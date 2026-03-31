@@ -18,7 +18,7 @@ const isEventActive=()=>{
   const{start,startHour,end,endHour}=SEASONAL_EVENT;
   return(ds===start&&hr>=startHour)||(ds>start&&ds<end)||(ds===end&&hr<endHour);
 };
-const STORAGE_VERSION    = "gn-v68"; // bumped — rival-bar/rival-fill CSS fix, final audit pass
+const STORAGE_VERSION    = "gn-v71"; // bumped — S1 farewell + thank you, floating jesters, confetti, fake alert, glitch title
 const SITE_TITLE         = "Games Night";
 const HOSTED_BY          = "Mekula";
 const FEATURED_GAME      = "Bullet League";
@@ -1569,6 +1569,82 @@ const INITIAL_SESSIONS = [
     placements:["p11","p04","p01","p02"],
     kills:{"p11":1,"p01":1}},
 
+  // ── Tue 31 Mar 2026 — 15 lobbies (Season 1 final day) ──
+  {id:"s319",date:"2026-03-31",notes:"Lobby 319",
+    winner:"p01",attendees:["p01","p14","p07","p02","p05","p08","p18","p06"],
+    placements:["p01","p14","p07","p02","p05","p08","p18","p06"],
+    kills:{"p01":4,"p14":1,"p07":2}},
+
+  {id:"s320",date:"2026-03-31",notes:"Lobby 320",
+    winner:"p07",attendees:["p07","p04","p03","p01","p02","p11","p18","p05","p14","p08"],
+    placements:["p07","p04","p03","p01","p02","p11","p18","p05","p14","p08"],
+    kills:{"p07":2,"p03":1,"p01":1,"p02":1,"p18":1,"p14":1}},
+
+  {id:"s321",date:"2026-03-31",notes:"Lobby 321",
+    winner:"p13",attendees:["p13","p14","p06","p11","p04","p02","p03","p07","p18","p01","p08","p05"],
+    placements:["p13","p14","p06","p11","p04","p02","p03","p07","p18","p01","p08","p05"],
+    kills:{"p13":2,"p14":2,"p06":1,"p11":2,"p04":1,"p02":0,"p03":0,"p07":0,"p18":0,"p01":0,"p08":0,"p05":0}},
+
+  {id:"s322",date:"2026-03-31",notes:"Lobby 322",
+    winner:"p07",attendees:["p07","p02","p11","p01","p13","p04","p14","p18","p03","p05","p06"],
+    placements:["p07","p02","p11","p01","p13","p04","p14","p18","p03","p05","p06"],
+    kills:{"p07":3,"p02":2,"p01":2,"p13":1,"p14":1}},
+
+  {id:"s323",date:"2026-03-31",notes:"Lobby 323",
+    winner:"p02",attendees:["p02","p01","p03","p07","p15","p08","p18","p13","p04","p14","p05","p11"],
+    placements:["p02","p01","p03","p07","p15","p08","p18","p13","p04","p14","p05","p11"],
+    kills:{"p02":3,"p01":5,"p03":1,"p08":1,"p13":1,"p04":0}},
+
+  {id:"s324",date:"2026-03-31",notes:"Lobby 324",
+    winner:"p02",attendees:["p02","p15","p14","p11","p01","p18","p07","p04","p03","p08","p13","p05"],
+    placements:["p02","p15","p14","p11","p01","p18","p07","p04","p03","p08","p13","p05"],
+    kills:{"p02":1,"p15":1,"p14":4,"p01":3,"p08":1,"p13":0}},
+
+  {id:"s325",date:"2026-03-31",notes:"Lobby 325",
+    winner:"p07",attendees:["p07","p04","p02","p03","p08","p01","p15","p14","p05","p09"],
+    placements:["p07","p04","p02","p03","p08","p01","p15","p14","p05","p09"],
+    kills:{"p07":3,"p04":1,"p02":1,"p03":1,"p01":1}},
+
+  {id:"s326",date:"2026-03-31",notes:"Lobby 326",
+    winner:"p07",attendees:["p07","p01","p02","p11","p04","p03","p18","p05","p35","p14"],
+    placements:["p07","p01","p02","p11","p04","p03","p18","p05","p35","p14"],
+    kills:{"p07":2,"p01":3,"p02":0,"p11":0,"p04":0,"p18":1,"p35":0}},
+
+  {id:"s327",date:"2026-03-31",notes:"Lobby 327",
+    winner:"p02",attendees:["p02","p07","p11","p01","p03","p14","p04","p18"],
+    placements:["p02","p07","p11","p01","p03","p14","p04","p18"],
+    kills:{"p02":1,"p07":1,"p01":0,"p14":1,"p18":1}},
+
+  {id:"s328",date:"2026-03-31",notes:"Lobby 328",
+    winner:"p02",attendees:["p02","p07","p14","p06","p11","p01","p04","p03","p18"],
+    placements:["p02","p07","p14","p06","p11","p01","p04","p03","p18"],
+    kills:{"p02":3,"p07":1,"p14":0,"p06":0,"p01":0,"p04":0}},
+
+  {id:"s329",date:"2026-03-31",notes:"Lobby 329",
+    winner:"p02",attendees:["p02","p07","p03","p14","p01","p06","p05","p18"],
+    placements:["p02","p07","p03","p14","p01","p06","p05","p18"],
+    kills:{"p02":1,"p07":1,"p01":2,"p06":1}},
+
+  {id:"s330",date:"2026-03-31",notes:"Lobby 330",
+    winner:"p04",attendees:["p04","p07","p14","p01","p11","p02","p03","p18"],
+    placements:["p04","p07","p14","p01","p11","p02","p03","p18"],
+    kills:{"p04":1,"p07":3,"p14":0,"p01":1,"p02":0}},
+
+  {id:"s331",date:"2026-03-31",notes:"Lobby 331",
+    winner:"p07",attendees:["p07","p02","p14","p01","p04","p18","p14"],
+    placements:["p07","p02","p14","p01","p04","p18"],
+    kills:{"p07":2,"p02":1,"p01":0,"p04":0}},
+
+  {id:"s332",date:"2026-03-31",notes:"Lobby 332",
+    winner:"p07",attendees:["p07","p02","p14","p18","p01","p04"],
+    placements:["p07","p02","p14","p18","p01","p04"],
+    kills:{"p07":2,"p02":1,"p01":0}},
+
+  {id:"s333",date:"2026-03-31",notes:"Lobby 333",
+    winner:"p01",attendees:["p01","p07","p02","p14","p18","p04"],
+    placements:["p01","p07","p02","p14","p18","p04"],
+    kills:{"p01":1,"p07":1,"p02":0,"p14":2}},
+
 ];
 
 // ═══════════════════════════════════════════════════
@@ -1626,6 +1702,7 @@ const BADGE_CATALOGUE = [
   {icon:"🚀",name:"First Blood S2", desc:"First win of Season 2 — Apr 2026",           how:"S2 exclusive. Win a lobby in Season 2 before anyone else."},
   {icon:"🌅",name:"Opening Night",  desc:"Played on the very first Season 2 session",  how:"S2 exclusive. Show up on April 1st, 2026."},
   {icon:"👑",name:"S2 Champion",    desc:"Most wins in Season 2",                      how:"Hold the most Season 2 wins of any player."},
+  {icon:"🃏",name:"Fool's Crown",   desc:"Won a lobby on April Fools Day — Apr 1, 2026", how:"Limited edition. Won on the one day nobody saw it coming."},
 ];
 
 // ═══════════════════════════════════════════════════
@@ -1775,6 +1852,20 @@ const CSS = `
   @keyframes slideR{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
   @keyframes ticker{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
   @keyframes liveGlo{0%,100%{box-shadow:0 0 18px rgba(255,215,0,.25),0 0 0 2px rgba(255,215,0,.4)}50%{box-shadow:0 0 32px rgba(255,107,53,.4),0 0 0 2px rgba(255,107,53,.6)}}
+  @keyframes foolsShimmer{0%{border-color:rgba(255,215,0,.5)}25%{border-color:rgba(255,77,143,.5)}50%{border-color:rgba(199,125,255,.5)}75%{border-color:rgba(0,229,255,.5)}100%{border-color:rgba(255,215,0,.5)}}
+  @keyframes foolsSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+  @keyframes jesterFloat{0%{transform:translateY(0) rotate(-8deg) scale(1)}33%{transform:translateY(-22px) rotate(10deg) scale(1.1)}66%{transform:translateY(-8px) rotate(-12deg) scale(.95)}100%{transform:translateY(0) rotate(-8deg) scale(1)}}
+  @keyframes jesterDrift{0%{transform:translateX(0) translateY(0) rotate(0deg)}25%{transform:translateX(12px) translateY(-18px) rotate(20deg)}50%{transform:translateX(-8px) translateY(-28px) rotate(-15deg)}75%{transform:translateX(6px) translateY(-10px) rotate(12deg)}100%{transform:translateX(0) translateY(0) rotate(0deg)}}
+  @keyframes jesterSpin{0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.2)}100%{transform:rotate(360deg) scale(1)}}
+  @keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+  @keyframes glitchShift{0%,95%,100%{transform:translate(0,0)}96%{transform:translate(-3px,1px)}97%{transform:translate(2px,-2px)}98%{transform:translate(-1px,2px)}99%{transform:translate(3px,-1px)}}
+  @keyframes s1FadeIn{0%{opacity:0;transform:translateY(30px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes numberRoll{0%{opacity:0;transform:scale(.6)}60%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+  .jester-zone{position:relative;display:inline-block;}
+  .confetti-piece{position:fixed;width:8px;height:8px;border-radius:2px;animation:confettiFall linear forwards;pointer-events:none;z-index:9998;}
+  .s1-farewell{background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,107,53,.07),rgba(199,125,255,.08));border:2px solid rgba(255,215,0,.45);border-radius:24px;padding:32px 28px;position:relative;overflow:hidden;}
+  .s1-farewell::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,215,0,.08),transparent 60%);pointer-events:none;}
+  .stat-roll{animation:numberRoll .5s cubic-bezier(.34,1.56,.64,1) both;}
 
   .spin-a{animation:spinA 1.1s linear infinite;display:inline-block;}
   .pulse-a{animation:pulseA 1.4s ease-in-out infinite;display:inline-block;}
@@ -1902,6 +1993,21 @@ const pad = n => String(n).padStart(2,"0");
 const todayStr = () => new Date().toISOString().split("T")[0];
 const weekAgoStr = () => new Date(Date.now()-7*24*60*60*1000).toISOString().split("T")[0];
 
+// ── April Fools ──
+const isFoolsDay=()=>{
+  const d=new Date();
+  return d.getUTCMonth()===3&&d.getUTCDate()===1; // April 1 UTC
+};
+const scrambleName=(name)=>{
+  if(!name)return name;
+  // Reverse the characters but keep numbers at end, shift first char to end
+  const chars=[...name];
+  if(chars.length<=2)return chars.reverse().join("");
+  // swap first and last half
+  const mid=Math.floor(chars.length/2);
+  return [...chars.slice(mid),...chars.slice(0,mid)].join("");
+};
+
 function getNextSession(){
   const now=new Date(),d=new Date(now);
   d.setUTCHours(SESSION_START_HOUR,0,0,0);
@@ -1959,6 +2065,8 @@ export default function GameNight(){
   const [np,setNp]=useState({username:"",color:"#FFD700"});
   const [chartPid,setChartPid]=useState("");
   const [shareCard,setShareCard]=useState(null); // {sid, visible}
+  const [confetti,setConfetti]=useState([]);
+  const [foolsToast,setFoolsToast]=useState(0); // 0=hidden 1=warning 2=reveal
 
   // ── Dual storage: window.storage (artifact) + localStorage (Netlify) ──
   const hasWS=typeof window!=="undefined"&&!!window.storage&&typeof window.storage.get==="function";
@@ -2032,6 +2140,28 @@ export default function GameNight(){
     tick();const id=setInterval(tick,1000);return()=>clearInterval(id);
   },[]);
 
+  // ── April Fools: confetti burst + fake alert ──
+  useEffect(()=>{
+    if(!isFoolsDay())return;
+    // Confetti — 20 pieces, different colors and timings
+    const colors=["#FF4D8F","#FFD700","#C77DFF","#00E5FF","#FF6B35","#00FF94","#FF6B6B","#4ECDC4"];
+    const pieces=Array.from({length:20},(_,i)=>({
+      id:i,
+      color:colors[i%colors.length],
+      left:Math.random()*100,
+      delay:Math.random()*1.5,
+      duration:2+Math.random()*2,
+      size:6+Math.random()*8,
+    }));
+    setConfetti(pieces);
+    const t=setTimeout(()=>setConfetti([]),4000);
+    // Fake alert — shows at 2s, changes at 5s, gone at 8s
+    const t1=setTimeout(()=>setFoolsToast(1),2000);
+    const t2=setTimeout(()=>setFoolsToast(2),5000);
+    const t3=setTimeout(()=>setFoolsToast(0),8000);
+    return()=>{clearTimeout(t);clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
+  },[]);
+
   useEffect(()=>{
     if(typeof window==="undefined")return;
     const h=()=>setShowScroll(window.scrollY>320);
@@ -2049,9 +2179,17 @@ export default function GameNight(){
   };
 
   const getPeriodSessions = (period=lbPeriod) => {
-    const weekAgo=weekAgoStr();
     if(period==="today") return sessions.filter(s=>s.date===getLatestSessionDate());
-    if(period==="week")  return sessions.filter(s=>s.date>=weekAgo);
+    if(period==="week"){
+      // Calendar week — Monday to latest session date, same logic as getWeeklyAwards
+      const latestDate=getLatestSessionDate();
+      if(!latestDate)return[];
+      const d=new Date(latestDate+"T12:00:00Z");
+      const weekStart=new Date(d);
+      weekStart.setDate(d.getDate()-((d.getDay()+6)%7));
+      const ws=weekStart.toISOString().split("T")[0];
+      return sessions.filter(s=>s.date>=ws&&s.date<=latestDate);
+    }
     return sessions;
   };
 
@@ -2160,6 +2298,9 @@ export default function GameNight(){
       if(topS2Winner&&topS2Winner[0]===pid&&topS2Winner[1]>0)
         b.push({icon:"👑",label:"S2 Champion",hot:true});
     }
+    // Fool's Crown: won a lobby on April Fools Day
+    const wonAprilFools=sessions.some(s=>s.date==="2026-04-01"&&s.winner===pid);
+    if(wonAprilFools)b.push({icon:"🃏",label:"Fool's Crown",hot:true});
     return b;
   };
 
@@ -2752,6 +2893,7 @@ export default function GameNight(){
   const uniqueWinners=[...new Set(sessions.filter(s=>s.winner).map(s=>s.winner))].length;
   const mvps=getDailyMVP();
   const latest=[...sessions].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+  const foolsDay=isFoolsDay();
 
   // ── admin ──
   const handleLogin=()=>{
@@ -2849,6 +2991,9 @@ export default function GameNight(){
     ...(view==="profile"&&profileId?[{id:"profile",l:`👤 ${players.find(x=>x.id===profileId)?.username||"Profile"}`}]:[]),
   ];
 
+  // ── April Fools display name — scrambles on Apr 1 ──
+  const dn=(username)=>foolsDay?scrambleName(username):username;
+
   // ── avatar ──
   const Av=({p,size=44,glow=false})=>(
     <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,
@@ -2869,7 +3014,7 @@ export default function GameNight(){
     </div>
   );
 
-  const sortedLB=getSortedLB();
+  const sortedLB=foolsDay?[...getSortedLB()].reverse():getSortedLB();
   const filteredLB=lbSearch.trim()?sortedLB.filter(p=>p.username.toLowerCase().includes(lbSearch.toLowerCase())):sortedLB;
   const rivals=getRivals();
   const filteredRivals=rivalSearch.trim()
@@ -2982,24 +3127,29 @@ export default function GameNight(){
 
     {/* LIVE TICKER */}
     {live&&(
-      <div style={{background:"linear-gradient(90deg,#062516,#041a0f,#062516)",overflow:"hidden",
-        height:34,display:"flex",alignItems:"center",borderBottom:"1px solid rgba(0,255,148,.3)"}}>
+      <div style={{
+        background:foolsDay?"linear-gradient(90deg,#1a0630,#300820,#1a0630)":"linear-gradient(90deg,#062516,#041a0f,#062516)",
+        overflow:"hidden",height:34,display:"flex",alignItems:"center",
+        borderBottom:foolsDay?"1px solid rgba(255,77,143,.4)":"1px solid rgba(0,255,148,.3)"}}>
         <div style={{whiteSpace:"nowrap",animation:"ticker 22s linear infinite",
-          color:"#00FF94",fontWeight:800,fontSize:".8rem",letterSpacing:2}}>
-          🔴 GAMES NIGHT LIVE &nbsp;·&nbsp; {FEATURED_GAME} &nbsp;·&nbsp;
-          Hosted by {HOSTED_BY} &nbsp;·&nbsp; 5–7 PM UTC &nbsp;·&nbsp; 📺 TUNE IN ON TWITCH &nbsp;·&nbsp;
+          color:foolsDay?"#FF4D8F":"#00FF94",fontWeight:800,fontSize:".8rem",letterSpacing:2}}>
+          {foolsDay
+            ? "🃏 GAMES NIGHT LIVE · APRIL FOOLS EDITION · Nobody knows what's real anymore · 🃏 TUNE IN IF YOU DARE ·"
+            : `🔴 GAMES NIGHT LIVE \u00a0·\u00a0 ${FEATURED_GAME} \u00a0·\u00a0 Hosted by ${HOSTED_BY} \u00a0·\u00a0 5–7 PM UTC \u00a0·\u00a0 📺 TUNE IN ON TWITCH \u00a0·\u00a0`
+          }
         </div>
       </div>
     )}
 
     {/* NAV */}
     <nav style={{background:"rgba(22,13,46,.97)",backdropFilter:"blur(20px)",
-      borderBottom:"1px solid rgba(255,255,255,.1)",
+      borderBottom:foolsDay?"1px solid rgba(255,77,143,.5)":"1px solid rgba(255,255,255,.1)",
+      animation:foolsDay?"foolsShimmer 3s ease-in-out infinite":undefined,
       position:"sticky",top:0,zIndex:100,padding:"0 16px",height:60,
       display:"flex",alignItems:"center",gap:6}}>
       <div onClick={()=>go("home")} style={{cursor:"pointer",fontFamily:"Fredoka One",
         fontSize:"1.2rem",color:"#FFD700",marginRight:6,flexShrink:0}}>
-        🎯 {SITE_TITLE}
+        {foolsDay?"🃏":"🎯"} {SITE_TITLE}{foolsDay?" 🃏":""}
       </div>
       <div className="nav-desktop" style={{flex:1,display:"flex",gap:2,overflowX:"auto",scrollbarWidth:"none"}}>
         {navItems.map(item=>(
@@ -3079,13 +3229,44 @@ export default function GameNight(){
               const _d=new Date(),_ds=_d.toISOString().split("T")[0],_hr=_d.getUTCHours();
               const isEaster=isEventActive();
               if(!isEaster) return(
-                <h1 className="hero-h1" style={{
-                  fontFamily:"Fredoka One",fontSize:"clamp(3rem,12vw,5.6rem)",lineHeight:.92,marginBottom:20,
-                  background:"linear-gradient(135deg,#FFD700 0%,#FF6B35 40%,#FF4D8F 75%,#C77DFF 100%)",
-                  WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                  filter:"drop-shadow(0 0 50px rgba(255,107,53,.35))"}}>
-                  🎮 GAMES<br/>NIGHT
-                </h1>
+                foolsDay?(
+                  <div style={{marginBottom:20,textAlign:"center"}}>
+                    <div className="jester-zone">
+                      {[
+                        {e:"🃏",top:"-18px",left:"0px",  delay:"0s",  dur:"3.2s",anim:"jesterFloat"},
+                        {e:"🃏",top:"-14px",right:"-4px", delay:".7s", dur:"2.8s",anim:"jesterDrift"},
+                        {e:"🃏",bottom:"-10px",left:"8px",delay:"1.1s",dur:"3.6s",anim:"jesterFloat"},
+                        {e:"🃏",top:"30%",right:"-18px",  delay:".4s", dur:"4.0s",anim:"jesterSpin"},
+                      ].map((j,ji)=>(
+                        <span key={ji} style={{
+                          position:"absolute",fontSize:"clamp(1.2rem,3vw,1.8rem)",
+                          top:j.top||"auto",bottom:j.bottom||"auto",
+                          left:j.left||"auto",right:j.right||"auto",
+                          animation:`${j.anim} ${j.dur} ease-in-out ${j.delay} infinite`,
+                          pointerEvents:"none",zIndex:2,userSelect:"none",
+                          filter:"drop-shadow(0 0 10px rgba(255,77,143,.6))",
+                        }}>{j.e}</span>
+                      ))}
+                      <h1 className="hero-h1" style={{
+                        fontFamily:"Fredoka One",fontSize:"clamp(3rem,12vw,5.6rem)",lineHeight:.92,
+                        background:"linear-gradient(135deg,#FF4D8F 0%,#FFD700 35%,#C77DFF 70%,#FF4D8F 100%)",
+                        WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+                        animation:"glitchShift 4s ease-in-out infinite",
+                        filter:"drop-shadow(0 0 40px rgba(255,77,143,.4))",
+                        position:"relative",zIndex:1}}>
+                        🃏 GAMES<br/>NIGHT
+                      </h1>
+                    </div>
+                  </div>
+                ):(
+                  <h1 className="hero-h1" style={{
+                    fontFamily:"Fredoka One",fontSize:"clamp(3rem,12vw,5.6rem)",lineHeight:.92,marginBottom:20,
+                    background:"linear-gradient(135deg,#FFD700 0%,#FF6B35 40%,#FF4D8F 75%,#C77DFF 100%)",
+                    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+                    filter:"drop-shadow(0 0 50px rgba(255,107,53,.35))"}}>
+                    🎮 GAMES<br/>NIGHT
+                  </h1>
+                )
               );
               const eggs=[
                 {e:"🥚",top:"-14px",left:"4px",  delay:"0s",   dur:"3.0s",anim:"eggBounce"},
@@ -3579,44 +3760,119 @@ export default function GameNight(){
           })()}
 
 
-          {/* ── Lobby 300 Milestone Countdown ── */}
-          {(()=>{
-            const target=300;
-            const count=sessions.length;
-            const remaining=target-count;
-            const pct=Math.min(100,Math.round((count/target)*100));
-            if(count>=target) return(
-              <div style={{background:"linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,107,53,.12))",
-                border:"2px solid rgba(255,215,0,.5)",borderRadius:18,padding:"20px 24px",
-                marginBottom:20,textAlign:"center",animation:"popIn .4s ease"}}>
-                <div style={{fontFamily:"Fredoka One",fontSize:"2rem",color:"#FFD700",marginBottom:4}}>
-                  🎉 Lobby 300 Reached!
-                </div>
-                <div style={{color:"var(--text2)",fontSize:".9rem",fontWeight:700}}>
-                  The community hit the milestone. Legendary.
-                </div>
+          {/* ── April Fools: Fake #1 Banner ── */}
+          {foolsDay&&(
+            <div style={{
+              background:"linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,107,53,.15))",
+              border:"3px solid #FFD700",borderRadius:18,
+              padding:"20px 24px",marginBottom:20,
+              textAlign:"center",animation:"popIn .4s ease",
+              position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:-10,left:-10,fontSize:"2rem",opacity:.15,transform:"rotate(-15deg)"}}>🃏</div>
+              <div style={{position:"absolute",bottom:-10,right:-10,fontSize:"2rem",opacity:.15,transform:"rotate(15deg)"}}>🃏</div>
+              <div style={{fontSize:".68rem",color:"#FFD700",fontWeight:800,
+                letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>
+                🏆 Season 2 — Live Rankings
               </div>
-            );
+              <div style={{fontFamily:"Fredoka One",fontSize:"clamp(1.4rem,5vw,2rem)",
+                color:"#FFD700",marginBottom:6}}>
+                🎉 You are currently ranked #1!
+              </div>
+              <div style={{color:"var(--text2)",fontSize:".86rem",fontWeight:600,marginBottom:10}}>
+                Congratulations. The leaderboard doesn't lie.
+              </div>
+              <div style={{fontSize:".72rem",color:"rgba(255,255,255,.3)",fontWeight:700,
+                fontStyle:"italic"}}>
+                April Fools. Check the board. 🃏
+              </div>
+            </div>
+          )}
+
+          {/* ── Season 1 Farewell (shows from Mar 31 — final day played) ── */}
+          {todayStr()>="2026-03-31"&&(()=>{
+            const champion=players.find(p=>p.id==="p02"); // Teriqstp
+            const killLeader=players.find(p=>p.id==="p01"); // MekulaGG
             return(
-              <div style={{background:"var(--card)",border:"1.5px solid var(--border)",
-                borderRadius:18,padding:"20px 24px",marginBottom:20}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                  <div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#FFD700"}}>
-                      🎯 Road to Lobby 300
-                    </div>
-                    <div style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700,marginTop:2}}>
-                      {remaining} lobby{remaining!==1?"s":""} to go · {count} played
-                    </div>
-                  </div>
-                  <div style={{fontFamily:"Fredoka One",fontSize:"1.6rem",color:"#FF6B35"}}>{pct}%</div>
+              <div className="s1-farewell" style={{marginBottom:28}}>
+                {/* Closing stamp */}
+                <div style={{display:"flex",justifyContent:"center",marginBottom:18}}>
+                  <span style={{background:"rgba(255,215,0,.12)",border:"1.5px solid rgba(255,215,0,.4)",
+                    borderRadius:50,padding:"5px 18px",fontFamily:"Fredoka One",
+                    fontSize:".72rem",color:"#FFD700",letterSpacing:3,textTransform:"uppercase"}}>
+                    ✅ Season 1 — Officially Closed
+                  </span>
                 </div>
-                <div style={{background:"rgba(255,255,255,.07)",borderRadius:50,height:10,overflow:"hidden"}}>
-                  <div style={{
-                    height:"100%",borderRadius:50,
-                    background:"linear-gradient(90deg,#FF6B35,#FFD700)",
-                    width:pct+"%",transition:"width .6s cubic-bezier(.34,1.56,.64,1)"
-                  }}/>
+                {/* Headline numbers */}
+                <div style={{textAlign:"center",marginBottom:22}}>
+                  <div style={{fontFamily:"Fredoka One",
+                    fontSize:"clamp(1.3rem,4vw,1.9rem)",
+                    background:"linear-gradient(135deg,#FFD700,#FF6B35,#C77DFF)",
+                    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+                    marginBottom:6,lineHeight:1.1}}>
+                    332 Lobbies. 1,881 Kills. 24 Nights.
+                  </div>
+                  <div style={{color:"var(--text3)",fontSize:".8rem",fontWeight:700}}>
+                    March 4 – March 31, 2026 · 32 players · 22 different winners
+                  </div>
+                </div>
+                {/* Stat pills */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",
+                  gap:10,marginBottom:22}}>
+                  {[
+                    {icon:"🏆",label:"Champion",val:champion?.username||"—",sub:"99 wins",c:"#FFD700"},
+                    {icon:"💀",label:"Kill Leader",val:killLeader?.username||"—",sub:"424 kills",c:"#FF4D8F"},
+                    {icon:"☄️",label:"Best Game",val:"EZEDINEYoutube",sub:"7K · Lobby 255",c:"#FF6B35"},
+                    {icon:"🌋",label:"Most Kills/Day",val:killLeader?.username||"—",sub:"28K · Mar 24",c:"#C77DFF"},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:14,padding:"12px 10px",
+                      textAlign:"center",animation:`s1FadeIn .5s ease ${i*.1}s both`}}>
+                      <div style={{fontSize:"1.3rem",marginBottom:4}}>{s.icon}</div>
+                      <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:800,
+                        letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>{s.label}</div>
+                      <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:".9rem",
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.val}</div>
+                      <div style={{fontSize:".68rem",color:"var(--text2)",fontWeight:700,marginTop:2}}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Champion spotlight */}
+                {champion&&(
+                  <div style={{display:"flex",alignItems:"center",gap:16,
+                    background:"rgba(255,215,0,.07)",border:"1.5px solid rgba(255,215,0,.25)",
+                    borderRadius:16,padding:"14px 18px",marginBottom:18,flexWrap:"wrap"}}>
+                    <div style={{width:52,height:52,borderRadius:"50%",flexShrink:0,
+                      background:`linear-gradient(135deg,${champion.color},${champion.color}88)`,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      fontFamily:"Fredoka One",fontSize:"1.4rem",color:"#fff",
+                      boxShadow:`0 0 24px ${champion.color}66`}}>
+                      {champion.username[0]}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:".62rem",color:"#FFD700",fontWeight:800,
+                        letterSpacing:2,textTransform:"uppercase",marginBottom:3}}>👑 Season 1 Champion</div>
+                      <div style={{fontFamily:"Fredoka One",color:champion.color,
+                        fontSize:"clamp(1rem,3vw,1.3rem)"}}>{champion.username}</div>
+                      <div style={{fontSize:".78rem",color:"var(--text2)",fontWeight:700,marginTop:2}}>
+                        99 wins · 349 kills · Season 1 finalised
+                      </div>
+                    </div>
+                    <div style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3rem)",
+                      color:"#FFD700",flexShrink:0}}>🏆</div>
+                  </div>
+                )}
+                {/* Personal thank you */}
+                <div style={{textAlign:"center",borderTop:"1px solid rgba(255,255,255,.07)",paddingTop:16}}>
+                  <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600,
+                    lineHeight:1.7,maxWidth:480,margin:"0 auto 10px"}}>
+                    33 days. 332 lobbies. 1,881 kills.<br/>
+                    Thank you for every single one.<br/>
+                    <span style={{color:"#FFD700",fontFamily:"Fredoka One",fontSize:".95rem"}}>
+                      Season 2 starts now. ⚔️
+                    </span>
+                  </p>
+                  <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:700,letterSpacing:1}}>
+                    — Mekula
+                  </div>
                 </div>
               </div>
             );
@@ -3625,7 +3881,6 @@ export default function GameNight(){
           {/* ── Season Banner ── */}
           {(()=>{
             const today=todayStr();
-            const s1End="2026-03-31";
             const s2Start="2026-04-01";
             if(today>=s2Start) return(
               <div style={{background:"linear-gradient(135deg,rgba(0,229,255,.12),rgba(199,125,255,.1))",
@@ -3642,24 +3897,6 @@ export default function GameNight(){
                 </div>
               </div>
             );
-            if(today>=new Date(new Date(s1End)-3*864e5).toISOString().split("T")[0]&&today<=s1End){
-              const diff=Math.ceil((new Date(s2Start)-new Date(today+"T00:00:00Z"))/(864e5));
-              return(
-                <div style={{background:"linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,107,53,.08))",
-                  border:"1.5px solid rgba(255,215,0,.3)",borderRadius:18,padding:"18px 24px",
-                  marginBottom:20,display:"flex",alignItems:"center",gap:14}}>
-                  <div style={{fontSize:"1.6rem",flexShrink:0}}>⏳</div>
-                  <div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:"#FFD700"}}>
-                      Season 1 ends in {diff} day{diff!==1?"s":""}
-                    </div>
-                    <div style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700,marginTop:2}}>
-                      Season 2 starts April 1 · Lock in your final placement.
-                    </div>
-                  </div>
-                </div>
-              );
-            }
             return null;
           })()}
 
@@ -3971,7 +4208,9 @@ export default function GameNight(){
             const now=new Date();
             const s1End=new Date("2026-03-31T23:59:59Z");
             const diff=s1End-now;
-            if(diff<=0)return null;
+            // Hide if time is up OR if we already have March 31 sessions (season done)
+            const s1Done=sessions.some(s=>s.date==="2026-03-31");
+            if(diff<=0||s1Done)return null;
             const days=Math.floor(diff/(1000*60*60*24));
             const hours=Math.floor((diff%(1000*60*60*24))/(1000*60*60));
             const mins=Math.floor((diff%(1000*60*60))/(1000*60));
@@ -4084,7 +4323,7 @@ export default function GameNight(){
                     fontFamily:"Fredoka One",fontSize:".55rem",color:"#fff",textShadow:"0 1px 3px rgba(0,0,0,.5)"}}>
                     {p.username[0].toUpperCase()}
                   </div>
-                  <span style={{fontWeight:700,color:"var(--text)",fontSize:".8rem"}}>{p.host?"👑 ":""}{p.username}</span>
+                  <span style={{fontWeight:700,color:"var(--text)",fontSize:".8rem"}}>{p.host?"👑 ":""}{dn(p.username)}</span>
                 </div>
               ))}
             </div>
@@ -4184,7 +4423,7 @@ export default function GameNight(){
                   <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,marginTop:streak>=3?20:0}}>
                     <Av p={player} size={52} glow/>
                     <div>
-                      <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.05rem"}}>{player.host?"👑 ":""}{player.username}</div>
+                      <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.05rem"}}>{player.host?"👑 ":""}{dn(player.username)}</div>
                       <div style={{fontSize:".72rem",color:rank.color,fontWeight:700,marginTop:2}}>{rank.title}</div>
                     </div>
                   </div>
@@ -4279,9 +4518,16 @@ export default function GameNight(){
           <div style={{textAlign:"center",marginBottom:28}}>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
               background:"linear-gradient(135deg,#00E5FF,#FF6B35,#C77DFF)",
-              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
+              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+              ...(foolsDay?{transform:"scaleY(-1)",display:"inline-block"}:{})}}>
               📊 Leaderboard
             </h2>
+            {foolsDay&&(
+              <div style={{fontFamily:"Fredoka One",color:"#FF4D8F",fontSize:".82rem",
+                marginTop:8,letterSpacing:1}}>
+                🃏 Upside Down Edition — Last place is first today
+              </div>
+            )}
           </div>
 
           {/* Period tabs */}
@@ -4341,7 +4587,7 @@ export default function GameNight(){
                 <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,flexWrap:"wrap"}}>
                   <Av p={p} size={60} glow/>
                   <div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.5rem",color:p.color}}>{p.host?"👑 ":""}{p.username}</div>
+                    <div style={{fontFamily:"Fredoka One",fontSize:"1.5rem",color:p.color}}>{p.host?"👑 ":""}{dn(p.username)}</div>
                     <div style={{fontSize:".82rem",color:rank.color,fontWeight:700}}>{rank.title}</div>
                     {streak>=2&&<div style={{fontSize:".76rem",color:"#FF6B35",fontWeight:800,marginTop:2}} className="fire">🔥 {streak}-game streak!</div>}
                   </div>
@@ -4429,7 +4675,7 @@ export default function GameNight(){
                     <div>
                       <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem",
                         maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {player.host?"👑 ":""}{player.username}
+                        {player.host?"👑 ":""}{dn(player.username)}
                       </div>
                       <div style={{fontSize:".64rem",color:rank.color,fontWeight:700}}>
                         {rank.title}{streak>=2?` 🔥×${streak}`:""}
@@ -4497,7 +4743,7 @@ export default function GameNight(){
                   <Av p={player} size={36} glow={isHL}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                      {player.host?"👑 ":""}{player.username}
+                      {player.host?"👑 ":""}{dn(player.username)}
                     </div>
                     <div style={{fontSize:".65rem",color:rank.color,fontWeight:700}}>
                       {rank.title}{streak>=2?` 🔥×${streak}`:""}
@@ -4796,7 +5042,7 @@ export default function GameNight(){
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:12}}>
                     <div>
                       <div style={{fontFamily:"Fredoka One",color:"#FFAB40",fontSize:".88rem",marginBottom:3}}>
-                        📅 {new Date(s.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}{s.date==="2026-04-04"&&<span style={{marginLeft:6,fontSize:".8rem"}}>🥚 Easter</span>}{s.date==="2026-04-03"&&<span style={{marginLeft:6,fontSize:".8rem"}}>💪 Good Friday</span>}
+                        📅 {new Date(s.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}{s.date==="2026-04-04"&&<span style={{marginLeft:6,fontSize:".8rem"}}>🥚 Easter</span>}{s.date==="2026-04-03"&&<span style={{marginLeft:6,fontSize:".8rem"}}>💪 Good Friday</span>}{s.date==="2026-04-01"&&<span style={{marginLeft:6,fontSize:".8rem"}}>🃏 April Fools</span>}
                         <span style={{color:"var(--text3)",fontSize:".76rem",fontWeight:700,marginLeft:8}}>· {s.notes}</span>
                       </div>
                       {s.notes&&s.notes!==("Lobby "+s.id?.replace("s",""))&&<p style={{color:"var(--text2)",fontSize:".8rem",fontStyle:"italic"}}>"{s.notes}"</p>}
@@ -5077,7 +5323,7 @@ export default function GameNight(){
                       <Av p={p} size={30}/>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".88rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                          {p.host?"👑 ":""}{p.username}
+                          {p.host?"👑 ":""}{dn(p.username)}
                         </div>
                         <div style={{fontSize:".62rem",color:"var(--text3)"}}>
                           {st.wins}W · {st.kills}K · {st.winRate}%WR · {st.appearances}G
@@ -5165,7 +5411,7 @@ export default function GameNight(){
               <div style={{display:"flex",alignItems:"center",gap:18,flexWrap:"wrap",marginBottom:20}}>
                 <Av p={p} size={72} glow/>
                 <div>
-                  <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"clamp(1.4rem,5vw,2rem)"}}>{p.host?"👑 ":""}{p.username}</div>
+                  <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"clamp(1.4rem,5vw,2rem)"}}>{p.host?"👑 ":""}{dn(p.username)}</div>
                   <div style={{fontFamily:"Fredoka One",color:rank.color,fontSize:"1rem",marginTop:2}}>{rank.title}</div>
                   {/* Last Seen + Days Active */}
                   {(()=>{
@@ -5544,7 +5790,7 @@ export default function GameNight(){
                               <div style={{flex:1,minWidth:0}}>
                                 <div style={{fontFamily:"Fredoka One",color:p.color,fontSize:".9rem",
                                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                  {p.host?"👑 ":""}{p.username}
+                                  {p.host?"👑 ":""}{dn(p.username)}
                                 </div>
                                 <div style={{fontSize:".65rem",color:"var(--text3)",fontWeight:700}}>{entry.sid}</div>
                               </div>
@@ -5644,7 +5890,7 @@ export default function GameNight(){
                         color:chartPid===p.id?"#000":"var(--text2)",
                         border:chartPid===p.id?"none":`1.5px solid ${p.color}44`,
                         boxShadow:chartPid===p.id?`0 0 16px ${p.color}66`:"none"}}>
-                      {p.host?"👑 ":""}{p.username}
+                      {p.host?"👑 ":""}{dn(p.username)}
                     </button>
                   ))}
                 </div>
@@ -5881,7 +6127,7 @@ export default function GameNight(){
                           <div style={{fontFamily:"Fredoka One",fontSize:i===0?"1rem":".88rem",
                             color:player.color,textAlign:"center",maxWidth:90,
                             overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                            {player.host?"👑 ":""}{player.username}
+                            {player.host?"👑 ":""}{dn(player.username)}
                           </div>
                           <div style={{
                             background:i===0?"linear-gradient(135deg,#FFD700,#FF6B35)":i===1?"rgba(192,192,192,.2)":"rgba(205,127,50,.2)",
@@ -6148,7 +6394,7 @@ export default function GameNight(){
                               <div style={{minWidth:0}}>
                                 <div style={{fontFamily:"Fredoka One",color:player.color,fontSize:".88rem",
                                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                  {player.host?"👑 ":""}{player.username}
+                                  {player.host?"👑 ":""}{dn(player.username)}
                                 </div>
                                 <div style={{fontSize:".64rem",color:"var(--text3)",fontWeight:700}}>
                                   {p.wins}W · {p.winRate}% WR
@@ -6313,7 +6559,7 @@ export default function GameNight(){
                             <div style={{fontFamily:"Fredoka One",fontSize:i===0?"1rem":".88rem",
                               color:player.color,textAlign:"center",maxWidth:90,
                               overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              {player.host?"👑 ":""}{player.username}
+                              {player.host?"👑 ":""}{dn(player.username)}
                             </div>
                             <div style={{
                               background:i===0?"linear-gradient(135deg,#00E5FF,#00FF94)":i===1?"rgba(192,192,192,.2)":"rgba(205,127,50,.2)",
@@ -6397,7 +6643,7 @@ export default function GameNight(){
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontFamily:"Fredoka One",color:player.color,fontSize:".92rem",
                               overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              {player.host?"👑 ":""}{player.username}
+                              {player.host?"👑 ":""}{dn(player.username)}
                             </div>
                           </div>
                           <div style={{display:"flex",gap:14,flexShrink:0}}>
@@ -6788,6 +7034,53 @@ export default function GameNight(){
         </div>
       );
     })()}
+
+    {/* ── April Fools: Confetti Burst ── */}
+    {confetti.map(p=>(
+      <div key={p.id} className="confetti-piece" style={{
+        left:`${p.left}%`,
+        top:0,
+        width:p.size,
+        height:p.size,
+        background:p.color,
+        animationDuration:`${p.duration}s`,
+        animationDelay:`${p.delay}s`,
+      }}/>
+    ))}
+
+    {/* ── April Fools: Fake System Alert Toast ── */}
+    {foolsToast>0&&(
+      <div style={{
+        position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",
+        zIndex:9999,maxWidth:340,width:"calc(100% - 32px)",
+        background:foolsToast===1?"rgba(255,107,53,.95)":"rgba(255,77,143,.95)",
+        border:`1.5px solid ${foolsToast===1?"rgba(255,150,50,.8)":"rgba(255,100,143,.8)"}`,
+        borderRadius:14,padding:"14px 18px",
+        boxShadow:"0 8px 32px rgba(0,0,0,.5)",
+        animation:"popIn .3s ease",
+        backdropFilter:"blur(12px)",
+      }}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+          <span style={{fontSize:"1.3rem",flexShrink:0}}>
+            {foolsToast===1?"⚠️":"🃏"}
+          </span>
+          <div>
+            <div style={{fontFamily:"Fredoka One",fontSize:".95rem",color:"#fff",marginBottom:3}}>
+              {foolsToast===1?"System Warning":"April Fools 🎉"}
+            </div>
+            <div style={{fontSize:".78rem",color:"rgba(255,255,255,.85)",fontWeight:600,lineHeight:1.5}}>
+              {foolsToast===1
+                ?"Leaderboard data may be unreliable today. We are investigating."
+                :"Just kidding. Happy April Fools. Now go win a lobby. 🃏"
+              }
+            </div>
+          </div>
+          <button onClick={()=>setFoolsToast(0)} style={{
+            background:"none",border:"none",color:"rgba(255,255,255,.6)",
+            cursor:"pointer",fontSize:".9rem",flexShrink:0,padding:2}}>✕</button>
+        </div>
+      </div>
+    )}
 
     {/* FOOTER */}
     <footer style={{textAlign:"center",padding:"28px 16px",borderTop:"1px solid rgba(255,255,255,.07)",
