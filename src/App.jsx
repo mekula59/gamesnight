@@ -18,7 +18,7 @@ const isEventActive=()=>{
   const{start,startHour,end,endHour}=SEASONAL_EVENT;
   return(ds===start&&hr>=startHour)||(ds>start&&ds<end)||(ds===end&&hr<endHour);
 };
-const STORAGE_VERSION    = "gn-v71"; // bumped — S1 farewell + thank you, floating jesters, confetti, fake alert, glitch title
+const STORAGE_VERSION    = "gn-v73"; // bumped — Season 2 opens Apr 1 (Lobbies 334–349) + Fool's Crown badges live
 const SITE_TITLE         = "Games Night";
 const HOSTED_BY          = "Mekula";
 const FEATURED_GAME      = "Bullet League";
@@ -1645,6 +1645,87 @@ const INITIAL_SESSIONS = [
     placements:["p01","p07","p02","p14","p18","p04"],
     kills:{"p01":1,"p07":1,"p02":0,"p14":2}},
 
+  // ── Wed 1 Apr 2026 — Season 2 Opening Night · 16 lobbies ──
+  {id:"s334",date:"2026-04-01",notes:"Lobby 334",
+    winner:"p11",attendees:["p11","p06","p04","p13","p01","p02","p18"],
+    placements:["p11","p06","p04","p13","p01","p02","p18"],
+    kills:{"p11":1,"p06":2,"p13":1,"p01":2}},
+
+  {id:"s335",date:"2026-04-01",notes:"Lobby 335",
+    winner:"p02",attendees:["p02","p14","p11","p08","p01","p07","p06","p18","p09"],
+    placements:["p02","p14","p11","p08","p01","p07","p06","p18","p09"],
+    kills:{"p02":3,"p14":1,"p01":3,"p07":1}},
+
+  {id:"s336",date:"2026-04-01",notes:"Lobby 336",
+    winner:"p02",attendees:["p02","p01","p14","p07","p11","p06","p15","p18","p09"],
+    placements:["p02","p01","p14","p07","p11","p06","p15","p18","p09"],
+    kills:{"p02":3,"p14":2,"p07":2}},
+
+  {id:"s337",date:"2026-04-01",notes:"Lobby 337",
+    winner:"p02",attendees:["p02","p04","p07","p14","p08","p09","p18","p01","p11"],
+    placements:["p02","p04","p07","p14","p08","p09","p18","p01","p11"],
+    kills:{"p02":4,"p04":2,"p14":1,"p09":1}},
+
+  {id:"s338",date:"2026-04-01",notes:"Lobby 338",
+    winner:"p01",attendees:["p01","p02","p07","p04","p14","p18","p08","p09","p06"],
+    placements:["p01","p02","p07","p04","p14","p18","p08","p09","p06"],
+    kills:{"p01":5,"p07":1}},
+
+  {id:"s339",date:"2026-04-01",notes:"Lobby 339",
+    winner:"p02",attendees:["p02","p01","p14","p03","p07","p18","p08","p04","p05"],
+    placements:["p02","p01","p14","p03","p07","p18","p08","p04","p05"],
+    kills:{"p02":2,"p01":2,"p14":2,"p03":1,"p08":1}},
+
+  {id:"s340",date:"2026-04-01",notes:"Lobby 340",
+    winner:"p14",attendees:["p14","p08","p07","p03","p04","p02","p05","p18","p01"],
+    placements:["p14","p08","p07","p03","p04","p02","p05","p18","p01"],
+    kills:{"p14":3,"p07":2,"p03":1,"p02":1}},
+
+  {id:"s341",date:"2026-04-01",notes:"Lobby 341",
+    winner:"p08",attendees:["p08","p02","p11","p07","p01","p14","p04","p03","p18","p05"],
+    placements:["p08","p02","p11","p07","p01","p14","p04","p03","p18","p05"],
+    kills:{"p08":1,"p02":1,"p11":3,"p01":2,"p04":1}},
+
+  {id:"s342",date:"2026-04-01",notes:"Lobby 342",
+    winner:"p18",attendees:["p18","p11","p04","p07","p08","p01","p14","p05","p02"],
+    placements:["p18","p11","p04","p07","p08","p01","p14","p05","p02"],
+    kills:{"p18":3,"p11":1,"p07":1,"p01":2}},
+
+  {id:"s343",date:"2026-04-01",notes:"Lobby 343",
+    winner:"p07",attendees:["p07","p14","p01","p03","p31","p18","p02","p08","p05","p11"],
+    placements:["p07","p14","p01","p03","p31","p18","p02","p08","p05","p11"],
+    kills:{"p07":4,"p14":1,"p01":2,"p18":1,"p02":1}},
+
+  {id:"s344",date:"2026-04-01",notes:"Lobby 344",
+    winner:"p02",attendees:["p02","p07","p04","p08","p11","p05","p09","p14","p18","p01"],
+    placements:["p02","p07","p04","p08","p11","p05","p09","p14","p18","p01"],
+    kills:{"p02":3,"p04":1,"p09":1}},
+
+  {id:"s345",date:"2026-04-01",notes:"Lobby 345",
+    winner:"p01",attendees:["p01","p11","p08","p04","p03","p14","p18","p05","p09","p02","p31"],
+    placements:["p01","p11","p08","p04","p03","p14","p18","p05","p09","p02","p31"],
+    kills:{"p01":4,"p11":1,"p04":1,"p03":1,"p14":1,"p05":1}},
+
+  {id:"s346",date:"2026-04-01",notes:"Lobby 346",
+    winner:"p14",attendees:["p14","p11","p31","p04","p02","p01","p18","p05","p09","p03"],
+    placements:["p14","p11","p31","p04","p02","p01","p18","p05","p09","p03"],
+    kills:{"p14":3,"p04":1,"p02":2,"p01":2}},
+
+  {id:"s347",date:"2026-04-01",notes:"Lobby 347",
+    winner:"p02",attendees:["p02","p01","p14","p04","p13","p31","p03","p18","p11"],
+    placements:["p02","p01","p14","p04","p13","p31","p03","p18","p11"],
+    kills:{"p01":2,"p14":2,"p13":2}},
+
+  {id:"s348",date:"2026-04-01",notes:"Lobby 348",
+    winner:"p14",attendees:["p14","p13","p02","p01","p03","p04","p18"],
+    placements:["p14","p13","p02","p01","p03","p04","p18"],
+    kills:{"p14":3,"p13":1,"p02":1}},
+
+  {id:"s349",date:"2026-04-01",notes:"Lobby 349",
+    winner:"p18",attendees:["p18","p11","p14","p04","p13","p20","p02","p01"],
+    placements:["p18","p11","p14","p04","p13","p20","p02","p01"],
+    kills:{"p18":2,"p11":2,"p13":1}},
+
 ];
 
 // ═══════════════════════════════════════════════════
@@ -1703,6 +1784,12 @@ const BADGE_CATALOGUE = [
   {icon:"🌅",name:"Opening Night",  desc:"Played on the very first Season 2 session",  how:"S2 exclusive. Show up on April 1st, 2026."},
   {icon:"👑",name:"S2 Champion",    desc:"Most wins in Season 2",                      how:"Hold the most Season 2 wins of any player."},
   {icon:"🃏",name:"Fool's Crown",   desc:"Won a lobby on April Fools Day — Apr 1, 2026", how:"Limited edition. Won on the one day nobody saw it coming."},
+  // ── Season 1 Legacy Badges ──
+  {icon:"🏆",name:"S1 Champion",    desc:"Season 1 Champion — most wins in March 2026",    how:"Finished #1 by wins in Season 1. Permanent."},
+  {icon:"💀",name:"S1 Reaper",      desc:"Season 1 Kill Leader — most kills in March 2026", how:"Led all players in total kills for Season 1. Permanent."},
+  {icon:"🥈",name:"S1 Podium",      desc:"Finished top 3 in Season 1 standings",            how:"Placed 2nd, 3rd or 4th by wins in Season 1."},
+  {icon:"☄️",name:"S1 Record Breaker",desc:"Best single game of Season 1 — 7K in one lobby",how:"EZEDINEYoutube holds the Season 1 single-game kill record."},
+  {icon:"🛡️",name:"S1 Iron Man",    desc:"Most appearances in Season 1 — almost never missed", how:"Showed up more than anyone else across all of Season 1."},
 ];
 
 // ═══════════════════════════════════════════════════
@@ -1854,6 +1941,32 @@ const CSS = `
   @keyframes liveGlo{0%,100%{box-shadow:0 0 18px rgba(255,215,0,.25),0 0 0 2px rgba(255,215,0,.4)}50%{box-shadow:0 0 32px rgba(255,107,53,.4),0 0 0 2px rgba(255,107,53,.6)}}
   @keyframes foolsShimmer{0%{border-color:rgba(255,215,0,.5)}25%{border-color:rgba(255,77,143,.5)}50%{border-color:rgba(199,125,255,.5)}75%{border-color:rgba(0,229,255,.5)}100%{border-color:rgba(255,215,0,.5)}}
   @keyframes foolsSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+  /* ── GAME BOOT ── */
+  @keyframes bootBar{0%{width:0%}100%{width:100%}}
+  @keyframes bootFade{0%{opacity:0;transform:scale(.94)}40%{opacity:1;transform:scale(1.01)}100%{opacity:1;transform:scale(1)}}
+  @keyframes bootScan{0%{transform:translateY(-100%)}100%{transform:translateY(900%)}  }
+  @keyframes bootBlink{0%,100%{opacity:1}45%{opacity:1}50%{opacity:0}55%{opacity:1}}
+  @keyframes bootPulse{0%,100%{text-shadow:0 0 20px rgba(255,215,0,.6)}50%{text-shadow:0 0 50px rgba(255,215,0,1),0 0 80px rgba(255,107,53,.6)}}
+
+  /* ── LEVEL TITLE CARD ── */
+  @keyframes lvlSweep{0%{transform:translateX(-100%)}60%{transform:translateX(0%)}100%{transform:translateX(0%)}}
+  @keyframes lvlText{0%{opacity:0;letter-spacing:1.5em;transform:scale(.85)}60%{opacity:1;letter-spacing:.05em;transform:scale(1.02)}100%{opacity:1;letter-spacing:.04em;transform:scale(1)}}
+  @keyframes lvlSub{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes lvlOut{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+  @keyframes lvlLine{0%{width:0}100%{width:100%}}
+  @keyframes lvlFlicker{0%,100%{opacity:1}30%{opacity:.7}32%{opacity:1}60%{opacity:.85}62%{opacity:1}}
+
+  /* ── HUD / ARENA ── */
+  @keyframes hudIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes rankGlow{0%,100%{box-shadow:0 0 12px var(--c,rgba(255,215,0,.3))}50%{box-shadow:0 0 28px var(--c,rgba(255,215,0,.7)),0 0 60px var(--c,rgba(255,215,0,.2))}}
+  @keyframes countUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes scanline{0%{background-position:0 0}100%{background-position:0 100px}}
+  @keyframes cornerPulse{0%,100%{opacity:.4}50%{opacity:.8}}
+  @keyframes arenaRow{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes crownSpin{0%{transform:rotate(-8deg) scale(1)}50%{transform:rotate(8deg) scale(1.15)}100%{transform:rotate(-8deg) scale(1)}}
+
+  /* ── JESTER + SEASON 1 (existing) ── */
   @keyframes jesterFloat{0%{transform:translateY(0) rotate(-8deg) scale(1)}33%{transform:translateY(-22px) rotate(10deg) scale(1.1)}66%{transform:translateY(-8px) rotate(-12deg) scale(.95)}100%{transform:translateY(0) rotate(-8deg) scale(1)}}
   @keyframes jesterDrift{0%{transform:translateX(0) translateY(0) rotate(0deg)}25%{transform:translateX(12px) translateY(-18px) rotate(20deg)}50%{transform:translateX(-8px) translateY(-28px) rotate(-15deg)}75%{transform:translateX(6px) translateY(-10px) rotate(12deg)}100%{transform:translateX(0) translateY(0) rotate(0deg)}}
   @keyframes jesterSpin{0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.2)}100%{transform:rotate(360deg) scale(1)}}
@@ -1861,6 +1974,57 @@ const CSS = `
   @keyframes glitchShift{0%,95%,100%{transform:translate(0,0)}96%{transform:translate(-3px,1px)}97%{transform:translate(2px,-2px)}98%{transform:translate(-1px,2px)}99%{transform:translate(3px,-1px)}}
   @keyframes s1FadeIn{0%{opacity:0;transform:translateY(30px)}100%{opacity:1;transform:translateY(0)}}
   @keyframes numberRoll{0%{opacity:0;transform:scale(.6)}60%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+
+  /* ── HUD CLASSES ── */
+  .hud-bg{
+    background-image:
+      linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+    background-size:40px 40px;
+  }
+  .arena-row{
+    animation:arenaRow .3s ease both;
+    transition:background .12s,transform .1s,box-shadow .15s;
+    position:relative;
+  }
+  .arena-row:hover{
+    background:rgba(255,255,255,.05)!important;
+    transform:translateX(3px);
+  }
+  .arena-row-1{
+    background:linear-gradient(90deg,rgba(255,215,0,.07),transparent)!important;
+    border-left:3px solid #FFD700!important;
+  }
+  .arena-row-1:hover{background:linear-gradient(90deg,rgba(255,215,0,.12),transparent)!important;}
+  .rank-num{
+    font-family:"Barlow Condensed",sans-serif;
+    font-weight:900;
+    letter-spacing:.04em;
+  }
+  .stat-hud{
+    font-family:"Barlow Condensed",sans-serif;
+    font-weight:700;
+    letter-spacing:.06em;
+    animation:countUp .4s ease both;
+  }
+  .corner-bracket::before,.corner-bracket::after{
+    content:"";position:absolute;width:10px;height:10px;
+    border-color:currentColor;border-style:solid;opacity:.5;
+  }
+  .corner-bracket::before{top:4px;left:4px;border-width:1.5px 0 0 1.5px;}
+  .corner-bracket::after{bottom:4px;right:4px;border-width:0 1.5px 1.5px 0;}
+  .lvl-card{
+    position:fixed;inset:0;z-index:9990;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:#0a061c;
+    pointer-events:none;
+  }
+  .boot-screen{
+    position:fixed;inset:0;z-index:9995;
+    background:#080516;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:0;
+  }
   .jester-zone{position:relative;display:inline-block;}
   .confetti-piece{position:fixed;width:8px;height:8px;border-radius:2px;animation:confettiFall linear forwards;pointer-events:none;z-index:9998;}
   .s1-farewell{background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,107,53,.07),rgba(199,125,255,.08));border:2px solid rgba(255,215,0,.45);border-radius:24px;padding:32px 28px;position:relative;overflow:hidden;}
@@ -2067,6 +2231,8 @@ export default function GameNight(){
   const [shareCard,setShareCard]=useState(null); // {sid, visible}
   const [confetti,setConfetti]=useState([]);
   const [foolsToast,setFoolsToast]=useState(0); // 0=hidden 1=warning 2=reveal
+  const [lvlCard,setLvlCard]=useState(null); // {label, icon, color, phase:'in'|'out'}
+  const [bootPhase,setBootPhase]=useState(0); // 0=logo 1=bar 2=done
 
   // ── Dual storage: window.storage (artifact) + localStorage (Netlify) ──
   const hasWS=typeof window!=="undefined"&&!!window.storage&&typeof window.storage.get==="function";
@@ -2140,6 +2306,15 @@ export default function GameNight(){
     tick();const id=setInterval(tick,1000);return()=>clearInterval(id);
   },[]);
 
+  // ── Game boot sequence ──
+  useEffect(()=>{
+    // Phase 0 → 1 after 600ms (logo visible, start bar)
+    const t1=setTimeout(()=>setBootPhase(1),600);
+    // Phase 1 → 2 after 1800ms (bar fills, fade out)
+    const t2=setTimeout(()=>setBootPhase(2),1800);
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
+
   // ── April Fools: confetti burst + fake alert ──
   useEffect(()=>{
     if(!isFoolsDay())return;
@@ -2169,7 +2344,37 @@ export default function GameNight(){
   },[]);
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),3000);};
-  const go=v=>{setPrevView(view);setView(v);setMobileOpen(false);(typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"}));};
+  const LEVEL_MAP={
+    home:     {label:"HOME BASE",     icon:"🏠",color:"#FF6B35"},
+    leaderboard:{label:"THE ARENA",   icon:"📊",color:"#FFD700"},
+    lobbies:  {label:"WAR ROOM",      icon:"🎮",color:"#00E5FF"},
+    hof:      {label:"HALL OF FAME",  icon:"🏛️",color:"#C77DFF"},
+    rivals:   {label:"RIVALS",        icon:"⚔️",color:"#FF4D8F"},
+    records:  {label:"RECORDS VAULT", icon:"🏅",color:"#FFAB40"},
+    charts:   {label:"INTEL",         icon:"📈",color:"#00FF94"},
+    season1:  {label:"SEASON 1",      icon:"🏆",color:"#FFD700"},
+    season2:  {label:"SEASON 2",      icon:"🚀",color:"#00E5FF"},
+    faq:      {label:"BRIEFING",      icon:"❓",color:"#7B8CDE"},
+    profile:  {label:"PLAYER FILE",   icon:"👤",color:"#FF6B35"},
+    admin:    {label:"COMMAND",       icon:"⚙️",color:"#FF5252"},
+  };
+  const go=v=>{
+    setPrevView(view);
+    setMobileOpen(false);
+    const lv=LEVEL_MAP[v];
+    if(lv&&v!==view){
+      setLvlCard({...lv,phase:"in"});
+      setTimeout(()=>{
+        setView(v);
+        if(typeof window!=="undefined")window.scrollTo({top:0,behavior:"instant"});
+        setLvlCard(c=>c?{...c,phase:"out"}:null);
+        setTimeout(()=>setLvlCard(null),500);
+      },700);
+    } else {
+      setView(v);
+      if(typeof window!=="undefined")window.scrollTo({top:0,behavior:"smooth"});
+    }
+  };
 
   // ── stats engine ──
   // "latest" = the most recent date that has sessions (not necessarily calendar today)
@@ -2301,6 +2506,44 @@ export default function GameNight(){
     // Fool's Crown: won a lobby on April Fools Day
     const wonAprilFools=sessions.some(s=>s.date==="2026-04-01"&&s.winner===pid);
     if(wonAprilFools)b.push({icon:"🃏",label:"Fool's Crown",hot:true});
+
+    // ── Season 1 Legacy Badges ──
+    const s1Sessions=sessions.filter(s=>s.date>="2026-03-01"&&s.date<="2026-03-31");
+    if(s1Sessions.length>0){
+      // S1 Champion: most wins in S1
+      const s1WinMap={};
+      s1Sessions.forEach(s=>{if(s.winner)s1WinMap[s.winner]=(s1WinMap[s.winner]||0)+1;});
+      const s1Champion=Object.entries(s1WinMap).sort((a,z)=>z[1]-a[1])[0];
+      if(s1Champion&&s1Champion[0]===pid)
+        b.push({icon:"🏆",label:"S1 Champion",hot:true});
+
+      // S1 Reaper: most kills in S1
+      const s1KillMap={};
+      s1Sessions.forEach(s=>Object.entries(s.kills||{}).forEach(([p,k])=>{s1KillMap[p]=(s1KillMap[p]||0)+k;}));
+      const s1Reaper=Object.entries(s1KillMap).sort((a,z)=>z[1]-a[1])[0];
+      if(s1Reaper&&s1Reaper[0]===pid)
+        b.push({icon:"💀",label:"S1 Reaper",hot:true});
+
+      // S1 Podium: top 2nd/3rd/4th by wins (champion excluded — they get the better badge)
+      const s1Standings=Object.entries(s1WinMap).sort((a,z)=>z[1]-a[1]);
+      const podiumPids=s1Standings.slice(1,4).map(x=>x[0]); // positions 2,3,4
+      if(podiumPids.includes(pid))
+        b.push({icon:"🥈",label:"S1 Podium"});
+
+      // S1 Record Breaker: best single game of S1
+      let s1BestGame={pid:"",k:0};
+      s1Sessions.forEach(s=>Object.entries(s.kills||{}).forEach(([p,k])=>{if(k>s1BestGame.k)s1BestGame={pid:p,k};}));
+      if(s1BestGame.pid===pid)
+        b.push({icon:"☄️",label:"S1 Record Breaker",hot:true});
+
+      // S1 Iron Man: most appearances in S1
+      const s1AppMap={};
+      s1Sessions.forEach(s=>(s.attendees||[]).forEach(p=>{s1AppMap[p]=(s1AppMap[p]||0)+1;}));
+      const s1IronMan=Object.entries(s1AppMap).sort((a,z)=>z[1]-a[1])[0];
+      if(s1IronMan&&s1IronMan[0]===pid)
+        b.push({icon:"🛡️",label:"S1 Iron Man"});
+    }
+
     return b;
   };
 
@@ -2361,7 +2604,23 @@ export default function GameNight(){
 
 
   // ── go to player profile ──
-  const goProfile=pid=>{setPrevView(view);setProfileId(pid);setView("profile");(typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"}));};
+  const goProfile=pid=>{
+    setPrevView(view);
+    setProfileId(pid);
+    const lv=LEVEL_MAP["profile"];
+    if(lv&&view!=="profile"){
+      setLvlCard({...lv,phase:"in"});
+      setTimeout(()=>{
+        setView("profile");
+        if(typeof window!=="undefined")window.scrollTo({top:0,behavior:"instant"});
+        setLvlCard(c=>c?{...c,phase:"out"}:null);
+        setTimeout(()=>setLvlCard(null),500);
+      },700);
+    } else {
+      setView("profile");
+      if(typeof window!=="undefined")window.scrollTo({top:0,behavior:"smooth"});
+    }
+  };
 
   // ── season sessions ──
   const getSeasonSessions=sid=>{
@@ -3006,11 +3265,63 @@ export default function GameNight(){
     </div>
   );
 
-  if(!loaded)return(
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",
-      height:"100vh",background:"var(--bg)",fontFamily:"Fredoka One",fontSize:"1.8rem",color:"#FFD700",gap:14}}>
+  // ── Game boot screen ──
+  if(!loaded||bootPhase<2)return(
+    <div className="boot-screen" style={{
+      opacity:bootPhase===2?0:1,
+      transition:"opacity .5s ease",
+      pointerEvents:bootPhase===2?"none":"all"
+    }}>
       <style dangerouslySetInnerHTML={{__html:CSS}}/>
-      <span className="spin-a" style={{display:"inline-block"}}>🎯</span>Loading…
+      {/* Scanline */}
+      <div style={{position:"absolute",inset:0,overflow:"hidden",pointerEvents:"none"}}>
+        <div style={{position:"absolute",left:0,right:0,height:"2px",
+          background:"linear-gradient(90deg,transparent,rgba(255,215,0,.15),transparent)",
+          animation:"bootScan 2.5s linear infinite"}}/>
+        <div style={{position:"absolute",inset:0,
+          backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)",
+          pointerEvents:"none"}}/>
+      </div>
+      {/* Logo block */}
+      <div style={{textAlign:"center",animation:"bootFade .6s ease both",marginBottom:48}}>
+        <div style={{fontSize:"clamp(3rem,12vw,5rem)",marginBottom:8,
+          animation:"bootPulse 2s ease-in-out infinite",lineHeight:1}}>🎯</div>
+        <div style={{fontFamily:"Barlow Condensed",fontWeight:900,
+          fontSize:"clamp(2.2rem,10vw,4rem)",letterSpacing:".12em",
+          color:"#FFD700",lineHeight:1,textTransform:"uppercase",
+          textShadow:"0 0 40px rgba(255,215,0,.5)"}}>
+          GAMES NIGHT
+        </div>
+        <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+          fontSize:"clamp(.7rem,2vw,1rem)",letterSpacing:".4em",
+          color:"rgba(255,255,255,.3)",marginTop:8,textTransform:"uppercase"}}>
+          BULLET LEAGUE · HOSTED BY MEKULA
+        </div>
+      </div>
+      {/* Boot messages + bar */}
+      <div style={{width:"min(320px,80vw)"}}>
+        <div style={{fontFamily:"Barlow Condensed",fontSize:".75rem",
+          letterSpacing:".15em",color:"rgba(0,229,255,.6)",
+          marginBottom:10,animation:"bootBlink 1.8s ease-in-out infinite",
+          textTransform:"uppercase"}}>
+          {bootPhase===0?"Initialising arena…":bootPhase===1?"Loading player data…":"Ready."}
+        </div>
+        <div style={{height:3,background:"rgba(255,255,255,.08)",borderRadius:2,overflow:"hidden"}}>
+          {bootPhase>=1&&<div style={{
+            height:"100%",borderRadius:2,
+            background:"linear-gradient(90deg,#FFD700,#FF6B35,#FF4D8F)",
+            animation:"bootBar 1.1s cubic-bezier(.4,0,.2,1) forwards",
+            boxShadow:"0 0 12px rgba(255,215,0,.6)"
+          }}/>}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:8,
+          fontFamily:"Barlow Condensed",fontSize:".65rem",
+          letterSpacing:".1em",color:"rgba(255,255,255,.2)"}}>
+          <span>S2 · ACTIVE</span>
+          <span>v72</span>
+          <span>mekulasgn.netlify.app</span>
+        </div>
+      </div>
     </div>
   );
 
@@ -3027,6 +3338,12 @@ export default function GameNight(){
   // ════════════════════════════════════════════════════
   return(<>
     <style dangerouslySetInnerHTML={{__html:CSS}}/>
+    {/* Global HUD scanline — ultra subtle, sets game tone across whole site */}
+    <div style={{
+      position:"fixed",inset:0,zIndex:1,pointerEvents:"none",
+      backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px)",
+      mixBlendMode:"multiply",
+    }}/>
     {showScroll&&<button className="scroll-top" onClick={()=>(typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"}))}>↑</button>}
 
     {/* TOAST */}
@@ -4515,16 +4832,41 @@ export default function GameNight(){
       {/* ═══════════════ LEADERBOARD ═══════════════ */}
       {view==="leaderboard"&&(
         <div className="fade-up">
-          <div style={{textAlign:"center",marginBottom:28}}>
-            <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
-              background:"linear-gradient(135deg,#00E5FF,#FF6B35,#C77DFF)",
-              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-              ...(foolsDay?{transform:"scaleY(-1)",display:"inline-block"}:{})}}>
-              📊 Leaderboard
-            </h2>
+          {/* Arena header */}
+          <div style={{marginBottom:28,position:"relative"}}>
+            {/* Top coordinate bar */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              marginBottom:12,padding:"0 2px"}}>
+              <span style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
+                letterSpacing:".25em",color:"rgba(255,215,0,.4)",textTransform:"uppercase"}}>
+                SECTOR: THE ARENA
+              </span>
+              <span style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
+                letterSpacing:".2em",color:"rgba(255,255,255,.2)",textTransform:"uppercase"}}>
+                {sessions.length} SESSIONS LOGGED
+              </span>
+            </div>
+            <div style={{textAlign:"center"}}>
+              <h2 style={{
+                fontFamily:"Barlow Condensed",fontWeight:900,
+                fontSize:"clamp(2.4rem,10vw,4.2rem)",
+                letterSpacing:".1em",lineHeight:.9,
+                background:"linear-gradient(135deg,#FFD700,#FF6B35,#FF4D8F)",
+                WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+                textShadow:"none",
+                ...(foolsDay?{transform:"scaleY(-1)",display:"inline-block"}:{})
+              }}>
+                THE ARENA
+              </h2>
+              <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                fontSize:".8rem",letterSpacing:".3em",
+                color:"rgba(255,255,255,.2)",marginTop:6,textTransform:"uppercase"}}>
+                SEASON 2 · ACTIVE · RANKINGS LIVE
+              </div>
+            </div>
             {foolsDay&&(
-              <div style={{fontFamily:"Fredoka One",color:"#FF4D8F",fontSize:".82rem",
-                marginTop:8,letterSpacing:1}}>
+              <div style={{textAlign:"center",fontFamily:"Fredoka One",color:"#FF4D8F",
+                fontSize:".82rem",marginTop:8,letterSpacing:1}}>
                 🃏 Upside Down Edition — Last place is first today
               </div>
             )}
@@ -4642,82 +4984,123 @@ export default function GameNight(){
           </div>
 
           {/* Desktop table */}
-          <div className="lb-table" style={{...card(),overflow:"hidden"}}>
+          <div className="lb-table hud-bg" style={{...card(),overflow:"hidden",border:"1.5px solid rgba(255,255,255,.1)"}}>
+            {/* Arena header */}
             <div style={{display:"grid",gridTemplateColumns:"46px 1fr 74px 74px 74px 74px 74px",
-              padding:"10px 18px",background:"rgba(0,0,0,.5)",
-              fontSize:".64rem",color:"var(--text3)",fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>
-              <span>#</span><span>Player</span>
-              <span style={{textAlign:"center"}}>🏆W</span>
-              <span style={{textAlign:"center"}}>💀K</span>
-              <span style={{textAlign:"center"}}>⚡K/G</span>
-              <span style={{textAlign:"center"}}>🎯Win%</span>
-              <span style={{textAlign:"center"}}>📅G</span>
+              padding:"10px 18px",
+              background:"linear-gradient(90deg,rgba(0,0,0,.7),rgba(0,0,0,.4))",
+              borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+              {["#","PLAYER","W","K","K/G","WIN%","G"].map((h,i)=>(
+                <span key={i} style={{
+                  fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".72rem",
+                  letterSpacing:".15em",color:"rgba(255,255,255,.3)",
+                  textAlign:i>1?"center":"left",textTransform:"uppercase"
+                }}>{h}</span>
+              ))}
             </div>
             {filteredLB.map((player,i)=>{
               const globalRank=sortedLB.findIndex(p=>p.id===player.id);
               const medals=["🥇","🥈","🥉"];
               const rank=getRank(player.id);
               const isHL=spotlight===player.id;
+              const isFirst=globalRank===0&&sessions.length>0&&!foolsDay;
               const streak=getStreak(player.id);
               return(
-                <div key={player.id} className="lb-row" onClick={()=>goProfile(player.id)} style={{
-                  display:"grid",gridTemplateColumns:"46px 1fr 74px 74px 74px 74px 74px",
-                  padding:"12px 18px",alignItems:"center",cursor:"pointer",
-                  borderTop:"1px solid rgba(255,255,255,.05)",
-                  background:isHL?`${player.color}12`:globalRank===0&&sessions.length>0?"rgba(255,215,0,.04)":"transparent",
-                  outline:isHL?`2px solid ${player.color}44`:"none",borderRadius:isHL?8:0,
-                  animation:`slideR .3s ease ${Math.min(i,.3)*i*.02}s both`}}>
-                  <span style={{fontFamily:"Fredoka One",fontSize:globalRank<3?"1.2rem":"1rem",color:globalRank<3?"#fff":"var(--text3)"}}>
+                <div key={player.id}
+                  className={`arena-row${isFirst?" arena-row-1":""}`}
+                  onClick={()=>goProfile(player.id)}
+                  style={{
+                    display:"grid",gridTemplateColumns:"46px 1fr 74px 74px 74px 74px 74px",
+                    padding:"11px 18px",alignItems:"center",cursor:"pointer",
+                    borderTop:"1px solid rgba(255,255,255,.04)",
+                    background:isHL?`${player.color}14`:isFirst?"linear-gradient(90deg,rgba(255,215,0,.07),transparent)":"transparent",
+                    outline:isHL?`2px solid ${player.color}44`:"none",
+                    borderRadius:isHL?6:0,
+                    animationDelay:`${Math.min(i,.25)*i*.025}s`,
+                  }}>
+                  {/* Rank number */}
+                  <span className="rank-num" style={{
+                    fontSize:globalRank<3?"1.3rem":".95rem",
+                    color:isFirst?"#FFD700":globalRank===1?"#C0C0C0":globalRank===2?"#CD7F32":"rgba(255,255,255,.25)",
+                    animation:isFirst?"crownSpin 3s ease-in-out infinite":undefined,
+                    display:"inline-block",
+                  }}>
                     {globalRank<3?medals[globalRank]:globalRank+1}
                   </span>
+                  {/* Player info */}
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <Av p={player} size={34} glow={isHL||globalRank===0}/>
+                    <div style={{position:"relative"}}>
+                      <Av p={player} size={34} glow={isHL||isFirst}/>
+                      {isFirst&&<div style={{
+                        position:"absolute",inset:-2,borderRadius:"50%",
+                        border:"1.5px solid rgba(255,215,0,.5)",
+                        boxShadow:"0 0 12px rgba(255,215,0,.4)",
+                        animation:"rankGlow 2s ease-in-out infinite",
+                        pointerEvents:"none"
+                      }}/>}
+                    </div>
                     <div>
-                      <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem",
-                        maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      <div style={{
+                        fontFamily:isFirst?"Barlow Condensed":"Fredoka One",
+                        fontWeight:isFirst?900:400,
+                        letterSpacing:isFirst?".04em":0,
+                        color:isFirst?"#FFD700":"#fff",
+                        fontSize:".9rem",
+                        maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
+                      }}>
                         {player.host?"👑 ":""}{dn(player.username)}
                       </div>
-                      <div style={{fontSize:".64rem",color:rank.color,fontWeight:700}}>
+                      <div style={{fontSize:".63rem",color:rank.color,fontWeight:700,letterSpacing:".02em"}}>
                         {rank.title}{streak>=2?` 🔥×${streak}`:""}
                       </div>
-                      {/* Form guide dots */}
+                      {/* Form dots */}
                       {(()=>{
                         const form=getFormGuide(player.id,5);
                         if(!form.length)return null;
                         return(
                           <div style={{display:"flex",gap:3,marginTop:4}}>
                             {form.map((f,fi)=>(
-                              <div key={fi} title={f.win?"W":"L"} style={{
-                                width:8,height:8,borderRadius:"50%",
-                                background:f.win?`${player.color}`:"rgba(255,255,255,.2)",
+                              <div key={fi} style={{
+                                width:7,height:7,borderRadius:"50%",
+                                background:f.win?player.color:"rgba(255,255,255,.18)",
                                 boxShadow:f.win?`0 0 5px ${player.color}88`:"none",
                                 flexShrink:0}}/>
                             ))}
                           </div>
                         );
                       })()}
-                      {/* Benchmark chasing line */}
+                      {/* Benchmark */}
                       {(()=>{
                         const bm=getBenchmark(player.id);
                         if(!bm)return null;
                         return(
-                          <div style={{fontSize:".58rem",color:"var(--text3)",fontWeight:700,
-                            marginTop:3,display:"flex",alignItems:"center",gap:3}}>
-                            <span style={{opacity:.6}}>↑</span>
-                            <span style={{color:bm.target.color,opacity:.8}}>{bm.target.username}</span>
-                            <span style={{opacity:.5}}>
-                              {bm.sameWins?`${bm.killGap}K away`:`${bm.winGap}W away`}
-                            </span>
+                          <div style={{fontSize:".57rem",color:"var(--text3)",fontWeight:700,
+                            marginTop:3,display:"flex",alignItems:"center",gap:3,
+                            fontFamily:"Barlow Condensed",letterSpacing:".05em"}}>
+                            <span style={{opacity:.5}}>↑</span>
+                            <span style={{color:bm.target.color,opacity:.75}}>{bm.target.username}</span>
+                            <span style={{opacity:.4}}>{bm.sameWins?`${bm.killGap}K`:` ${bm.winGap}W`}</span>
                           </div>
                         );
                       })()}
                     </div>
                   </div>
-                  <span style={{textAlign:"center",fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.08rem"}}>{player.wins}</span>
-                  <span style={{textAlign:"center",fontFamily:"Fredoka One",color:"#FF4D8F",fontSize:"1.08rem"}}>{player.kills}</span>
-                  <span style={{textAlign:"center",fontFamily:"Fredoka One",color:"#00E5FF",fontSize:"1.08rem"}}>{player.kd}</span>
-                  <span style={{textAlign:"center",fontFamily:"Fredoka One",color:"#00FF94",fontSize:"1.08rem"}}>{player.winRate}%</span>
-                  <span style={{textAlign:"center",fontFamily:"Fredoka One",color:"#FFAB40",fontSize:"1.08rem"}}>{player.appearances}</span>
+                  {/* HUD stats */}
+                  {[
+                    {v:player.wins,     c:"#FFD700"},
+                    {v:player.kills,    c:"#FF4D8F"},
+                    {v:player.kd,       c:"#00E5FF"},
+                    {v:player.winRate+"%",c:"#00FF94"},
+                    {v:player.appearances,c:"#FFAB40"},
+                  ].map((s,si)=>(
+                    <span key={si} className="stat-hud" style={{
+                      textAlign:"center",
+                      fontSize:isFirst?"1.1rem":".98rem",
+                      color:isFirst?s.c:`${s.c}cc`,
+                      animationDelay:`${si*.04+i*.02}s`,
+                      textShadow:isFirst?`0 0 12px ${s.c}66`:"none",
+                    }}>{s.v}</span>
+                  ))}
                 </div>
               );
             })}
@@ -7035,7 +7418,61 @@ export default function GameNight(){
       );
     })()}
 
-    {/* ── April Fools: Confetti Burst ── */}
+    {/* ── LEVEL TITLE CARD ── */}
+    {lvlCard&&(
+      <div className="lvl-card" style={{
+        opacity:lvlCard.phase==="out"?0:1,
+        transform:lvlCard.phase==="out"?"scale(1.04)":"scale(1)",
+        transition:"opacity .45s ease, transform .45s ease",
+      }}>
+        {/* BG grid */}
+        <div style={{position:"absolute",inset:0,
+          backgroundImage:"linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)",
+          backgroundSize:"44px 44px",pointerEvents:"none"}}/>
+        {/* Sweep bar */}
+        <div style={{
+          position:"absolute",left:0,top:0,bottom:0,
+          background:`linear-gradient(90deg,${lvlCard.color}22,${lvlCard.color}08,transparent)`,
+          animation:"lvlSweep .7s cubic-bezier(.16,1,.3,1) both",
+          width:"100%",
+          borderLeft:`3px solid ${lvlCard.color}`,
+          pointerEvents:"none"
+        }}/>
+        {/* Scanline */}
+        <div style={{position:"absolute",left:0,right:0,height:"1.5px",
+          background:`linear-gradient(90deg,transparent,${lvlCard.color}44,transparent)`,
+          animation:"bootScan 1.8s linear infinite",pointerEvents:"none"}}/>
+        {/* Content */}
+        <div style={{textAlign:"center",position:"relative",zIndex:2,padding:"0 20px"}}>
+          <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+            fontSize:"clamp(.7rem,2vw,.95rem)",letterSpacing:".5em",
+            color:"rgba(255,255,255,.3)",marginBottom:14,textTransform:"uppercase",
+            animation:"lvlSub .4s ease .1s both"}}>
+            NOW ENTERING
+          </div>
+          <div style={{fontSize:"clamp(2rem,6vw,2.5rem)",marginBottom:10,
+            animation:"lvlSub .4s ease .05s both"}}>{lvlCard.icon}</div>
+          <div style={{
+            fontFamily:"Barlow Condensed",fontWeight:900,
+            fontSize:"clamp(2.8rem,12vw,6rem)",
+            letterSpacing:".08em",lineHeight:.9,
+            color:lvlCard.color,textTransform:"uppercase",
+            textShadow:`0 0 60px ${lvlCard.color}88`,
+            animation:"lvlText .6s cubic-bezier(.16,1,.3,1) both",
+            animation:"lvlFlicker .8s ease both",
+          }}>
+            {lvlCard.label}
+          </div>
+          {/* Animated line */}
+          <div style={{height:2,marginTop:18,
+            background:`linear-gradient(90deg,transparent,${lvlCard.color},transparent)`,
+            animation:"lvlLine .6s ease .2s both",width:0,margin:"18px auto 0"}}>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── CONFETTI ── */}
     {confetti.map(p=>(
       <div key={p.id} className="confetti-piece" style={{
         left:`${p.left}%`,
