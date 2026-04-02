@@ -3362,6 +3362,7 @@ export default function GameNight(){
   const navItems=[
     {id:"home",      l:"HOME BASE"},
     {id:"leaderboard",l:"THE ARENA"},
+    {id:"profile",   l:"COMBAT FILE"},
     {id:"lobbies",   l:"WAR ROOM"},
     {id:"hof",       l:"LEGENDS WING"},
     {id:"rivals",    l:"RIVALS"},
@@ -3370,7 +3371,6 @@ export default function GameNight(){
     {id:"season1",   l:"S1 ARCHIVE"},
     {id:"season2",   l:todayStr()<"2026-04-01"?`S2 ${s2CdClock.d>0?s2CdClock.d+"d":s2CdClock.h+"h"}`:"SEASON 2"},
     {id:"faq",       l:"BRIEFING"},
-    ...(view==="profile"&&profileId?[{id:"profile",l:`${players.find(x=>x.id===profileId)?.username||"Profile"}`}]:[]),
   ];
 
   // ── April Fools display name — scrambles on Apr 1 ──
@@ -3777,19 +3777,63 @@ export default function GameNight(){
                 </span>
               </div>
 
-              {/* Hero title */}
-              <div style={{marginBottom:26}}>
-                <h1 className="bc9" style={{
-                  fontSize:"clamp(3.5rem,14vw,7rem)",letterSpacing:".05em",lineHeight:.82,
-                  background:"linear-gradient(160deg,#FFD700 0%,#FF6B35 40%,#FF4D8F 70%,#C77DFF 100%)",
-                  WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                  margin:"0 0 12px",
-                  ...(foolsDay?{filter:"hue-rotate(180deg)"}:{})}}>
-                  {foolsDay?"🃏 GAMES":"GAMES"}<br/>NIGHT
-                </h1>
-                <div className="bc7" style={{fontSize:".72rem",letterSpacing:".26em",color:"var(--text3)"}}>
-                  {FEATURED_GAME} · MON–SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
-                </div>
+              {/* Hero title — Easter / Fools / default */}
+              <div style={{marginBottom:26,position:"relative"}}>
+                {(()=>{
+                  const isEaster=isEventActive();
+                  if(isEaster) return(
+                    <>
+                      <div style={{marginBottom:10}}>
+                        <span className="easter-hud">
+                          <span className="easter-hud-dot"/>Easter 2026
+                        </span>
+                      </div>
+                      <div className="easter-logo-zone" style={{display:"inline-block"}}>
+                        {[
+                          {e:"🥚",top:"-14px",left:"4px",  delay:"0s",  dur:"3.0s",anim:"eggBounce"},
+                          {e:"🐣",top:"-18px",right:"2px", delay:".6s", dur:"2.6s",anim:"eggFloat"},
+                          {e:"🥚",bottom:"-8px",left:"12px",delay:"1.0s",dur:"3.4s",anim:"eggDrift"},
+                          {e:"🐰",bottom:"-6px",right:"6px",delay:".3s",dur:"4.0s",anim:"eggSpin"},
+                          {e:"🌸",top:"28%",left:"-16px",  delay:"1.3s",dur:"2.8s",anim:"eggFloat"},
+                          {e:"🥚",top:"26%",right:"-14px", delay:".8s", dur:"3.2s",anim:"eggBounce"},
+                        ].map((eg,ei)=>(
+                          <span key={ei} style={{
+                            position:"absolute",fontSize:"clamp(1.1rem,3vw,1.6rem)",
+                            top:eg.top||"auto",bottom:eg.bottom||"auto",
+                            left:eg.left||"auto",right:eg.right||"auto",
+                            animation:`${eg.anim} ${eg.dur} ease-in-out ${eg.delay} infinite`,
+                            pointerEvents:"none",zIndex:2,userSelect:"none",
+                            filter:"drop-shadow(0 0 8px rgba(255,215,0,.45))",
+                          }}>{eg.e}</span>
+                        ))}
+                        <h1 className="hero-h1 easter-h1" style={{
+                          WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+                          backgroundClip:"text",filter:"none",position:"relative",zIndex:1,
+                          margin:"0 0 12px"}}>
+                          🐣 GAMES<br/>NIGHT
+                        </h1>
+                      </div>
+                      <div className="bc7" style={{fontSize:".72rem",letterSpacing:".26em",color:"var(--text3)"}}>
+                        {FEATURED_GAME} · EASTER BREAK · DOOM ISLAND
+                      </div>
+                    </>
+                  );
+                  return(
+                    <>
+                      <h1 className="bc9" style={{
+                        fontSize:"clamp(3.5rem,14vw,7rem)",letterSpacing:".05em",lineHeight:.82,
+                        background:"linear-gradient(160deg,#FFD700 0%,#FF6B35 40%,#FF4D8F 70%,#C77DFF 100%)",
+                        WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+                        margin:"0 0 12px",
+                        ...(foolsDay?{filter:"hue-rotate(180deg)"}:{})}}>
+                        {foolsDay?"🃏 GAMES":"GAMES"}<br/>NIGHT
+                      </h1>
+                      <div className="bc7" style={{fontSize:".72rem",letterSpacing:".26em",color:"var(--text3)"}}>
+                        {FEATURED_GAME} · MON–SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Season stat strip */}
