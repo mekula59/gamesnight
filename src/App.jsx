@@ -18,7 +18,7 @@ const isEventActive=()=>{
   const{start,startHour,end,endHour}=SEASONAL_EVENT;
   return(ds===start&&hr>=startHour)||(ds>start&&ds<end)||(ds===end&&hr<endHour);
 };
-const STORAGE_VERSION    = "gn-v73"; // bumped — Season 2 opens Apr 1 (Lobbies 334–349) + Fool's Crown badges live
+const STORAGE_VERSION    = "gn-v74"; // bumped — full game-feel redesign: zone entry, arena LB, combat file, badge flip, intel hover, weekly missions, ambient glow
 const SITE_TITLE         = "Games Night";
 const HOSTED_BY          = "Mekula";
 const FEATURED_GAME      = "Bullet League";
@@ -1806,7 +1806,7 @@ const SEASONS = [
 ];
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Barlow+Condensed:wght@700;900&family=Nunito:wght@400;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Barlow+Condensed:wght@400;600;700;900&family=Nunito:wght@400;600;700;800;900&family=Share+Tech+Mono&display=swap');
   :root{
     --bg:#160d2e;--bg2:#1e1245;--card:#221650;--card2:#2a1c60;
     --border:rgba(255,255,255,.15);--border2:rgba(255,255,255,.25);
@@ -1839,6 +1839,107 @@ const CSS = `
   @keyframes easterRain{0%{transform:translateY(-20px) rotate(0deg);opacity:.9}100%{transform:translateY(340px) rotate(540deg);opacity:0}}
   @keyframes borderRun{0%{background-position:0 0,100% 0,100% 100%,0 100%}100%{background-position:300px 0,100% 300px,-300px 100%,0 -300px}}
   @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}}
+
+  /* ── V74 GAME-FEEL SYSTEM ─────────────────────────────────── */
+
+  /* Typography utilities */
+  .bc{font-family:"Barlow Condensed",sans-serif!important;}
+  .bc9{font-family:"Barlow Condensed",sans-serif!important;font-weight:900!important;}
+  .bc7{font-family:"Barlow Condensed",sans-serif!important;font-weight:700!important;}
+  .mono{font-family:"Share Tech Mono",monospace!important;}
+
+  /* Zone panel — hard left edge, no left radius */
+  .zone-panel{
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.06);
+    border-left:3px solid var(--panel-accent,rgba(255,255,255,.15));
+    border-radius:0 6px 6px 0;
+  }
+  .zone-panel-accent{
+    background:linear-gradient(135deg,var(--panel-accent-bg,rgba(255,255,255,.05)),rgba(0,0,0,.4));
+    border:1px solid var(--panel-accent-border,rgba(255,255,255,.1));
+    border-left:3px solid var(--panel-accent,rgba(255,255,255,.3));
+    border-radius:0 6px 6px 0;
+  }
+
+  /* Intel hover card */
+  .intel-card{
+    position:absolute;bottom:calc(100% + 8px);left:50%;
+    transform:translateX(-50%);
+    z-index:500;pointer-events:none;
+    background:var(--card2);
+    border-radius:0 8px 8px 8px;
+    padding:10px 14px;min-width:170px;white-space:nowrap;
+    box-shadow:0 12px 32px rgba(0,0,0,.75),0 0 20px rgba(0,0,0,.2);
+    animation:intelIn .14s ease;
+  }
+  @keyframes intelIn{from{opacity:0;transform:translateX(-50%) translateY(5px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  .av-wrap{position:relative;display:inline-flex;flex-shrink:0;}
+  .av-wrap .intel-card{opacity:0;pointer-events:none;transition:opacity .15s ease;}
+  .av-wrap:hover .intel-card{opacity:1;pointer-events:auto;}
+
+  /* Badge flip card */
+  .badge-flip-wrap{width:118px;height:64px;cursor:pointer;perspective:900px;flex-shrink:0;}
+  .badge-flip-inner{
+    width:100%;height:100%;position:relative;
+    transform-style:preserve-3d;
+    transition:transform .42s cubic-bezier(.4,0,.2,1);
+  }
+  .badge-flip-wrap.flipped .badge-flip-inner{transform:rotateY(180deg);}
+  .badge-flip-front,.badge-flip-back{
+    position:absolute;inset:0;backface-visibility:hidden;
+    border-radius:4px;
+    display:flex;align-items:center;justify-content:center;padding:5px 8px;gap:5px;
+  }
+  .badge-flip-back{transform:rotateY(180deg);background:var(--card2);}
+
+  /* Weekly mission board */
+  .mission-board{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:6px;
+    margin-bottom:22px;
+  }
+  .mission-item{
+    padding:14px 16px;
+    background:rgba(255,255,255,.025);
+    border-radius:0 6px 6px 0;
+    border-left:3px solid var(--m-color,rgba(255,255,255,.2));
+    border-top:1px solid rgba(255,255,255,.05);
+    border-right:1px solid rgba(255,255,255,.05);
+    border-bottom:1px solid rgba(255,255,255,.05);
+  }
+  .mission-bar-track{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-top:8px;}
+  .mission-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+
+  /* Arena row upgrades */
+  .arena-row-v74{
+    transition:transform .1s,background .1s;
+    cursor:default;
+  }
+  .arena-row-v74:hover{transform:translateX(3px);}
+
+  /* Records vault grid */
+  .vault-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:8px;
+  }
+  .vault-card{
+    padding:18px 18px;
+    border-radius:0 6px 6px 0;
+    border-left:3px solid var(--vc,rgba(255,255,255,.2));
+    border-top:1px solid rgba(255,255,255,.04);
+    border-right:1px solid rgba(255,255,255,.04);
+    border-bottom:1px solid rgba(255,255,255,.04);
+  }
+
+  /* Zone ambient glow */
+  .zone-glow-orb{
+    position:fixed;top:-18%;left:50%;transform:translateX(-50%);
+    width:75vw;height:40vh;z-index:0;pointer-events:none;
+    transition:background .9s ease;
+  }
   .easter-hud{display:inline-flex;align-items:center;gap:6px;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.35);border-radius:4px;padding:3px 12px;font-family:"Barlow Condensed",sans-serif;font-size:.72rem;font-weight:700;letter-spacing:3px;color:#ff6b35;text-transform:uppercase;animation:hudBlink 4s ease-in-out infinite;margin-bottom:12px;}
   .easter-hud-dot{width:6px;height:6px;border-radius:50%;background:#ff6b35;flex-shrink:0;}
   .easter-logo-zone{position:relative;display:inline-block;padding:20px 48px 14px;}
@@ -2345,17 +2446,17 @@ export default function GameNight(){
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),3000);};
   const LEVEL_MAP={
-    home:     {label:"HOME BASE",     icon:"🏠",color:"#FF6B35"},
-    leaderboard:{label:"THE ARENA",   icon:"📊",color:"#FFD700"},
-    lobbies:  {label:"WAR ROOM",      icon:"🎮",color:"#00E5FF"},
-    hof:      {label:"HALL OF FAME",  icon:"🏛️",color:"#C77DFF"},
-    rivals:   {label:"RIVALS",        icon:"⚔️",color:"#FF4D8F"},
-    records:  {label:"RECORDS VAULT", icon:"🏅",color:"#FFAB40"},
+    home:     {label:"HOME BASE",     icon:"⚡",color:"#FF6B35"},
+    leaderboard:{label:"THE ARENA",   icon:"⚔️", color:"#FFD700"},
+    lobbies:  {label:"WAR ROOM",      icon:"🎮",color:"#FF4D8F"},
+    hof:      {label:"LEGENDS WING",  icon:"🏛️",color:"#C77DFF"},
+    rivals:   {label:"RIVALS",        icon:"⚔️", color:"#FF4D8F"},
+    records:  {label:"THE VAULT",     icon:"🏅",color:"#C77DFF"},
     charts:   {label:"INTEL",         icon:"📈",color:"#00FF94"},
-    season1:  {label:"SEASON 1",      icon:"🏆",color:"#FFD700"},
+    season1:  {label:"S1 ARCHIVE",    icon:"🏆",color:"#FFD700"},
     season2:  {label:"SEASON 2",      icon:"🚀",color:"#00E5FF"},
-    faq:      {label:"BRIEFING",      icon:"❓",color:"#7B8CDE"},
-    profile:  {label:"PLAYER FILE",   icon:"👤",color:"#FF6B35"},
+    faq:      {label:"BRIEFING ROOM", icon:"❓",color:"#7B8CDE"},
+    profile:  {label:"COMBAT FILE",   icon:"👤",color:"#FF6B35"},
     admin:    {label:"COMMAND",       icon:"⚙️",color:"#FF5252"},
   };
   const go=v=>{
@@ -2683,6 +2784,28 @@ export default function GameNight(){
     const ice=[...wSt].filter(p=>p.wins===0&&p.appearances>=5).sort((a,b)=>b.appearances-a.appearances);
     return{week:ws,end:latestDate,lobbies:wSess.length,mvpWins:byW[0],mvpKills:byK[0],mvpKD:byKD[0],mvpActive:byA[0],iceCold:ice[0]||null};
   };
+  // ── Weekly Missions — auto-generated from current week data ──
+  const getWeeklyMissions=()=>{
+    const weekSess=getPeriodSessions("week");
+    const weekKills=weekSess.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
+    const weekWinners=[...new Set(weekSess.filter(s=>s.winner).map(s=>s.winner))].length;
+    const lobbiesTarget=15,killsTarget=60,winnersTarget=4;
+    return[
+      {icon:"🎮",color:"#00E5FF",label:"FULL DEPLOYMENT",
+       desc:"15 lobbies played this week",
+       progress:Math.min(weekSess.length,lobbiesTarget),target:lobbiesTarget,
+       unit:`${weekSess.length} of ${lobbiesTarget} lobbies`},
+      {icon:"💀",color:"#FF4D8F",label:"KILL QUOTA",
+       desc:"Community racks up 60 kills",
+       progress:Math.min(weekKills,killsTarget),target:killsTarget,
+       unit:`${weekKills} of ${killsTarget} kills`},
+      {icon:"👑",color:"#FFD700",label:"THRONE CONTESTED",
+       desc:"4 different winners claim a lobby",
+       progress:Math.min(weekWinners,winnersTarget),target:winnersTarget,
+       unit:`${weekWinners} of ${winnersTarget} winners`},
+    ];
+  };
+
   // ── All-Time Records ──
   const getRecords=()=>{
     if(!sessions.length)return null;
@@ -3237,33 +3360,86 @@ export default function GameNight(){
   const primaryBtn=(ex={})=>({border:"none",borderRadius:11,cursor:"pointer",fontFamily:"Fredoka One",fontSize:"1rem",padding:"13px 26px",color:"#fff",background:"linear-gradient(135deg,#FF6B35,#FF4D8F)",boxShadow:"0 4px 22px rgba(255,107,53,.5)",...ex});
 
   const navItems=[
-    {id:"home",      l:"🏠 Home"},
-    {id:"leaderboard",l:"📊 Board"},
-    {id:"lobbies",   l:"🎮 Lobbies"},
-    {id:"hof",       l:"🏛️ HoF"},
-    {id:"rivals",    l:"⚔️ Rivals"},
-    {id:"records",   l:"🏅 Records"},
-    {id:"charts",    l:"📈 Charts"},
-    {id:"season1",   l:"🏆 S1"},
-    {id:"season2",   l:todayStr()<"2026-04-01"?`⏳ S2 ${s2CdClock.d>0?s2CdClock.d+"d":s2CdClock.h+"h"}`:"🚀 S2"},
-    {id:"faq",       l:"❓ FAQ"},
-    ...(view==="profile"&&profileId?[{id:"profile",l:`👤 ${players.find(x=>x.id===profileId)?.username||"Profile"}`}]:[]),
+    {id:"home",      l:"HOME BASE"},
+    {id:"leaderboard",l:"THE ARENA"},
+    {id:"lobbies",   l:"WAR ROOM"},
+    {id:"hof",       l:"LEGENDS WING"},
+    {id:"rivals",    l:"RIVALS"},
+    {id:"records",   l:"THE VAULT"},
+    {id:"charts",    l:"INTEL"},
+    {id:"season1",   l:"S1 ARCHIVE"},
+    {id:"season2",   l:todayStr()<"2026-04-01"?`S2 ${s2CdClock.d>0?s2CdClock.d+"d":s2CdClock.h+"h"}`:"SEASON 2"},
+    {id:"faq",       l:"BRIEFING"},
+    ...(view==="profile"&&profileId?[{id:"profile",l:`${players.find(x=>x.id===profileId)?.username||"Profile"}`}]:[]),
   ];
 
   // ── April Fools display name — scrambles on Apr 1 ──
   const dn=(username)=>foolsDay?scrambleName(username):username;
 
   // ── avatar ──
-  const Av=({p,size=44,glow=false})=>(
-    <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,
-      background:`linear-gradient(135deg,${p.color},${p.color}88)`,
-      display:"flex",alignItems:"center",justifyContent:"center",
-      fontFamily:"Fredoka One",fontSize:size*.36+"px",color:"#fff",
-      textShadow:"0 1px 4px rgba(0,0,0,.6)",
-      boxShadow:glow?`0 0 24px ${p.color}66`:"none"}}>
-      {p.username[0].toUpperCase()}
+  // ── Intel hover card ──
+  const IntelCard=({p})=>{
+    const st=getStats(p.id);
+    const rk=getRank(p.id);
+    const form=getFormGuide(p.id,5);
+    const dr=getDrought(p.id);
+    return(
+      <div className="intel-card" style={{border:`1px solid ${p.color}44`,borderTop:`2px solid ${p.color}`}}>
+        <div className="bc9" style={{fontSize:".72rem",color:p.color,letterSpacing:".07em",marginBottom:4}}>
+          {rk.title}
+        </div>
+        <div style={{display:"flex",gap:3,marginBottom:6}}>
+          {form.map((f,i)=>(
+            <div key={i} style={{width:8,height:8,borderRadius:"50%",
+              background:f.win?p.color:"rgba(255,255,255,.2)",
+              boxShadow:f.win?`0 0 5px ${p.color}88`:"none"}}/>
+          ))}
+        </div>
+        <div className="bc7" style={{fontSize:".68rem",color:"#c8baff",letterSpacing:".05em"}}>
+          {st.wins}W · {st.kills}K
+          {dr>3&&<span style={{color:"#FF6B35",marginLeft:6}}>{dr}G drought</span>}
+        </div>
+      </div>
+    );
+  };
+
+  // ── Avatar — intel card shown via CSS hover, zero hooks ──
+  const Av=({p,size=44,glow=false,intel=false})=>(
+    <div className="av-wrap">
+      <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,
+        background:`linear-gradient(135deg,${p.color},${p.color}88)`,
+        display:"flex",alignItems:"center",justifyContent:"center",
+        fontFamily:"Barlow Condensed",fontWeight:900,fontSize:size*.38+"px",color:"#fff",
+        textShadow:"0 1px 4px rgba(0,0,0,.6)",
+        boxShadow:glow?`0 0 24px ${p.color}66`:"none"}}>
+        {p.username[0].toUpperCase()}
+      </div>
+      {intel&&<IntelCard p={p}/>}
     </div>
   );
+
+  // ── Badge flip — DOM classList toggle, no hooks ──
+  const BadgeFlip=({b,playerColor})=>{
+    const bc=BADGE_CATALOGUE.find(x=>x.name===b.label)||{how:"Earned through gameplay"};
+    return(
+      <div className="badge-flip-wrap" title="Click to reveal"
+        onClick={e=>e.currentTarget.classList.toggle("flipped")}>
+        <div className="badge-flip-inner">
+          <div className="badge-flip-front" style={{
+            background:`${playerColor}14`,border:`1px solid ${playerColor}33`}}>
+            <span style={{fontSize:"1rem",flexShrink:0}}>{b.icon}</span>
+            <span className="bc7" style={{fontSize:".62rem",color:playerColor,letterSpacing:".04em",
+              lineHeight:1.3,overflow:"hidden",display:"-webkit-box",
+              WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{b.label}</span>
+          </div>
+          <div className="badge-flip-back" style={{border:`1px solid ${playerColor}44`}}>
+            <span style={{fontFamily:"Nunito",fontWeight:700,fontSize:".6rem",
+              color:"#c8baff",lineHeight:1.4,textAlign:"center"}}>{bc.how}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // ── Game boot screen ──
   if(!loaded||bootPhase<2)return(
@@ -3338,11 +3514,15 @@ export default function GameNight(){
   // ════════════════════════════════════════════════════
   return(<>
     <style dangerouslySetInnerHTML={{__html:CSS}}/>
-    {/* Global HUD scanline — ultra subtle, sets game tone across whole site */}
+    {/* Global HUD scanline */}
     <div style={{
       position:"fixed",inset:0,zIndex:1,pointerEvents:"none",
       backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px)",
       mixBlendMode:"multiply",
+    }}/>
+    {/* Ambient zone glow — shifts colour per zone */}
+    <div className="zone-glow-orb" style={{
+      background:`radial-gradient(ellipse,${(LEVEL_MAP[view]||LEVEL_MAP.home).color}0d 0%,transparent 70%)`,
     }}/>
     {showScroll&&<button className="scroll-top" onClick={()=>(typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"}))}>↑</button>}
 
@@ -3460,20 +3640,26 @@ export default function GameNight(){
 
     {/* NAV */}
     <nav style={{background:"rgba(22,13,46,.97)",backdropFilter:"blur(20px)",
-      borderBottom:foolsDay?"1px solid rgba(255,77,143,.5)":"1px solid rgba(255,255,255,.1)",
+      borderBottom:foolsDay?"1px solid rgba(255,77,143,.5)":"1px solid rgba(255,255,255,.08)",
       animation:foolsDay?"foolsShimmer 3s ease-in-out infinite":undefined,
-      position:"sticky",top:0,zIndex:100,padding:"0 16px",height:60,
+      position:"sticky",top:0,zIndex:100,padding:"0 16px",height:58,
       display:"flex",alignItems:"center",gap:6}}>
-      <div onClick={()=>go("home")} style={{cursor:"pointer",fontFamily:"Fredoka One",
-        fontSize:"1.2rem",color:"#FFD700",marginRight:6,flexShrink:0}}>
-        {foolsDay?"🃏":"🎯"} {SITE_TITLE}{foolsDay?" 🃏":""}
+      <div onClick={()=>go("home")} style={{cursor:"pointer",
+        fontFamily:"Barlow Condensed",fontWeight:900,letterSpacing:".12em",
+        fontSize:"1.1rem",color:"#FFD700",marginRight:8,flexShrink:0,
+        textShadow:"0 0 16px rgba(255,215,0,.4)"}}>
+        {foolsDay?"🃏":"⚡"} GN{foolsDay?" 🃏":""}
       </div>
+      <div style={{width:1,height:22,background:"rgba(255,255,255,.1)",marginRight:4,flexShrink:0}}/>
       <div className="nav-desktop" style={{flex:1,display:"flex",gap:2,overflowX:"auto",scrollbarWidth:"none"}}>
         {navItems.map(item=>(
           <button key={item.id} className="nav-btn" onClick={()=>go(item.id)} style={{
-            padding:"5px 10px",borderRadius:7,fontWeight:700,fontSize:".78rem",
-            color:view===item.id?"#FF6B35":"#9080c8",
-            borderBottom:view===item.id?"2px solid #FF6B35":"2px solid transparent"}}>
+            padding:"5px 10px",borderRadius:0,fontWeight:700,fontSize:".66rem",
+            fontFamily:"Barlow Condensed",letterSpacing:".16em",
+            color:view===item.id?(LEVEL_MAP[item.id]||LEVEL_MAP.home).color:"rgba(255,255,255,.3)",
+            background:"none",border:"none",
+            borderBottom:view===item.id?`2px solid ${(LEVEL_MAP[item.id]||LEVEL_MAP.home).color}`:"2px solid transparent",
+            cursor:"pointer",height:58,transition:"color .13s",whiteSpace:"nowrap"}}>
             {item.l}
           </button>
         ))}
@@ -3493,18 +3679,18 @@ export default function GameNight(){
         background:"rgba(0,255,148,.1)",border:"1px solid rgba(0,255,148,.45)",
         borderRadius:50,padding:"4px 11px",flexShrink:0}}>
         <span className="pulse-a" style={{width:7,height:7,borderRadius:"50%",background:"#00FF94",display:"inline-block"}}></span>
-        <span style={{color:"#00FF94",fontWeight:800,fontSize:".74rem"}}>LIVE</span>
+        <span style={{color:"#00FF94",fontFamily:"Barlow Condensed",fontWeight:800,fontSize:".74rem",letterSpacing:".15em"}}>LIVE</span>
       </div>}
       {adminMode
         ?<button className="pill hide-mob" onClick={()=>go("admin")} style={{
-            padding:"5px 11px",borderRadius:8,flexShrink:0,
+            padding:"5px 11px",borderRadius:4,flexShrink:0,
             background:view==="admin"?"#FF4D8F":"rgba(255,77,143,.18)",
             border:"1px solid rgba(255,77,143,.5)",
-            color:view==="admin"?"#fff":"#ff99c4",fontWeight:700,fontSize:".76rem"}}>⚙️ Admin</button>
+            color:view==="admin"?"#fff":"#ff99c4",fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".72rem",letterSpacing:".1em"}}>⚙ COMMAND</button>
         :<button className="pill hide-mob" onClick={()=>setShowLogin(true)} style={{
-            padding:"5px 10px",borderRadius:8,flexShrink:0,
-            border:"1px solid var(--border)",background:"rgba(255,255,255,.05)",
-            color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>🔒</button>
+            padding:"5px 10px",borderRadius:4,flexShrink:0,
+            border:"1px solid rgba(255,255,255,.12)",background:"rgba(255,255,255,.05)",
+            color:"rgba(255,255,255,.35)",fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".72rem",letterSpacing:".1em"}}>🔒</button>
       }
       <button className="ham-btn" onClick={()=>setMobileOpen(v=>!v)} style={{
         padding:"6px 9px",background:"rgba(255,255,255,.08)",border:"1.5px solid var(--border)",
@@ -3513,6 +3699,10 @@ export default function GameNight(){
         {mobileOpen?"✕":"☰"}
       </button>
     </nav>
+    {/* Bottom zone accent line */}
+    <div style={{position:"fixed",bottom:0,left:0,right:0,height:2,zIndex:50,pointerEvents:"none",
+      background:`linear-gradient(90deg,transparent,${(LEVEL_MAP[view]||LEVEL_MAP.home).color}66,transparent)`,
+      transition:"background .7s ease"}}/>
 
     {/* MOBILE MENU */}
     {mobileOpen&&(
@@ -3536,1129 +3726,288 @@ export default function GameNight(){
       {/* ═══════════════ HOME ═══════════════ */}
       {view==="home"&&(
         <div className="fade-up">
-          {/* Hero */}
-          <div style={{textAlign:"center",marginBottom:40}}>
-            <p style={{fontFamily:"Fredoka One",color:"var(--orange)",
-              letterSpacing:5,fontSize:".76rem",textTransform:"uppercase",marginBottom:12}}>
-              Hosted by {HOSTED_BY} · {FEATURED_GAME}
-            </p>
-            {(()=>{
-              const _d=new Date(),_ds=_d.toISOString().split("T")[0],_hr=_d.getUTCHours();
-              const isEaster=isEventActive();
-              if(!isEaster) return(
-                foolsDay?(
-                  <div style={{marginBottom:20,textAlign:"center"}}>
-                    <div className="jester-zone">
-                      {[
-                        {e:"🃏",top:"-18px",left:"0px",  delay:"0s",  dur:"3.2s",anim:"jesterFloat"},
-                        {e:"🃏",top:"-14px",right:"-4px", delay:".7s", dur:"2.8s",anim:"jesterDrift"},
-                        {e:"🃏",bottom:"-10px",left:"8px",delay:"1.1s",dur:"3.6s",anim:"jesterFloat"},
-                        {e:"🃏",top:"30%",right:"-18px",  delay:".4s", dur:"4.0s",anim:"jesterSpin"},
-                      ].map((j,ji)=>(
-                        <span key={ji} style={{
-                          position:"absolute",fontSize:"clamp(1.2rem,3vw,1.8rem)",
-                          top:j.top||"auto",bottom:j.bottom||"auto",
-                          left:j.left||"auto",right:j.right||"auto",
-                          animation:`${j.anim} ${j.dur} ease-in-out ${j.delay} infinite`,
-                          pointerEvents:"none",zIndex:2,userSelect:"none",
-                          filter:"drop-shadow(0 0 10px rgba(255,77,143,.6))",
-                        }}>{j.e}</span>
-                      ))}
-                      <h1 className="hero-h1" style={{
-                        fontFamily:"Fredoka One",fontSize:"clamp(3rem,12vw,5.6rem)",lineHeight:.92,
-                        background:"linear-gradient(135deg,#FF4D8F 0%,#FFD700 35%,#C77DFF 70%,#FF4D8F 100%)",
-                        WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                        animation:"glitchShift 4s ease-in-out infinite",
-                        filter:"drop-shadow(0 0 40px rgba(255,77,143,.4))",
-                        position:"relative",zIndex:1}}>
-                        🃏 GAMES<br/>NIGHT
-                      </h1>
-                    </div>
-                  </div>
-                ):(
-                  <h1 className="hero-h1" style={{
-                    fontFamily:"Fredoka One",fontSize:"clamp(3rem,12vw,5.6rem)",lineHeight:.92,marginBottom:20,
-                    background:"linear-gradient(135deg,#FFD700 0%,#FF6B35 40%,#FF4D8F 75%,#C77DFF 100%)",
-                    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                    filter:"drop-shadow(0 0 50px rgba(255,107,53,.35))"}}>
-                    🎮 GAMES<br/>NIGHT
-                  </h1>
-                )
-              );
-              const eggs=[
-                {e:"🥚",top:"-14px",left:"4px",  delay:"0s",   dur:"3.0s",anim:"eggBounce"},
-                {e:"🐣",top:"-18px",right:"2px",  delay:".6s",  dur:"2.6s",anim:"eggFloat"},
-                {e:"🥚",bottom:"-8px",left:"12px",delay:"1.0s", dur:"3.4s",anim:"eggDrift"},
-                {e:"🐰",bottom:"-6px",right:"6px",delay:".3s",  dur:"4.0s",anim:"eggSpin"},
-                {e:"🌸",top:"28%", left:"-16px",  delay:"1.3s", dur:"2.8s",anim:"eggFloat"},
-                {e:"🥚",top:"26%", right:"-14px", delay:".8s",  dur:"3.2s",anim:"eggBounce"},
-              ];
-              return(
-                <div style={{marginBottom:20,textAlign:"center"}}>
-                  <div style={{marginBottom:10}}><span className="easter-hud"><span className="easter-hud-dot"/>Easter Edition 2026</span></div>
-                  <div className="easter-logo-zone">
-                    {eggs.map((eg,ei)=>(
-                      <span key={ei} style={{
-                        position:"absolute",fontSize:"clamp(1.1rem,3vw,1.6rem)",
-                        top:eg.top||"auto",bottom:eg.bottom||"auto",
-                        left:eg.left||"auto",right:eg.right||"auto",
-                        animation:`${eg.anim} ${eg.dur} ease-in-out ${eg.delay} infinite`,
-                        pointerEvents:"none",zIndex:2,userSelect:"none",
-                        filter:"drop-shadow(0 0 8px rgba(255,215,0,.45)) drop-shadow(0 4px 10px rgba(0,0,0,.6))",
-                      }}>{eg.e}</span>
-                    ))}
-                    <h1 className={"hero-h1 easter-h1"} style={{
-                      WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                      filter:"none",position:"relative",zIndex:1}}>
-                      🐣 GAMES<br/>NIGHT
-                    </h1>
-                  </div>
-                  <p className="easter-sub">Doom Island · Easter Break</p>
-                </div>
-              );
-            })()}
-            <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginBottom:26}}>
-              {[{c:"#00E5FF",t:`🔫 ${FEATURED_GAME}`},{c:"#FFD700",t:"🕔 Mon–Sat · 5 PM UTC"},{c:"#FFAB40",t:`👥 ${players.length} Players`}]
-                .map((b,i)=>(
-                  <span key={i} style={{background:`${b.c}14`,border:`1px solid ${b.c}44`,
-                    borderRadius:50,padding:"6px 16px",fontSize:".82rem",color:b.c,fontWeight:700}}>{b.t}</span>
-                ))}
-            </div>
-            <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-              <a href={DISCORD_URL} target="_blank" rel="noreferrer" style={{
-                display:"inline-flex",alignItems:"center",gap:8,padding:"12px 24px",borderRadius:12,
-                textDecoration:"none",background:"linear-gradient(135deg,#5865F2,#7289DA)",color:"#fff",
-                fontFamily:"Fredoka One",fontSize:".95rem",boxShadow:"0 4px 20px rgba(88,101,242,.5)"}}>
-                💬 Join Discord
-              </a>
-              <a href={TWITCH_URL} target="_blank" rel="noreferrer" style={{
-                display:"inline-flex",alignItems:"center",gap:8,padding:"12px 24px",borderRadius:12,
-                textDecoration:"none",background:"linear-gradient(135deg,#9147FF,#6441A5)",color:"#fff",
-                fontFamily:"Fredoka One",fontSize:".95rem",boxShadow:"0 4px 20px rgba(145,71,255,.5)"}}>
-                📺 Watch Live
-              </a>
-            </div>
-          </div>
-
-          {/* 🎂 FryGG Birthday Banner — Mar 13 only */}
-          {new Date().toISOString().startsWith("2026-03-13") && <div style={{
-            background:"linear-gradient(135deg,#FF4D8F22,#FFD70022,#C77DFF22)",
-            border:"2px solid #FFD70055",
-            borderRadius:20,
-            padding:"20px 24px",
-            marginBottom:32,
-            textAlign:"center",
-            position:"relative",
-            overflow:"hidden",
-            animation:"popIn .5s ease"
-          }}>
-            <div style={{fontSize:"2rem",marginBottom:6,letterSpacing:4}}>🎂 🎉 🎈 🎊 🥳</div>
-            <div style={{
-              fontFamily:"Fredoka One",
-              fontSize:"clamp(1.3rem,4vw,2rem)",
-              background:"linear-gradient(135deg,#FFD700,#FF6B35,#FF4D8F,#C77DFF)",
-              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-              marginBottom:8,
-              lineHeight:1.1
-            }}>
-              Happy Birthday, FryGG! 🎮
-            </div>
-            <p style={{
-              color:"var(--text2)",
-              fontSize:".92rem",
-              fontWeight:600,
-              maxWidth:480,
-              margin:"0 auto",
-              lineHeight:1.5
-            }}>
-              From the whole SuperchampsHQ crew — may your lobbies be easy, your kills be plentiful, and your birthday be legendary.{" "}
-              <span style={{color:"#FFD700",fontWeight:800}}>GG, legend! 🏆</span>
-            </p>
-          </div>}
-
-          {/* ── Weekend / Easter Banner ── */}
-          {(()=>{
-            const d=new Date();
-            const day=d.getUTCDay();
-            const hour=d.getUTCHours();
-            const isEasterWindow=isEventActive();
-            const isWeekendWindow=!isEasterWindow&&(
-              (day===6&&hour>=19)||(day===0)||(day===1&&hour<16));
-            if(!isEasterWindow&&!isWeekendWindow) return null;
-            const hoursToMonday=day===1?16-hour:day===0?(24-hour+16):(24-hour+24+16);
-            if(isEasterWindow){
-              return(
-                <div className="easter-banner-wrap">
-                  <div className="easter-grid"/>
-                  <div className="easter-scanline"/>
-                  <div className="easter-rain-layer">
-                    {["🥚","🐣","🌸","🐰","🥚","🐣","🥚","🌸","🐰","🥚","🐣","🥚","🌸","🥚","🐣","🐰"].map((e,i)=>(
-                      <span key={i} className="easter-drop" style={{
-                        left:`${(i*6.3+Math.sin(i)*8)%100}%`,
-                        top:`${-10-((i*7)%30)}px`,
-                        fontSize:`${0.7+(i%3)*.25}rem`,
-                        opacity:0.06+((i%4)*.03),
-                        animationDuration:`${6+(i%5)*1.8}s`,
-                        animationDelay:`${(i%7)*.9}s`,
-                      }}>{e}</span>
-                    ))}
-                  </div>
-                  <div className="easter-banner-inner">
-                    <div style={{position:"absolute",top:-16,right:-12,fontSize:"5rem",opacity:.05,transform:"rotate(15deg)",pointerEvents:"none"}}>🐣</div>
-                    <div style={{position:"absolute",bottom:-16,left:-12,fontSize:"5rem",opacity:.05,transform:"rotate(-20deg)",pointerEvents:"none"}}>🥚</div>
-                    <div className="easter-b-emojis">🐣🥚🐰🌸🎮</div>
-                    <div className="easter-b-title">Happy Easter, Champs</div>
-                    <p className="easter-b-text">The island goes quiet. Recharge, eat too much chocolate, be back Monday. Doom Island doesn't wait. 5PM UTC.</p>
-                    <div className="easter-b-tags">
-                      <span className="easter-btag easter-bt1">🥚 Show up Apr 4 to earn Easter Egg</span>
-                      <span className="easter-btag easter-bt2">Back Monday 5PM UTC</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-            return(
-              <div style={{
-                background:"linear-gradient(135deg,rgba(199,125,255,.13),rgba(0,229,255,.08))",
-                border:"2px solid rgba(199,125,255,.35)",
-                borderRadius:20,padding:"22px 24px",marginBottom:32,textAlign:"center",
-                animation:"popIn .5s ease"
-              }}>
-                <div style={{fontSize:"2rem",marginBottom:6}}>😴 🏝️ ⚔️</div>
-                <div style={{
-                  fontFamily:"Fredoka One",
-                  fontSize:"clamp(1.2rem,4vw,1.8rem)",
-                  background:"linear-gradient(135deg,#C77DFF,#00E5FF)",
-                  WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                  marginBottom:8
-                }}>
-                  Get some rest, champs 🛌
-                </div>
-                <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600,maxWidth:480,margin:"0 auto 12px",lineHeight:1.6}}>
-                  That's a wrap. Back on Doom Island Monday, 5PM UTC. Don't be late. 🔥
-                </p>
-                <div style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>
-                  ⏱ Lobbies back in ~{Math.max(1,Math.round(hoursToMonday))}h
-                </div>
-              </div>
-            );
-          })()}
-          {/* Countdown / Live */}
-          <div style={{marginBottom:36}}>
-            {live?(
-              <div className="live-glo" style={{background:"linear-gradient(135deg,rgba(0,255,148,.1),rgba(29,233,182,.06))",
-                border:"2px solid rgba(0,255,148,.5)",borderRadius:20,padding:"26px 20px",textAlign:"center"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}>
-                  <span className="pulse-a" style={{width:12,height:12,borderRadius:"50%",background:"#00FF94",display:"inline-block"}}></span>
-                  <span style={{fontFamily:"Fredoka One",fontSize:"clamp(1.4rem,5vw,2.2rem)",color:"#00FF94"}}>GAMES NIGHT IS LIVE!</span>
-                  <span className="pulse-a" style={{width:12,height:12,borderRadius:"50%",background:"#00FF94",display:"inline-block",animationDelay:".5s"}}></span>
-                </div>
-                <p style={{color:"var(--text2)",fontSize:".88rem",marginBottom:16}}>Running until 7:00 PM UTC · Friend Brawl in progress!</p>
-                <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-                  <a href={TWITCH_URL} target="_blank" rel="noreferrer" style={{padding:"10px 22px",borderRadius:10,textDecoration:"none",background:"linear-gradient(135deg,#9147FF,#6441A5)",color:"#fff",fontFamily:"Fredoka One",fontSize:".92rem"}}>📺 Watch Now</a>
-                  <a href={DISCORD_URL} target="_blank" rel="noreferrer" style={{padding:"10px 22px",borderRadius:10,textDecoration:"none",background:"rgba(88,101,242,.25)",border:"1px solid rgba(88,101,242,.5)",color:"#a0aaff",fontFamily:"Fredoka One",fontSize:".92rem"}}>💬 Discord</a>
-                </div>
-              </div>
-            ):(
-              <div style={{...card({border:"2px solid rgba(255,107,53,.28)"}),padding:"26px 18px",textAlign:"center"}}>
-                <p style={{color:"var(--text2)",fontWeight:800,fontSize:".74rem",letterSpacing:2,textTransform:"uppercase",marginBottom:18}}>
-                  ⏱ Next Session In
-                </p>
-                <div className="cd-wrap" style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:16}}>
-                  {[{v:cd.d,l:"Days"},{v:cd.h,l:"Hrs"},{v:cd.m,l:"Min"},{v:cd.s,l:"Sec"}].map((seg,i)=>(
-                    <div key={i} className="cd-seg" style={{background:"rgba(255,107,53,.13)",border:"2px solid rgba(255,107,53,.38)",
-                      borderRadius:14,padding:"14px 18px",minWidth:72,textAlign:"center",animation:`popIn .4s ease ${i*.07}s both`}}>
-                      <div style={{fontFamily:"Fredoka One",fontSize:"2.4rem",color:"#FF6B35",lineHeight:1}}>{pad(seg.v??0)}</div>
-                      <div style={{fontSize:".63rem",color:"var(--text3)",fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginTop:3}}>{seg.l}</div>
-                    </div>
-                  ))}
-                </div>
-                <p style={{color:"var(--text3)",fontSize:".8rem",marginBottom:14}}>Mon – Sat · 5:00 PM – 7:00 PM UTC</p>
-                <a href={DISCORD_URL} target="_blank" rel="noreferrer" style={{display:"inline-block",padding:"8px 20px",borderRadius:9,textDecoration:"none",background:"rgba(88,101,242,.2)",border:"1px solid rgba(88,101,242,.4)",color:"#a0aaff",fontWeight:700,fontSize:".82rem"}}>💬 Get notified on Discord</a>
-              </div>
-            )}
-          </div>
-
-
-          {/* ── Pre-session Prediction Poll ── */}
-          {(()=>{
-            const todaySessions=sessions.filter(s=>s.date===getLatestSessionDate()&&s.date===todayStr());
-            const firstLobbyPlayed=todaySessions.length>0;
-            const showPoll=!live&&(cd.d===0&&cd.h===0&&cd.m<60)&&!firstLobbyPlayed;
-            const showResult=pollVote&&firstLobbyPlayed&&todaySessions.length>0;
-            if(!showPoll&&!showResult)return null;
-            // Pick top 5 players by all-time wins as poll candidates
-            const candidates=allStats().sort((a,b)=>b.wins-a.wins||b.kills-a.kills).slice(0,5);
-            if(!candidates.length)return null;
-            const totalVotes=Object.values(
-              candidates.reduce((acc,p)=>{acc[p.id]=(acc[p.id]||0)+(pollVote===p.id?1:0);return acc;},{})
-            ).reduce((a,b)=>a+b,0)||1;
-            return(
-              <div style={{...card({border:"2px solid rgba(255,215,0,.35)",background:"linear-gradient(135deg,rgba(255,215,0,.06),var(--card))"}),
-                padding:22,marginBottom:28,animation:"popIn .4s ease"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-                  <div>
-                    <p style={{fontSize:".66rem",color:"#FFD700",fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>🗳️ Tonight's Prediction</p>
-                    <h3 style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.1rem"}}>Who wins the first lobby?</h3>
-                  </div>
-                  <span style={{background:"rgba(255,215,0,.15)",border:"1px solid rgba(255,215,0,.4)",borderRadius:50,padding:"4px 12px",color:"#FFD700",fontWeight:800,fontSize:".74rem"}}>
-                    ⏱ {cd.m}m {String(cd.s).padStart(2,"0")}s away
-                  </span>
-                </div>
-                {pollVote?(
-                  <div>
-                    <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                      {candidates.map(p=>{
-                        const pct=pollVote===p.id?100:0;
-                        const isVoted=pollVote===p.id;
-                        return(
-                          <div key={p.id} style={{display:"flex",alignItems:"center",gap:10}}>
-                            <div style={{width:26,flexShrink:0,textAlign:"center"}}>
-                              {isVoted&&<span style={{color:"#FFD700",fontWeight:800}}>✓</span>}
-                            </div>
-                            <Av p={p} size={28}/>
-                            <span style={{fontFamily:"Fredoka One",color:isVoted?"#FFD700":p.color,fontSize:".88rem",width:130,flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username}</span>
-                            <div style={{flex:1,height:8,background:"rgba(255,255,255,.1)",borderRadius:4,overflow:"hidden"}}>
-                              <div style={{width:isVoted?"100%":"0%",height:"100%",background:`linear-gradient(90deg,${p.color},${p.color}88)`,borderRadius:4,transition:"width .6s ease"}}></div>
-                            </div>
-                            <span style={{fontFamily:"Fredoka One",color:"var(--text3)",fontSize:".82rem",minWidth:30,textAlign:"right"}}>{isVoted?"100%":"—"}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p style={{color:"var(--text3)",fontSize:".74rem",marginTop:12,fontWeight:700}}>Your vote is locked in 🔒 — results reveal after the first lobby!</p>
-                    {showResult&&(()=>{
-                      const firstLobby=todaySessions[0];
-                      const actualWinner=players.find(p=>p.id===firstLobby?.winner);
-                      const predicted=players.find(p=>p.id===pollVote);
-                      const correct=firstLobby?.winner===pollVote;
-                      return(
-                        <div style={{marginTop:12,padding:"10px 14px",borderRadius:10,
-                          background:correct?"rgba(0,255,148,.1)":"rgba(255,77,143,.1)",
-                          border:`1.5px solid ${correct?"rgba(0,255,148,.4)":"rgba(255,77,143,.4)"}`}}>
-                          <div style={{fontFamily:"Fredoka One",fontSize:".95rem",
-                            color:correct?"#00FF94":"#FF4D8F",marginBottom:4}}>
-                            {correct?"✅ You called it!":"❌ Wrong pick"}
-                          </div>
-                          <div style={{fontSize:".78rem",color:"var(--text2)",fontWeight:600}}>
-                            You predicted: <span style={{color:predicted?.color||"#fff",fontWeight:800}}>{predicted?.username||"—"}</span>
-                          </div>
-                          <div style={{fontSize:".78rem",color:"var(--text2)",fontWeight:600}}>
-                            Lobby 1 winner: <span style={{color:actualWinner?.color||"#fff",fontWeight:800}}>{actualWinner?.username||"—"}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                ):(
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    {candidates.map(p=>(
-                      <button key={p.id} onClick={async()=>{
-                        setPollVote(p.id);
-                        try{
-                          const nextSess=getNextSession();
-                          store.set(`gn-poll-${todayStr()}`,p.id);
-                        }catch{}
-                      }} style={{
-                        display:"flex",alignItems:"center",gap:10,
-                        background:`${p.color}10`,border:`1.5px solid ${p.color}44`,
-                        borderRadius:10,padding:"9px 14px",cursor:"pointer",textAlign:"left",
-                        transition:"background .15s,border .15s"}}>
-                        <Av p={p} size={30}/>
-                        <div>
-                          <div style={{fontFamily:"Fredoka One",color:p.color,fontSize:".92rem"}}>{p.username}</div>
-                          <div style={{fontSize:".66rem",color:"var(--text3)",fontWeight:700}}>{p.wins}W all-time · {p.winRate}% WR</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* ── Player of the Week — standalone pinned card ── */}
-          {(()=>{
-            const potw=getPOTW();
-            if(!potw)return null;
-            const carry=getCarryScore(potw.player.id);
-            const cons=getConsistency(potw.player.id);
-            const form=getFormGuide(potw.player.id,5);
-            const formWins=form.filter(f=>f.win).length;
-            return(
-              <div style={{
-                background:`linear-gradient(135deg,${potw.player.color}14,rgba(255,215,0,.08),var(--card))`,
-                border:`2px solid ${potw.player.color}55`,
-                borderRadius:20,padding:"22px 24px",marginBottom:28,
-                position:"relative",overflow:"hidden",
-                animation:"popIn .4s ease"}}>
-                {/* BG glow */}
-                <div style={{position:"absolute",top:-30,right:-30,width:160,height:160,
-                  borderRadius:"50%",
-                  background:`radial-gradient(circle,${potw.player.color}18,transparent)`,
-                  pointerEvents:"none"}}/>
-                <div style={{fontSize:".66rem",color:"#FFD700",fontWeight:800,
-                  letterSpacing:3,textTransform:"uppercase",marginBottom:14}}>
-                  ⭐ Player of the Week
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",marginBottom:16}}>
-                  <div onClick={()=>goProfile(potw.player.id)} style={{cursor:"pointer",flexShrink:0}}>
-                    <Av p={potw.player} size={64} glow/>
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div onClick={()=>goProfile(potw.player.id)} style={{
-                      fontFamily:"Fredoka One",fontSize:"clamp(1.3rem,5vw,1.8rem)",
-                      color:potw.player.color,cursor:"pointer",lineHeight:1,marginBottom:4}}>
-                      {potw.player.host?"👑 ":""}{potw.player.username}
-                    </div>
-                    <div style={{fontSize:".78rem",color:"var(--text2)",fontWeight:600}}>
-                      {potw.wins}W · {potw.kills}K · {potw.games} lobbies this week · {potw.kd} K/G
-                    </div>
-                    {/* Mini form strip */}
-                    {form.length>0&&(
-                      <div style={{display:"flex",gap:4,marginTop:8,alignItems:"center"}}>
-                        <span style={{fontSize:".62rem",color:"var(--text3)",fontWeight:800,
-                          letterSpacing:1,textTransform:"uppercase",marginRight:4}}>Form</span>
-                        {form.map((f,fi)=>(
-                          <div key={fi} style={{width:9,height:9,borderRadius:"50%",
-                            background:f.win?potw.player.color:"rgba(255,255,255,.18)",
-                            boxShadow:f.win?`0 0 5px ${potw.player.color}88`:"none"}}/>
-                        ))}
-                        <span style={{fontFamily:"Fredoka One",fontSize:".76rem",
-                          color:formWins>=4?"#00FF94":formWins>=3?"#FFD700":"var(--text3)",
-                          marginLeft:6}}>{formWins}W–{5-formWins}L</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Stat pills */}
-                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {[
-                    {l:"This Week",v:`${potw.wins}W ${potw.kills}K`,c:"#FFD700"},
-                    {l:"Carry",v:`${carry} carry win${carry===1?"":"s"}`,c:"#FF6B35"},
-                    {l:"Consistency",v:`${cons}% top-half`,c:"#00FF94"},
-                  ].map((s,i)=>(
-                    <div key={i} style={{
-                      background:`${s.c}12`,border:`1px solid ${s.c}33`,
-                      borderRadius:9,padding:"5px 12px"}}>
-                      <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:800,
-                        letterSpacing:1,textTransform:"uppercase"}}>{s.l}</div>
-                      <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:".9rem"}}>{s.v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Daily MVP */}
-          <div style={{marginBottom:36}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-              <div>
-                <h2 style={{fontFamily:"Fredoka One",fontSize:"1.45rem",color:"#FFD700"}}>⚡ Latest Session Day MVP</h2>
-                <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>
-                  {mvps?new Date(mvps.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}):"No sessions yet"}
-                </p>
-              </div>
-              <button onClick={()=>go("leaderboard")} className="pill" style={{
-                padding:"6px 14px",borderRadius:50,background:"rgba(255,215,0,.1)",
-                border:"1px solid rgba(255,215,0,.35)",color:"#FFD700",fontWeight:700,fontSize:".8rem"}}>
-                Full Board →
-              </button>
-            </div>
-            {mvps?(
-              <div className="mvp-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
-                {[
-                  {label:"Most Wins",  player:mvps.topWinner, val:mvps.topWinner?.wins+"W",        icon:"🏆",c:"#FFD700"},
-                  {label:"Most Kills", player:mvps.topKiller,  val:mvps.topKiller?.kills+"K",        icon:"💀",c:"#FF4D8F"},
-                  {label:"Lobby Kill King",player:mvps.killKing,val:(mvps.killKing?.killKingK||0)+"K",icon:"🔫",c:"#FF6B35",tied:mvps.killKings?.length>1,tiedKings:mvps.killKings},
-                  {label:"Most Active",player:mvps.topAppear,  val:mvps.topAppear?.appearances+"G",  icon:"🎮",c:"#00E5FF"},
-                ].map((m,i)=>{
-                  if(!m.player||m.player.appearances===0)return null;
-                  const streak=getStreak(m.player.id);
-                  const rk=getRank(m.player.id);
-                  return(
-                    <div key={i} className="card-h" style={{
-                      background:`linear-gradient(135deg,${m.c}14,var(--card))`,
-                      border:`2px solid ${m.c}44`,borderRadius:18,
-                      padding:18,display:"flex",alignItems:"center",gap:14}}>
-                      {m.tied?(
-                        <div style={{display:"flex",flexDirection:"row"}}>
-                          {m.tiedKings.slice(0,3).map((tk,ti)=>{
-                            const tp=players.find(x=>x.id===tk.id);
-                            return tp?<div key={ti} style={{marginLeft:ti>0?-10:0,zIndex:3-ti}}><Av p={tp} size={40} glow/></div>:null;
-                          })}
-                        </div>
-                      ):<Av p={m.player} size={52} glow/>}
-                      <div>
-                        <div style={{fontSize:".65rem",color:m.c,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>{m.icon} {m.label}</div>
-                        {m.tied?(
-                          <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".88rem"}}>
-                            {m.tiedKings.map(tk=>players.find(x=>x.id===tk.id)?.username).filter(Boolean).join(" & ")}
-                          </div>
-                        ):<div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1rem"}}>{m.player.username}</div>}
-                        <div style={{fontFamily:"Fredoka One",color:m.c,fontSize:"1.7rem",lineHeight:1.05}}>{m.val}{m.tied?" each":""}</div>
-                        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
-                          <span style={{fontSize:".68rem",color:rk.color,fontWeight:700}}>{rk.title}</span>
-                          {streak>=2&&<span className="fire" style={{display:"inline-block",fontSize:".75rem"}}>🔥×{streak}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ):(
-              <div style={{...card(),padding:24,textAlign:"center"}}>
-                <div style={{fontSize:"2rem",marginBottom:8}}>⚡</div>
-                <p style={{color:"var(--text2)",fontWeight:700}}>No sessions today yet</p>
-                <p style={{color:"var(--text3)",fontSize:".82rem",marginTop:4}}>MVPs will appear after today's first lobby</p>
-              </div>
-            )}
-          </div>
-
-          {/* Stats row */}
-          <div className="stats-4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:11,marginBottom:36}}>
-            {[
-              {l:"Lobbies",    v:sessions.length, i:"📅",c:"#FF6B35"},
-              {l:"Players",   v:players.length,  i:"👾",c:"#00E5FF"},
-              {l:"Total Kills",v:totalKills,      i:"💀",c:"#FF4D8F"},
-              {l:"Champions", v:uniqueWinners,    i:"🏆",c:"#FFD700"},
-            ].map((s,i)=>(
-              <div key={i} style={{...card({border:`2px solid ${s.c}2a`}),
-                padding:"17px 8px",textAlign:"center",animation:`fadeUp .38s ease ${i*.07}s both`}}>
-                <div style={{fontSize:"1.6rem",marginBottom:3}}>{s.i}</div>
-                <div style={{fontFamily:"Fredoka One",fontSize:"1.9rem",color:s.c}}>{s.v}</div>
-                <div style={{fontSize:".7rem",color:"var(--text2)",fontWeight:700}}>{s.l}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Top Rivalry teaser */}
-          {rivals.length>0&&(()=>{
-            const r=rivals[0];
-            const p1=players.find(x=>x.id===r.p1),p2=players.find(x=>x.id===r.p2);
-            if(!p1||!p2)return null;
-            const leader=r.p1wins>=r.p2wins?p1:p2;
-            const leaderW=r.p1wins>=r.p2wins?r.p1wins:r.p2wins;
-            const trailerW=r.p1wins>=r.p2wins?r.p2wins:r.p1wins;
-            return(
-              <div style={{...card({border:"2px solid rgba(255,77,143,.3)",
-                background:"linear-gradient(135deg,rgba(255,77,143,.08),var(--card))"}),
-                padding:22,marginBottom:36,cursor:"pointer",transition:"transform .2s"}}
-                onClick={()=>go("rivals")}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:16}}>
-                  <div>
-                    <p style={{fontSize:".68rem",color:"#FF4D8F",fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>⚔️ Biggest Rivalry</p>
-                    <h3 style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.1rem"}}>
-                      {p1.username} <span style={{color:"var(--text3)"}}>vs</span> {p2.username}
-                    </h3>
-                  </div>
-                  <span style={{color:"#FF4D8F",fontWeight:700,fontSize:".8rem"}}>View all rivals →</span>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-                  <Av p={p1} size={42} glow={leader.id===p1.id}/>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                      <span style={{fontFamily:"Fredoka One",color:p1.color,fontSize:".95rem"}}>{r.p1wins}</span>
-                      <span style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>{r.total} meetings</span>
-                      <span style={{fontFamily:"Fredoka One",color:p2.color,fontSize:".95rem"}}>{r.p2wins}</span>
-                    </div>
-                    <div className="rival-bar">
-                      <div className="rival-fill" style={{width:`${(r.p1wins/r.total)*100}%`,background:`linear-gradient(90deg,${p1.color},${p1.color}88)`}}></div>
-                    </div>
-                  </div>
-                  <Av p={p2} size={42} glow={leader.id===p2.id}/>
-                </div>
-                <p style={{textAlign:"center",color:"var(--text2)",fontSize:".82rem"}}>
-                  <span style={{color:leader.color,fontWeight:800}}>{leader.username}</span> leads {leaderW}–{trailerW}
-                </p>
-              </div>
-            );
-          })()}
-
-
-          {/* ── April Fools: Fake #1 Banner ── */}
+          {/* ── April Fools floating jesters ── */}
           {foolsDay&&(
-            <div style={{
-              background:"linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,107,53,.15))",
-              border:"3px solid #FFD700",borderRadius:18,
-              padding:"20px 24px",marginBottom:20,
-              textAlign:"center",animation:"popIn .4s ease",
-              position:"relative",overflow:"hidden"}}>
-              <div style={{position:"absolute",top:-10,left:-10,fontSize:"2rem",opacity:.15,transform:"rotate(-15deg)"}}>🃏</div>
-              <div style={{position:"absolute",bottom:-10,right:-10,fontSize:"2rem",opacity:.15,transform:"rotate(15deg)"}}>🃏</div>
-              <div style={{fontSize:".68rem",color:"#FFD700",fontWeight:800,
-                letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>
-                🏆 Season 2 — Live Rankings
-              </div>
-              <div style={{fontFamily:"Fredoka One",fontSize:"clamp(1.4rem,5vw,2rem)",
-                color:"#FFD700",marginBottom:6}}>
-                🎉 You are currently ranked #1!
-              </div>
-              <div style={{color:"var(--text2)",fontSize:".86rem",fontWeight:600,marginBottom:10}}>
-                Congratulations. The leaderboard doesn't lie.
-              </div>
-              <div style={{fontSize:".72rem",color:"rgba(255,255,255,.3)",fontWeight:700,
-                fontStyle:"italic"}}>
-                April Fools. Check the board. 🃏
-              </div>
+            <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:5}}>
+              {[{e:"🃏",t:"10%",l:"5%",delay:"0s",dur:"3.2s",anim:"jesterFloat"},
+                {e:"🃏",t:"20%",r:"6%",delay:".7s",dur:"2.8s",anim:"jesterDrift"},
+                {e:"🃏",t:"60%",l:"3%",delay:"1.1s",dur:"3.6s",anim:"jesterFloat"},
+                {e:"🃏",t:"70%",r:"4%",delay:".4s",dur:"4.0s",anim:"jesterSpin"},
+              ].map((j,ji)=>(
+                <span key={ji} style={{position:"absolute",fontSize:"clamp(1.2rem,3vw,1.8rem)",
+                  top:j.t,left:j.l||undefined,right:j.r||undefined,
+                  animation:`${j.anim} ${j.dur} ease-in-out ${j.delay} infinite`,
+                  userSelect:"none",filter:"drop-shadow(0 0 10px rgba(255,77,143,.6))"}}>{j.e}</span>
+              ))}
             </div>
           )}
 
-          {/* ── Season 1 Farewell (shows from Mar 31 — final day played) ── */}
-          {todayStr()>="2026-03-31"&&(()=>{
-            const champion=players.find(p=>p.id==="p02"); // Teriqstp
-            const killLeader=players.find(p=>p.id==="p01"); // MekulaGG
-            return(
-              <div className="s1-farewell" style={{marginBottom:28}}>
-                {/* Closing stamp */}
-                <div style={{display:"flex",justifyContent:"center",marginBottom:18}}>
-                  <span style={{background:"rgba(255,215,0,.12)",border:"1.5px solid rgba(255,215,0,.4)",
-                    borderRadius:50,padding:"5px 18px",fontFamily:"Fredoka One",
-                    fontSize:".72rem",color:"#FFD700",letterSpacing:3,textTransform:"uppercase"}}>
-                    ✅ Season 1 — Officially Closed
-                  </span>
-                </div>
-                {/* Headline numbers */}
-                <div style={{textAlign:"center",marginBottom:22}}>
-                  <div style={{fontFamily:"Fredoka One",
-                    fontSize:"clamp(1.3rem,4vw,1.9rem)",
-                    background:"linear-gradient(135deg,#FFD700,#FF6B35,#C77DFF)",
-                    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                    marginBottom:6,lineHeight:1.1}}>
-                    332 Lobbies. 1,881 Kills. 24 Nights.
-                  </div>
-                  <div style={{color:"var(--text3)",fontSize:".8rem",fontWeight:700}}>
-                    March 4 – March 31, 2026 · 32 players · 22 different winners
-                  </div>
-                </div>
-                {/* Stat pills */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",
-                  gap:10,marginBottom:22}}>
-                  {[
-                    {icon:"🏆",label:"Champion",val:champion?.username||"—",sub:"99 wins",c:"#FFD700"},
-                    {icon:"💀",label:"Kill Leader",val:killLeader?.username||"—",sub:"424 kills",c:"#FF4D8F"},
-                    {icon:"☄️",label:"Best Game",val:"EZEDINEYoutube",sub:"7K · Lobby 255",c:"#FF6B35"},
-                    {icon:"🌋",label:"Most Kills/Day",val:killLeader?.username||"—",sub:"28K · Mar 24",c:"#C77DFF"},
-                  ].map((s,i)=>(
-                    <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:14,padding:"12px 10px",
-                      textAlign:"center",animation:`s1FadeIn .5s ease ${i*.1}s both`}}>
-                      <div style={{fontSize:"1.3rem",marginBottom:4}}>{s.icon}</div>
-                      <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:800,
-                        letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>{s.label}</div>
-                      <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:".9rem",
-                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.val}</div>
-                      <div style={{fontSize:".68rem",color:"var(--text2)",fontWeight:700,marginTop:2}}>{s.sub}</div>
-                    </div>
-                  ))}
-                </div>
-                {/* Champion spotlight */}
-                {champion&&(
-                  <div style={{display:"flex",alignItems:"center",gap:16,
-                    background:"rgba(255,215,0,.07)",border:"1.5px solid rgba(255,215,0,.25)",
-                    borderRadius:16,padding:"14px 18px",marginBottom:18,flexWrap:"wrap"}}>
-                    <div style={{width:52,height:52,borderRadius:"50%",flexShrink:0,
-                      background:`linear-gradient(135deg,${champion.color},${champion.color}88)`,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      fontFamily:"Fredoka One",fontSize:"1.4rem",color:"#fff",
-                      boxShadow:`0 0 24px ${champion.color}66`}}>
-                      {champion.username[0]}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:".62rem",color:"#FFD700",fontWeight:800,
-                        letterSpacing:2,textTransform:"uppercase",marginBottom:3}}>👑 Season 1 Champion</div>
-                      <div style={{fontFamily:"Fredoka One",color:champion.color,
-                        fontSize:"clamp(1rem,3vw,1.3rem)"}}>{champion.username}</div>
-                      <div style={{fontSize:".78rem",color:"var(--text2)",fontWeight:700,marginTop:2}}>
-                        99 wins · 349 kills · Season 1 finalised
-                      </div>
-                    </div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3rem)",
-                      color:"#FFD700",flexShrink:0}}>🏆</div>
-                  </div>
-                )}
-                {/* Personal thank you */}
-                <div style={{textAlign:"center",borderTop:"1px solid rgba(255,255,255,.07)",paddingTop:16}}>
-                  <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600,
-                    lineHeight:1.7,maxWidth:480,margin:"0 auto 10px"}}>
-                    33 days. 332 lobbies. 1,881 kills.<br/>
-                    Thank you for every single one.<br/>
-                    <span style={{color:"#FFD700",fontFamily:"Fredoka One",fontSize:".95rem"}}>
-                      Season 2 starts now. ⚔️
-                    </span>
-                  </p>
-                  <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:700,letterSpacing:1}}>
-                    — Mekula
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── Season Banner ── */}
-          {(()=>{
-            const today=todayStr();
-            const s2Start="2026-04-01";
-            if(today>=s2Start) return(
-              <div style={{background:"linear-gradient(135deg,rgba(0,229,255,.12),rgba(199,125,255,.1))",
-                border:"2px solid rgba(0,229,255,.35)",borderRadius:18,padding:"18px 24px",
-                marginBottom:20,display:"flex",alignItems:"center",gap:14,animation:"popIn .4s ease"}}>
-                <div style={{fontSize:"1.8rem",flexShrink:0}}>🚀</div>
-                <div>
-                  <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#00E5FF"}}>
-                    Season 2 is Live
-                  </div>
-                  <div style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700,marginTop:2}}>
-                    April 2026 · Fresh start, same energy. Keep grinding.
-                  </div>
-                </div>
-              </div>
-            );
-            return null;
-          })()}
-
-          {/* ── Storylines Engine ── */}
-          {(()=>{
-            const lines=getStorylines();
-            if(!lines.length)return null;
-            return(
-              <div style={{marginBottom:20}}>
-                <div style={{fontSize:".66rem",color:"var(--text3)",fontWeight:800,
-                  letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>
-                  📰 What's going on
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {lines.map((line,i)=>(
-                    <div key={i} style={{
-                      display:"flex",alignItems:"flex-start",gap:12,
-                      background:"var(--card)",border:`1px solid ${line.color}22`,
-                      borderLeft:`3px solid ${line.color}`,
-                      borderRadius:"0 12px 12px 0",
-                      padding:"11px 14px",
-                      animation:`fadeUp .35s ease ${i*.06}s both`}}>
-                      <span style={{fontSize:"1.1rem",flexShrink:0,marginTop:1}}>{line.icon}</span>
-                      <p style={{color:"var(--text)",fontSize:".84rem",fontWeight:600,lineHeight:1.5,margin:0}}>
-                        {line.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── Active Streak Tracker ── */}
-          {(()=>{
-            const streakers=getLiveStreaks();
-            if(!streakers.length)return null;
-            return(
-              <div style={{background:"linear-gradient(135deg,rgba(255,107,53,.12),rgba(255,77,143,.08))",
-                border:"2px solid rgba(255,107,53,.35)",borderRadius:18,padding:"18px 24px",
-                marginBottom:20,animation:"popIn .4s ease"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                  <span style={{fontSize:"1.4rem"}}>🔥</span>
-                  <div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:"#FF6B35"}}>
-                      Live Streaks
-                    </div>
-                    <div style={{color:"var(--text3)",fontSize:".72rem",fontWeight:700}}>
-                      Active win streaks from the last session
-                    </div>
-                  </div>
-                </div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-                  {streakers.map((p,i)=>(
-                    <div key={i} onClick={()=>goProfile(p.id)} style={{
-                      display:"flex",alignItems:"center",gap:9,
-                      background:"rgba(0,0,0,.3)",border:`1.5px solid ${p.color}44`,
-                      borderRadius:12,padding:"8px 14px",cursor:"pointer",
-                      animation:`popIn .3s ease ${i*.07}s both`}}>
-                      <Av p={p} size={30} glow={true}/>
-                      <div>
-                        <div style={{fontFamily:"Fredoka One",color:p.color,fontSize:".9rem",lineHeight:1}}>
-                          {p.username}
-                        </div>
-                        <div style={{fontSize:".7rem",color:"#FF6B35",fontWeight:800,marginTop:2}}>
-                          {"🔥".repeat(Math.min(p.streak,5))} {p.streak}-win streak
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── Daily Recap ── */}
+          {/* ── Season / date row ── */}
           {(()=>{
             const latestDate=getLatestSessionDate();
-            if(!latestDate)return null;
-            const recap=getDayRecap(latestDate);
-            if(!recap)return null;
-            const dd=new Date(latestDate+"T12:00:00Z");
-            const dateLabel=dd.toLocaleDateString("en",{weekday:"long",month:"long",day:"numeric"});
-            return(
-              <div style={{background:"var(--card)",border:"1.5px solid var(--border)",
-                borderRadius:18,padding:"20px 24px",marginBottom:20}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:8}}>
-                  <div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#00E5FF"}}>
-                      📋 Latest Session Recap
-                    </div>
-                    <div style={{color:"var(--text3)",fontSize:".74rem",fontWeight:700,marginTop:2}}>
-                      {dateLabel}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-                    <button onClick={()=>setShareCard({type:"day",date:latestDate,visible:true})} style={{
-                      background:"rgba(199,125,255,.1)",border:"1px solid rgba(199,125,255,.3)",
-                      borderRadius:9,padding:"6px 14px",color:"#C77DFF",
-                      fontWeight:800,fontSize:".76rem",cursor:"pointer"}}>
-                      📤 Share
-                    </button>
-                    <button onClick={()=>{go("lobbies");}} style={{
-                      background:"rgba(0,229,255,.1)",border:"1px solid rgba(0,229,255,.3)",
-                      borderRadius:9,padding:"6px 14px",color:"#00E5FF",
-                      fontWeight:800,fontSize:".76rem",cursor:"pointer"}}>
-                      All lobbies →
-                    </button>
-                  </div>
+            const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
+            const s2Kills=s2Sess.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
+            const allKills=sessions.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
+            const currentSeason=SEASONS.find(s=>latestDate>=s.start&&latestDate<=s.end)||SEASONS[1];
+            const seasonSess=sessions.filter(s=>s.date>=currentSeason.start&&s.date<=currentSeason.end);
+            const allStats_lb=allStats();
+            const champion=allStats_lb.sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
+            const championP=champion?players.find(p=>p.id===champion.id):null;
+            const s2Champion_stats=allStats(seasonSess).sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
+            const s2ChampP=s2Champion_stats?players.find(p=>p.id===s2Champion_stats.id):null;
+            const leaderP=s2ChampP||championP;
+            const leaderSt=leaderP?getStats(leaderP.id):null;
+            const s2LeaderSt=leaderP?getStats(leaderP.id,seasonSess):null;
+            const allStatsForLB=allStats();
+            const byS2W=allStats(seasonSess).filter(p=>p.appearances>0).sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
+            const secondP=byS2W[1]?players.find(p=>p.id===byS2W[1].id):null;
+            const gapW=byS2W[1]?(byS2W[0].wins-byS2W[1].wins):0;
+            const missions=getWeeklyMissions();
+
+            return(<>
+              {/* Status row */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                marginBottom:14,flexWrap:"wrap",gap:8}}>
+                <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
+                  color:`rgba(255,107,53,.7)`}}>
+                  {currentSeason.name.toUpperCase()} · {currentSeason.label.toUpperCase()} · ACTIVE
+                </span>
+                <span className="bc7" style={{fontSize:".62rem",letterSpacing:".2em",color:"var(--text3)"}}>
+                  {seasonSess.length} SESSIONS · {sessions.length} ALL TIME
+                </span>
+              </div>
+
+              {/* Hero title */}
+              <div style={{marginBottom:26}}>
+                <h1 className="bc9" style={{
+                  fontSize:"clamp(3.5rem,14vw,7rem)",letterSpacing:".05em",lineHeight:.82,
+                  background:"linear-gradient(160deg,#FFD700 0%,#FF6B35 40%,#FF4D8F 70%,#C77DFF 100%)",
+                  WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+                  margin:"0 0 12px",
+                  ...(foolsDay?{filter:"hue-rotate(180deg)"}:{})}}>
+                  {foolsDay?"🃏 GAMES":"GAMES"}<br/>NIGHT
+                </h1>
+                <div className="bc7" style={{fontSize:".72rem",letterSpacing:".26em",color:"var(--text3)"}}>
+                  {FEATURED_GAME} · MON–SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
                 </div>
-                {/* Stats row */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
-                  {[
-                    {l:"Lobbies",v:recap.lobbies,c:"var(--cyan)"},
-                    {l:"Total Kills",v:recap.totalKills,c:"var(--pink)"},
-                    {l:"Players",v:recap.uniquePlayers,c:"var(--green)"},
-                  ].map((s,i)=>(
-                    <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
-                      <div style={{fontFamily:"Fredoka One",fontSize:"1.4rem",color:s.c,lineHeight:1}}>{s.v}</div>
-                      <div style={{fontSize:".65rem",color:"var(--text3)",fontWeight:800,
-                        textTransform:"uppercase",letterSpacing:1,marginTop:4}}>{s.l}</div>
+              </div>
+
+              {/* Season stat strip */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(76px,1fr))",
+                gap:1,marginBottom:24,border:"1px solid rgba(255,215,0,.12)",borderRadius:2,overflow:"hidden"}}>
+                {[
+                  {l:"S2 SESSIONS",v:seasonSess.length,   c:"#00E5FF"},
+                  {l:"S2 KILLS",   v:s2Kills,              c:"#FF4D8F"},
+                  {l:"S1 LOBBIES", v:332,                  c:"#FFD700"},
+                  {l:"ALL KILLS",  v:allKills.toLocaleString(), c:"#FF6B35"},
+                  {l:"PLAYERS",    v:players.length,       c:"#C77DFF"},
+                ].map((s,i)=>(
+                  <div key={i} style={{padding:"14px 8px",textAlign:"center",
+                    background:"rgba(255,255,255,.02)",borderRight:"1px solid rgba(255,255,255,.04)"}}>
+                    <div className="bc9" style={{fontSize:"clamp(1.1rem,4vw,1.8rem)",color:s.c,
+                      lineHeight:1,textShadow:`0 0 14px ${s.c}33`}}>{s.v}</div>
+                    <div className="bc7" style={{fontSize:".53rem",letterSpacing:".18em",
+                      color:"var(--text3)",marginTop:5}}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Current leader card */}
+              {leaderP&&leaderSt&&(
+                <div style={{
+                  background:`linear-gradient(135deg,${leaderP.color}0e,rgba(0,0,0,.5))`,
+                  border:`1px solid ${leaderP.color}33`,borderLeft:`3px solid ${leaderP.color}`,
+                  borderRadius:"0 8px 8px 0",padding:"18px 20px",marginBottom:20,
+                  display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",
+                  position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",right:-8,top:-10,fontFamily:"Barlow Condensed",
+                    fontWeight:900,fontSize:"7rem",color:leaderP.color,opacity:.05,
+                    lineHeight:1,pointerEvents:"none"}}>{leaderP.username[0]}</div>
+                  <Av p={leaderP} size={58} glow intel/>
+                  <div style={{flex:1,minWidth:0,position:"relative",zIndex:1}}>
+                    <div className="bc7" style={{fontSize:".6rem",letterSpacing:".35em",
+                      color:`${leaderP.color}66`,marginBottom:4}}>
+                      ▸ {currentSeason.name.toUpperCase()} CURRENT LEADER
                     </div>
-                  ))}
-                </div>
-                {/* Top winners */}
-                <div style={{marginBottom:recap.killKing.k>0?12:0}}>
-                  <div style={{fontSize:".68rem",color:"var(--text3)",fontWeight:800,
-                    letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>🏆 Winners</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-                    {recap.winnersList.slice(0,5).map((w,i)=>{
-                      if(!w.player)return null;
-                      return(
-                        <div key={i} onClick={()=>goProfile(w.player.id)} style={{
-                          display:"flex",alignItems:"center",gap:7,
-                          background:`${w.player.color}14`,border:`1px solid ${w.player.color}33`,
-                          borderRadius:9,padding:"6px 11px",cursor:"pointer"}}>
-                          <Av p={w.player} size={24}/>
-                          <span style={{fontFamily:"Fredoka One",color:w.player.color,fontSize:".85rem"}}>{w.player.username}</span>
-                          <span style={{background:"rgba(0,0,0,.3)",borderRadius:6,padding:"1px 7px",
-                            fontFamily:"Fredoka One",fontSize:".8rem",color:"#FFD700"}}>{w.wins}W</span>
-                        </div>
-                      );
-                    })}
-                    {recap.winnersList.length>5&&(
-                      <div style={{display:"flex",alignItems:"center",
-                        color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>
-                        +{recap.winnersList.length-5} more
+                    <div className="bc9" style={{fontSize:"clamp(1.3rem,5vw,2rem)",
+                      letterSpacing:".06em",color:leaderP.color,
+                      textShadow:`0 0 18px ${leaderP.color}44`,lineHeight:1}}>
+                      {leaderP.host?"👑 ":""}{dn(leaderP.username).toUpperCase()}
+                    </div>
+                    <div className="bc7" style={{fontSize:".75rem",color:"var(--text2)",
+                      marginTop:5,letterSpacing:".06em"}}>
+                      {s2LeaderSt?.wins||0}W this season · {leaderSt.wins}W all time · {getRank(leaderP.id).title}
+                    </div>
+                    {secondP&&gapW>=0&&(
+                      <div className="bc7" style={{fontSize:".62rem",color:"var(--text3)",marginTop:3}}>
+                        ← {dn(secondP.username)} is {gapW}W behind in {currentSeason.name}
                       </div>
                     )}
                   </div>
+                  <div style={{fontSize:"clamp(2rem,6vw,3.2rem)",color:"#FFD700",
+                    textShadow:"0 0 24px rgba(255,215,0,.55)",flexShrink:0}}>🏆</div>
                 </div>
-                {/* Kill king */}
-                {recap.killKing.k>0&&(
-                  <div style={{display:"flex",alignItems:"center",gap:10,
-                    background:"rgba(255,107,53,.1)",border:"1px solid rgba(255,107,53,.25)",
-                    borderRadius:10,padding:"8px 12px"}}>
-                    <span style={{fontSize:"1.1rem"}}>🔫</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:".65rem",color:"var(--text3)",fontWeight:800,
-                        textTransform:"uppercase",letterSpacing:1}}>
-                        Kill King of the Day{recap.killKingsList?.length>1?" (Tied)":""}
-                      </div>
-                      <div style={{fontFamily:"Fredoka One",color:"var(--orange)",fontSize:".9rem"}}>
-                        {recap.killKingsList?.length>1
-                          ? recap.killKingsList.map(k=>k.player?.username).filter(Boolean).join(" & ")+" — "+recap.killKing.k+"K each"
-                          : recap.killKing.player?.username+" — "+recap.killKing.k+" kills in one lobby"
-                        }
-                      </div>
-                    </div>
-                    {recap.killKingsList?.length===1&&recap.killKing.player&&
-                      <Av p={recap.killKing.player} size={32} glow={true}/>}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              )}
 
-          {/* ── Clip Highlights ── */}
-          {(()=>{
-            const clipped=[...sessions].filter(s=>s.clip&&s.clip.trim())
-              .sort((a,b)=>new Date(b.date)-new Date(a.date)||parseInt(b.id.slice(1))-parseInt(a.id.slice(1)))
-              .slice(0,6);
-            if(!clipped.length)return null;
-            return(
-              <div style={{background:"var(--card)",border:"1.5px solid rgba(145,71,255,.35)",
-                borderRadius:18,padding:"20px 24px",marginBottom:20}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                  <span style={{fontSize:"1.3rem"}}>🎬</span>
-                  <div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:"#C77DFF"}}>
-                      Clip Highlights
+              {/* Intelligence Briefing */}
+              <div style={{marginBottom:22}}>
+                <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
+                  color:"var(--text3)",marginBottom:12}}>▸ INTELLIGENCE BRIEFING</div>
+                <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  {getStorylines().map((s,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,
+                      padding:"9px 14px",background:"rgba(255,255,255,.025)",
+                      borderLeft:`2px solid ${s.color}44`,borderRadius:"0 4px 4px 0"}}>
+                      <span style={{fontSize:".85rem",flexShrink:0,marginTop:1}}>{s.icon}</span>
+                      <span className="bc7" style={{fontSize:".82rem",letterSpacing:".03em",
+                        color:"var(--text2)",lineHeight:1.5}}>{s.text}</span>
                     </div>
-                    <div style={{color:"var(--text3)",fontSize:".72rem",fontWeight:700}}>
-                      {clipped.length} clip{clipped.length!==1?"s":""} saved
-                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Season narrative */}
+              <div style={{padding:"13px 18px",marginBottom:22,
+                background:"rgba(255,255,255,.02)",
+                borderLeft:"3px solid rgba(255,107,53,.33)",
+                borderRadius:"0 6px 6px 0"}}>
+                <div className="bc7" style={{fontSize:".86rem",lineHeight:1.85,
+                  color:"var(--text3)",letterSpacing:".04em"}}>
+                  {currentSeason.name} is live. The standings shift every session.
+                  {leaderP&&` ${dn(leaderP.username)} leads${s2LeaderSt?.wins?` with ${s2LeaderSt.wins}W`:""} — but it is only ${currentSeason.label}.`}
+                  {" Every lobby is a record waiting to happen."}
+                </div>
+              </div>
+
+              {/* Weekly Mission Board */}
+              <div style={{marginBottom:22}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                  marginBottom:10,flexWrap:"wrap",gap:8}}>
+                  <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
+                    color:"rgba(199,125,255,.6)"}}>▸ WEEKLY MISSIONS</div>
+                  <div className="bc7" style={{fontSize:".6rem",letterSpacing:".2em",color:"var(--text3)"}}>
+                    AUTO-GENERATED · RESETS MONDAY
                   </div>
                 </div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {clipped.map((s,i)=>{
-                    const winner=players.find(p=>p.id===s.winner);
-                    const dd=new Date(s.date+"T12:00:00Z");
-                    const dateLabel=dd.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+                <div className="mission-board">
+                  {missions.map((m,i)=>{
+                    const pct=m.target>0?Math.round((m.progress/m.target)*100):0;
+                    const done=m.progress>=m.target;
                     return(
-                      <a key={i} href={s.clip} target="_blank" rel="noreferrer" style={{
-                        display:"flex",alignItems:"center",gap:8,textDecoration:"none",
-                        background:"rgba(145,71,255,.12)",border:"1px solid rgba(145,71,255,.35)",
-                        borderRadius:11,padding:"8px 13px",
-                        animation:`fadeUp .3s ease ${i*.06}s both`}}>
-                        {winner&&<Av p={winner} size={26}/>}
-                        <div>
-                          <div style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:".84rem",lineHeight:1}}>
-                            {s.notes||s.id}
-                          </div>
-                          <div style={{fontSize:".65rem",color:"var(--text3)",fontWeight:700,marginTop:2}}>
-                            {dateLabel} {winner?`· ${winner.username}`:""}
+                      <div key={i} className="mission-item" style={{"--m-color":m.color}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                          <span style={{fontSize:"1.1rem",flexShrink:0}}>{m.icon}</span>
+                          <div>
+                            <div className="bc9" style={{fontSize:".72rem",
+                              color:done?"#00FF94":m.color,letterSpacing:".1em"}}>
+                              {done?"✓ ":""}{m.label}
+                            </div>
+                            <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",
+                              letterSpacing:".04em",marginTop:2}}>{m.desc}</div>
                           </div>
                         </div>
-                        <span style={{fontSize:".7rem",color:"#C77DFF",flexShrink:0}}>▶</span>
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── Activity Feed ── */}
-          {(()=>{
-            const feed=getActivityFeed();
-            if(!feed.length)return null;
-            const typeMap={
-              firstwin:{icon:"🎉",color:"#00FF94",msg:(p,v)=>`${p} got their FIRST ever win! Welcome to the winners circle!`},
-              streak:{icon:"🔥",color:"#FF6B35",msg:(p,v)=>`${p} hit a ${v}-game win streak!`},
-              kills: {icon:"💀",color:"#FF4D8F",msg:(p,v)=>`${p} crossed ${v} total kills!`},
-              wins:  {icon:"🏆",color:"#FFD700",msg:(p,v)=>`${p} reached ${v} all-time wins!`},
-              record:{icon:"🌟",color:"#C77DFF",msg:(p,v)=>`${p} dropped ${v} kills in one lobby — new personal best!`},
-            };
-            return(
-              <div style={{marginBottom:36}}>
-                <h2 style={{fontFamily:"Fredoka One",fontSize:"1.35rem",color:"#00FF94",marginBottom:12}}>📡 Activity Feed</h2>
-                <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                  {feed.map((ev,i)=>{
-                    const p=players.find(x=>x.id===ev.pid);if(!p)return null;
-                    const tm=typeMap[ev.type]||{icon:"⚡",color:"#fff",msg:(p,v)=>`${p}: ${v}`};
-                    return(
-                      <div key={i} onClick={()=>goProfile(p.id)} style={{
-                        display:"flex",alignItems:"center",gap:12,
-                        background:"var(--card)",border:`1.5px solid ${tm.color}33`,
-                        borderRadius:12,padding:"10px 14px",cursor:"pointer",
-                        animation:`fadeUp .3s ease ${i*.04}s both`}}>
-                        <span style={{fontSize:"1.3rem",flexShrink:0}}>{tm.icon}</span>
-                        <Av p={p} size={30}/>
-                        <span style={{flex:1,color:"var(--text)",fontSize:".84rem",fontWeight:700}}>
-                          {tm.msg(p.username,ev.val)}
-                        </span>
-                        <span style={{color:"var(--text3)",fontSize:".7rem",flexShrink:0}}>
-                          {new Date(ev.date+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})}
-                        </span>
+                        <div className="mission-bar-track">
+                          <div className="mission-bar-fill" style={{
+                            width:`${pct}%`,
+                            background:done?`linear-gradient(90deg,#00FF94,${m.color})`:`linear-gradient(90deg,${m.color}88,${m.color})`,
+                            boxShadow:done?"0 0 8px rgba(0,255,148,.5)":`0 0 6px ${m.color}44`,
+                          }}/>
+                        </div>
+                        <div className="bc7" style={{fontSize:".6rem",
+                          color:done?"#00FF94":"var(--text3)",letterSpacing:".1em",marginTop:5}}>
+                          {done?"MISSION COMPLETE":`${m.unit} · ${pct}%`}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-            );
-          })()}
 
-          {/* ── Weekly Awards ── */}
-          {(()=>{
-            const wa=getWeeklyAwards();
-            if(!wa)return null;
-            const awards=[
-              {icon:"🏆",label:"Most Wins",   p:wa.mvpWins,  val:wa.mvpWins?.wins+"W",   c:"#FFD700"},
-              {icon:"💀",label:"Top Fragger", p:wa.mvpKills, val:wa.mvpKills?.kills+"K",  c:"#FF4D8F"},
-              {icon:"⚡",label:"Best K/G",    p:wa.mvpKD,    val:wa.mvpKD?.kd+" K/G",    c:"#00E5FF"},
-              {icon:"🎮",label:"Most Active", p:wa.mvpActive,val:wa.mvpActive?.appearances+"G",c:"#FFAB40"},
-              ...(wa.iceCold?[{icon:"🧊",label:"Ice Cold",    p:wa.iceCold, val:wa.iceCold?.appearances+"G, 0W",c:"#90CAF9"}]:[]),
-            ].filter(a=>a.p);
-            return(
-              <div style={{marginBottom:36}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:6}}>
-                  <div>
-                    <h2 style={{fontFamily:"Fredoka One",fontSize:"1.35rem",color:"#C77DFF"}}>🏅 Weekly Awards</h2>
-                    <p style={{color:"var(--text3)",fontSize:".74rem",marginTop:2}}>
-                      {new Date(wa.week+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})} → {new Date(wa.end+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})} · {wa.lobbies} lobbies
-                    </p>
-                  </div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(185px,1fr))",gap:10}}>
-                  {awards.map((a,i)=>(
-                    <div key={i} onClick={()=>a.p&&goProfile(a.p.id)} style={{
-                      background:`linear-gradient(135deg,${a.c}12,var(--card))`,
-                      border:`2px solid ${a.c}44`,borderRadius:14,padding:"14px 16px",
-                      cursor:"pointer",animation:`fadeUp .35s ease ${i*.06}s both`}}>
-                      <div style={{fontSize:".66rem",color:a.c,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{a.icon} {a.label}</div>
-                      {a.p&&<><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                        <Av p={a.p} size={28}/>
-                        <span style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.p.username}</span>
+              {/* Next session countdown */}
+              {!live&&(
+                <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                  <div className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
+                    color:"var(--text3)"}}>NEXT SESSION IN</div>
+                  <div style={{display:"flex",gap:4}}>
+                    {[{v:String(cd.d>0?cd.d:cd.h).padStart(2,"0"),l:cd.d>0?"DAYS":"HRS"},
+                      {v:String(cd.m).padStart(2,"0"),l:"MIN"},
+                      {v:String(cd.s).padStart(2,"0"),l:"SEC"}].map((d,i)=>(
+                      <div key={i} style={{textAlign:"center"}}>
+                        <div className="bc9" style={{fontSize:"clamp(1.6rem,5vw,2.4rem)",
+                          color:"#00E5FF",lineHeight:1,background:"var(--card)",padding:"6px 12px",
+                          borderRadius:2,border:"1px solid rgba(0,229,255,.33)",
+                          textShadow:"0 0 12px rgba(0,229,255,.44)",minWidth:54}}>{d.v}</div>
+                        <div className="bc7" style={{fontSize:".52rem",letterSpacing:".2em",
+                          color:"var(--text3)",marginTop:4}}>{d.l}</div>
                       </div>
-                      <div style={{fontFamily:"Fredoka One",color:a.c,fontSize:"1.5rem",lineHeight:1}}>{a.val}</div></>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── Season 1 Finale Banner ── */}
-          {(()=>{
-            const now=new Date();
-            const s1End=new Date("2026-03-31T23:59:59Z");
-            const diff=s1End-now;
-            // Hide if time is up OR if we already have March 31 sessions (season done)
-            const s1Done=sessions.some(s=>s.date==="2026-03-31");
-            if(diff<=0||s1Done)return null;
-            const days=Math.floor(diff/(1000*60*60*24));
-            const hours=Math.floor((diff%(1000*60*60*24))/(1000*60*60));
-            const mins=Math.floor((diff%(1000*60*60))/(1000*60));
-            const rec=getRecords();
-            const potw=getPOTW();
-            return(
-              <div className="s1-finale" style={{marginBottom:32}}>
-                <div style={{textAlign:"center",marginBottom:20}}>
-                  <div style={{fontFamily:"Fredoka One",fontSize:".7rem",letterSpacing:4,
-                    color:"var(--gold)",textTransform:"uppercase",marginBottom:6}}>Season 1 · March 2026</div>
-                  <div style={{fontFamily:"Fredoka One",fontSize:"clamp(1.4rem,5vw,2.2rem)",
-                    background:"linear-gradient(135deg,#FFD700,#FF6B35,#C77DFF)",
-                    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-                    marginBottom:4}}>
-                    🏆 Season Finale Countdown
+                    ))}
                   </div>
-                  <p style={{color:"var(--text2)",fontSize:".85rem",fontWeight:600}}>
-                    Season 1 closes on March 31st — who locks their legacy?
-                  </p>
                 </div>
-                <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
-                  {[{v:days,l:"Days"},{v:hours,l:"Hours"},{v:mins,l:"Mins"}].map((seg,i)=>(
-                    <div key={i} style={{background:"rgba(0,0,0,.35)",borderRadius:12,
-                      padding:"14px 20px",textAlign:"center",minWidth:72}}>
-                      <div style={{fontFamily:"Fredoka One",fontSize:"clamp(1.8rem,6vw,2.8rem)",
-                        color:"var(--gold)",lineHeight:1}}>{String(seg.v).padStart(2,"0")}</div>
-                      <div style={{fontSize:".7rem",color:"var(--text3)",fontWeight:800,
-                        letterSpacing:2,textTransform:"uppercase",marginTop:4}}>{seg.l}</div>
+              )}
+
+              {/* S1 Farewell */}
+              {(()=>{
+                const today=todayStr();
+                if(today<"2026-03-31")return null;
+                const s1=sessions.filter(s=>s.date>="2026-03-01"&&s.date<="2026-03-31");
+                if(!s1.length)return null;
+                const s1Stats=allStats(s1).filter(p=>p.appearances>0);
+                const s1Champ=s1Stats.sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
+                const champP=s1Champ?players.find(p=>p.id===s1Champ.id):null;
+                return(
+                  <div className="s1-farewell" style={{marginTop:28,animation:"s1FadeIn .8s ease both"}}>
+                    <div className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
+                      color:"rgba(255,215,0,.6)",marginBottom:14}}>
+                      🏁 SEASON 1 — OFFICIALLY CLOSED
                     </div>
-                  ))}
-                </div>
-                {rec&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",
-                  gap:10,marginBottom:potw?16:0}}>
-                  {[
-                    {icon:"🎯",label:"Top Winner",val:`${players.find(p=>p.id===rec.topWinner[0])?.username||"—"}`,sub:`${rec.topWinner[1]} wins`},
-                    {icon:"💀",label:"Kill Leader",val:`${players.find(p=>p.id===rec.topKiller[0])?.username||"—"}`,sub:`${rec.topKiller[1]} kills`},
-                    {icon:"🔫",label:"Best Single Game",val:`${players.find(p=>p.id===rec.topGame.pid)?.username||"—"}`,sub:`${rec.topGame.k}K in ${rec.topGame.sid}`},
-                    {icon:"🌋",label:"Most Kills in a Day",val:`${players.find(p=>p.id===rec.topDayKill?.pid)?.username||"—"}`,sub:`${rec.topDayKill?.k}K · ${rec.topDayKill?.date}`},
-                    {icon:"🔥",label:"Best Streak",val:`${players.find(p=>p.id===rec.bestStreak.pid)?.username||"—"}`,sub:`${rec.bestStreak.streak} in a row`},
-                    {icon:"📊",label:"Total Lobbies",val:rec.totalSessions,sub:`${rec.totalKills} kills total`},
-                  ].map((s,i)=>(
-                    <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:10,
-                      padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontSize:"1.3rem"}}>{s.icon}</span>
-                      <div>
-                        <div style={{fontSize:".7rem",color:"var(--text3)",fontWeight:800,
-                          textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
-                        <div style={{fontFamily:"Fredoka One",fontSize:"1rem",color:"var(--gold)"}}>{s.val}</div>
-                        <div style={{fontSize:".72rem",color:"var(--text2)"}}>{s.sub}</div>
+                    {champP&&(
+                      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,flexWrap:"wrap"}}>
+                        <Av p={champP} size={52} glow intel/>
+                        <div>
+                          <div className="bc9" style={{fontSize:"clamp(1.1rem,4vw,1.6rem)",
+                            color:"#FFD700",letterSpacing:".06em",
+                            textShadow:"0 0 20px rgba(255,215,0,.5)"}}>
+                            👑 {dn(champP.username).toUpperCase()}
+                          </div>
+                          <div className="bc7" style={{fontSize:".78rem",color:"var(--text2)",marginTop:4}}>
+                            {s1Champ.wins}W · {s1Champ.kills}K · Season 1 Champion
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>}
-                {potw&&<div className="potw-card" style={{marginTop:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-                    <div style={{width:52,height:52,borderRadius:"50%",
-                      background:`linear-gradient(135deg,${potw.player.color},${potw.player.color}88)`,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      fontFamily:"Fredoka One",fontSize:"1.4rem",color:"#fff",
-                      boxShadow:`0 0 20px ${potw.player.color}66`,flexShrink:0}}>
-                      {potw.player.username[0]}
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:".7rem",color:"var(--gold)",fontWeight:800,
-                        letterSpacing:2,textTransform:"uppercase"}}>⭐ Player of the Week</div>
-                      <div style={{fontFamily:"Fredoka One",fontSize:"1.3rem",
-                        color:potw.player.color}}>{potw.player.username}</div>
-                      <div style={{fontSize:".8rem",color:"var(--text2)",marginTop:2}}>
-                        {potw.wins}W · {potw.kills}K · {potw.games} lobbies · {potw.kd} K/G this week
-                      </div>
+                    )}
+                    <div className="bc7" style={{fontSize:".82rem",color:"var(--text3)",
+                      lineHeight:1.7,letterSpacing:".04em"}}>
+                      {s1.length} lobbies. {s1Stats.length} players.{" "}
+                      {s1Stats.reduce((n,p)=>n+p.kills,0)} kills.{" "}
+                      Every single lobby is in the record. Season 2 starts clean — the legacy stays.
                     </div>
                   </div>
-                </div>}
-              </div>
-            );
+                );
+              })()}
+            </>);
           })()}
-
-          {/* Community */}
-          <div className="comm-row" style={{display:"flex",gap:12,marginBottom:36,flexWrap:"wrap"}}>
-            {[
-              {icon:"💬",title:"Join the Community",color:"#a0aaff",bg:"rgba(88,101,242,.15)",
-               border:"rgba(88,101,242,.4)",desc:"Chat before each lobby, get pinged when it goes live, talk trash with the squad.",
-               link:DISCORD_URL,btn:"linear-gradient(135deg,#5865F2,#7289DA)",btnText:"Join Discord →"},
-              {icon:"📺",title:"Watch Live on Twitch",color:"#cc99ff",bg:"rgba(145,71,255,.15)",
-               border:"rgba(145,71,255,.4)",desc:"Every lobby streamed live Mon–Sat 5 PM UTC. Clutch plays, rage moments, the lot.",
-               link:TWITCH_URL,btn:"linear-gradient(135deg,#9147FF,#6441A5)",btnText:"Watch on Twitch →"},
-            ].map((c,i)=>(
-              <div key={i} style={{flex:1,minWidth:"min(240px,100%)",...card({border:`2px solid ${c.border}`,background:`linear-gradient(135deg,${c.bg},var(--card))`}),padding:22,textAlign:"center"}}>
-                <div style={{fontSize:"2.4rem",marginBottom:8}}>{c.icon}</div>
-                <div style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:c.color,marginBottom:8}}>{c.title}</div>
-                <p style={{color:"var(--text2)",fontSize:".84rem",marginBottom:16,lineHeight:1.5}}>{c.desc}</p>
-                <a href={c.link} target="_blank" rel="noreferrer" style={{display:"inline-block",padding:"10px 22px",borderRadius:10,textDecoration:"none",background:c.btn,color:"#fff",fontFamily:"Fredoka One",fontSize:".92rem"}}>{c.btnText}</a>
-              </div>
-            ))}
-          </div>
-
-          {/* Roster */}
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-              <h2 style={{fontFamily:"Fredoka One",fontSize:"1.35rem",color:"#FFD700"}}>👾 The Roster</h2>
-              <button className="pill" onClick={()=>go("hof")} style={{padding:"5px 14px",borderRadius:50,border:"1px solid rgba(255,215,0,.35)",background:"rgba(255,215,0,.1)",color:"#FFD700",fontWeight:700,fontSize:".8rem"}}>Hall of Fame →</button>
-            </div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-              {players.map((p,i)=>(
-                <div key={p.id} onClick={()=>goProfile(p.id)} style={{background:"rgba(255,255,255,.06)",border:`1.5px solid ${p.color}33`,
-                  borderRadius:50,padding:"4px 12px",display:"flex",alignItems:"center",gap:6,cursor:"pointer",
-                  animation:`fadeUp .3s ease ${i*.022}s both`}}>
-                  <div style={{width:18,height:18,borderRadius:"50%",background:p.color,flexShrink:0,
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    fontFamily:"Fredoka One",fontSize:".55rem",color:"#fff",textShadow:"0 1px 3px rgba(0,0,0,.5)"}}>
-                    {p.username[0].toUpperCase()}
-                  </div>
-                  <span style={{fontWeight:700,color:"var(--text)",fontSize:".8rem"}}>{p.host?"👑 ":""}{dn(p.username)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
       {/* ═══════════════ HALL OF FAME ═══════════════ */}
       {view==="hof"&&(
         <div className="fade-up">
-          <div style={{textAlign:"center",marginBottom:36}}>
-            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>The Legends</p>
-            <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.6rem)",
-              background:"linear-gradient(135deg,#FFD700,#FF6B35,#FF4D8F,#C77DFF)",
-              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
-              🏛️ Hall of Fame
+          {/* Legends Wing header */}
+          <div style={{marginBottom:28}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
+              <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
+                color:"rgba(255,215,0,.5)",textTransform:"uppercase"}}>SECTOR: LEGENDS WING · HALL OF FAME</span>
+              <span className="bc7" style={{fontSize:".62rem",letterSpacing:".2em",
+                color:"var(--text3)",textTransform:"uppercase"}}>{players.length} combatants · {sessions.length} lobbies</span>
+            </div>
+            <h2 className="bc9" style={{fontSize:"clamp(2rem,8vw,4rem)",letterSpacing:".08em",lineHeight:.9,
+              color:"#FFD700",textShadow:"0 0 28px rgba(255,215,0,.25)",margin:"0 0 10px"}}>
+              LEGENDS WING
             </h2>
-            <p style={{color:"var(--text2)",marginTop:8,fontSize:".86rem"}}>{players.length} players · {sessions.length} lobbies played</p>
+            <div style={{height:1,background:"linear-gradient(90deg,rgba(255,215,0,.44),transparent)",marginBottom:8}}/>
+            <div className="bc7" style={{fontSize:".72rem",letterSpacing:".12em",color:"var(--text3)"}}>
+              Season archive · All-time elite · Permanent legacy
+            </div>
           </div>
 
 
@@ -5727,374 +5076,379 @@ export default function GameNight(){
       )}
 
 
-      {/* ═══════════════ PROFILE ═══════════════ */}
-      {view==="profile"&&profileId&&(()=>{
-        const p=players.find(x=>x.id===profileId);
-        if(!p)return<div style={{textAlign:"center",padding:60}}><p style={{color:"var(--text2)"}}>Player not found</p></div>;
+      {/* ═══════════════ PROFILE / COMBAT FILE ═══════════════ */}
+      {view==="profile"&&(()=>{
+        // resolve active player — default to first if none set
+        const p=profileId?players.find(x=>x.id===profileId)||players[0]:players[0];
+        if(!p)return null;
         const st=getStats(p.id);
         const rank=getRank(p.id);
         const badges=getBadges(p.id);
         const streak=getStreak(p.id);
+        const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
+        const s2St=getStats(p.id,s2Sess);
+        const form=getFormGuide(p.id,5);
+        const drought=getDrought(p.id);
+        const carry=getCarryScore(p.id);
+        const consistency=getConsistency(p.id);
+        const lastSeen=getLastSeen(p.id);
+        const daysActive=getDaysActive(p.id);
+        // Primary rival — highest meeting count from H2H data
+        const pRivals=getRivals().filter(r=>r.p1===p.id||r.p2===p.id);
+        const topRival=pRivals[0];
+        const rivalId=topRival?(topRival.p1===p.id?topRival.p2:topRival.p1):null;
+        const rivalP=rivalId?players.find(x=>x.id===rivalId):null;
+        const rivalSt=rivalP?getStats(rivalP.id):null;
+        const rivalWins=topRival?(topRival.p1===p.id?topRival.p1wins:topRival.p2wins):0;
+        const rivalLoss=topRival?(topRival.p1===p.id?topRival.p2wins:topRival.p1wins):0;
+        // Career milestones
+        const milestones=[
+          {l:"1W",  done:st.wins>=1},
+          {l:"3W",  done:st.wins>=3},
+          {l:"10W", done:st.wins>=10},
+          {l:"25W", done:st.wins>=25},
+          {l:"50W", done:st.wins>=50},
+          {l:"100W",done:st.wins>=100},
+        ];
+        // Auto-generated bio from real data
+        const bioLines=[];
+        if(st.wins>=1) bioLines.push(`${st.wins} career wins. ${st.kills} kills across ${st.appearances} lobbies.`);
+        else bioLines.push(`${st.appearances} lobbies played. Still hunting that first win.`);
+        if(drought>5) bioLines.push(`Currently ${drought} games without a win. The drought is real.`);
+        else if(streak>=3) bioLines.push(`On a ${streak}-game streak right now. Nobody hotter today.`);
+        else if(drought===0&&st.wins>0) bioLines.push(`Won their most recent lobby. Form is good.`);
+        if(rivalP&&topRival?.total>=3) bioLines.push(`Biggest rivalry: ${dn(rivalP.username)} — ${rivalWins}–${rivalLoss} in ${topRival.total} head-to-head finishes.`);
+        const bio=bioLines.join(" ");
+        // Sparkline
         const pSess=[...sessions].filter(s=>s.attendees?.includes(p.id))
           .sort((a,b)=>new Date(b.date)-new Date(a.date)||parseInt(b.id.slice(1))-parseInt(a.id.slice(1)));
-        const pRivals=getRivals().filter(r=>r.p1===p.id||r.p2===p.id).slice(0,3);
-        // sparkline data: per-lobby kills (oldest→latest), last 20 games
-        const sparkRaw=[...pSess].reverse().slice(-20); // oldest first, cap at 20
+        const sparkRaw=[...pSess].reverse().slice(-20);
         const spark=sparkRaw.map(s=>s.kills?.[p.id]||0);
         const sparkMax=Math.max(...spark,1);
-        // Y-axis: pick nice round ticks
-        const yTicks=(()=>{
-          const step=sparkMax<=5?1:sparkMax<=10?2:sparkMax<=20?5:10;
-          const ticks=[];
-          for(let t=0;t<=sparkMax;t+=step) ticks.push(t);
-          if(ticks[ticks.length-1]<sparkMax) ticks.push(ticks[ticks.length-1]+step);
-          return ticks;
-        })();
+        const yTicks=(()=>{const step=sparkMax<=5?1:sparkMax<=10?2:5;const t=[];for(let v=0;v<=sparkMax;v+=step)t.push(v);if(t[t.length-1]<sparkMax)t.push(t[t.length-1]+step);return t;})();
         const axisMax=yTicks[yTicks.length-1];
-        const PAD_L=24,PAD_T=6,PAD_B=18,PAD_R=6;
-        const W=260,H=80;
-        const CW=W-PAD_L-PAD_R, CH=H-PAD_T-PAD_B;
+        const PAD_L=24,PAD_T=6,PAD_B=18,PAD_R=6,W=260,H=80;
+        const CW=W-PAD_L-PAD_R,CH=H-PAD_T-PAD_B;
         const xPos=i=>PAD_L+Math.round((i/(spark.length-1||1))*CW);
         const yPos=v=>PAD_T+Math.round(CH-(v/axisMax)*CH);
         const pts=spark.map((v,i)=>`${xPos(i)},${yPos(v)}`).join(" ");
+        const diffDays=lastSeen?Math.floor((new Date()-new Date(lastSeen+"T12:00:00Z"))/(1000*60*60*24)):null;
+        const lastSeenLabel=diffDays===0?"Today":diffDays===1?"Yesterday":diffDays!=null?`${diffDays}d ago`:"—";
+
         return(
           <div className="fade-up">
-            {/* Back + H2H shortcut */}
-            <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-              <button onClick={()=>go(prevView||"hof")} style={{
-                display:"flex",alignItems:"center",gap:6,
-                background:"rgba(255,255,255,.07)",border:"1.5px solid var(--border)",
-                borderRadius:9,padding:"7px 14px",color:"var(--text2)",cursor:"pointer",fontWeight:700,fontSize:".84rem"}}>
-                ← Back
-              </button>
-              {!p.host&&(
-                <button onClick={()=>{
-                  setH2hA(p.id);setH2hB("");
-                  go("rivals");
-                  setTimeout(()=>document.querySelector(".h2h-scroll")?.scrollIntoView({behavior:"smooth"}),300);
-                }} style={{
-                  display:"flex",alignItems:"center",gap:6,
-                  background:"rgba(0,229,255,.1)",border:"1.5px solid rgba(0,229,255,.3)",
-                  borderRadius:9,padding:"7px 14px",color:"#00E5FF",cursor:"pointer",fontWeight:700,fontSize:".84rem"}}>
-                  🆚 Compare vs…
-                </button>
+            {/* Zone header */}
+            <div style={{marginBottom:20}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                marginBottom:8,flexWrap:"wrap",gap:8}}>
+                <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
+                  color:"rgba(0,229,255,.5)"}}>SECTOR: BARRACKS · COMBAT FILES</span>
+                <span className="bc7" style={{fontSize:".62rem",letterSpacing:".2em",
+                  color:"var(--text3)"}}>{players.length} COMBATANTS REGISTERED</span>
+              </div>
+              <h2 className="bc9" style={{fontSize:"clamp(2rem,8vw,3.5rem)",letterSpacing:".08em",
+                lineHeight:.9,color:"#00E5FF",textShadow:"0 0 28px rgba(0,229,255,.3)",
+                margin:"0 0 8px"}}>COMBAT FILE</h2>
+              <div style={{height:1,background:"linear-gradient(90deg,rgba(0,229,255,.44),transparent)"}}/>
+            </div>
+
+            {/* SELECT COMBATANT */}
+            <div style={{marginBottom:18}}>
+              <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
+                color:"var(--text3)",marginBottom:10}}>SELECT COMBATANT</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {players.map(pl=>(
+                  <button key={pl.id} onClick={()=>{setProfileId(pl.id);}} style={{
+                    background:p.id===pl.id?`${pl.color}18`:"rgba(255,255,255,.02)",
+                    border:p.id===pl.id?`1px solid ${pl.color}55`:"1px solid rgba(255,255,255,.06)",
+                    borderBottom:p.id===pl.id?`2px solid ${pl.color}`:"2px solid transparent",
+                    color:p.id===pl.id?pl.color:"var(--text3)",
+                    fontFamily:"Barlow Condensed",fontWeight:900,
+                    fontSize:".67rem",letterSpacing:".1em",padding:"5px 11px",
+                    cursor:"pointer",outline:"none",transition:"all .12s"}}>
+                    {dn(pl.username).slice(0,8).toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Identity hero */}
+            <div style={{
+              background:`linear-gradient(135deg,${p.color}0e,rgba(0,0,0,.5))`,
+              border:`1px solid ${p.color}33`,borderLeft:`4px solid ${p.color}`,
+              borderRadius:"0 8px 8px 0",padding:"20px 20px",marginBottom:12,
+              display:"flex",alignItems:"center",gap:18,flexWrap:"wrap",
+              position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",right:-8,top:-8,fontFamily:"Barlow Condensed",
+                fontWeight:900,fontSize:"7rem",color:p.color,opacity:.05,lineHeight:1,
+                pointerEvents:"none"}}>{p.username[0]}</div>
+              {streak>=3&&(
+                <div className="bc7" style={{position:"absolute",top:12,right:14,
+                  fontSize:".7rem",background:"rgba(255,107,53,.18)",borderRadius:4,
+                  padding:"3px 11px",border:"1px solid rgba(255,107,53,.4)",
+                  color:"#FF6B35",letterSpacing:".1em"}}>
+                  🔥 {streak}-GAME STREAK
+                </div>
+              )}
+              <Av p={p} size={72} glow intel/>
+              <div style={{flex:1,minWidth:0,position:"relative",zIndex:1}}>
+                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".35em",
+                  color:`${p.color}66`,marginBottom:4}}>
+                  COMBAT FILE · {rank.title}
+                </div>
+                <div className="bc9" style={{color:p.color,
+                  fontSize:"clamp(1.4rem,5vw,2rem)",letterSpacing:".06em",
+                  textShadow:`0 0 20px ${p.color}44`,lineHeight:1,
+                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {p.host?"👑 ":""}{dn(p.username).toUpperCase()}
+                </div>
+                <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
+                  marginTop:5,letterSpacing:".08em"}}>
+                  LAST SEEN {lastSeenLabel} · {daysActive} SESSION DAYS
+                </div>
+              </div>
+            </div>
+
+            {/* Bio */}
+            <div style={{padding:"12px 16px",marginBottom:12,
+              background:"rgba(255,255,255,.02)",
+              borderLeft:`3px solid ${p.color}33`,borderRadius:"0 6px 6px 0"}}>
+              <div className="bc7" style={{fontSize:".84rem",lineHeight:1.8,
+                color:"var(--text3)",letterSpacing:".04em"}}>{bio}</div>
+            </div>
+
+            {/* Stat grid */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(88px,1fr))",
+              gap:1,border:`1px solid ${p.color}14`,borderRadius:2,overflow:"hidden",marginBottom:12}}>
+              {[
+                {l:"S2 WINS",  v:s2St.wins,        c:"#00E5FF"},
+                {l:"ALL WINS", v:st.wins,           c:"#FFD700"},
+                {l:"KILLS",    v:st.kills,          c:"#FF4D8F"},
+                {l:"WIN RATE", v:st.winRate+"%",    c:"#00FF94"},
+                {l:"K/G",      v:st.kd,             c:"#00E5FF"},
+                {l:"CARRY",    v:carry,             c:"#FF6B35"},
+                {l:"CONSISTENCY",v:consistency+"%", c:"#00FF94"},
+                {l:"DROUGHT",  v:drought>0?drought+"G":"ACTIVE",
+                  c:drought>5?"#FF6B35":drought>0?"#FFD700":"#00FF94"},
+              ].map((s,i)=>(
+                <div key={i} style={{padding:"12px 8px",textAlign:"center",
+                  background:"rgba(255,255,255,.025)",borderRight:"1px solid rgba(255,255,255,.04)"}}>
+                  <div className="bc9" style={{fontSize:"clamp(1rem,3.5vw,1.5rem)",color:s.c,
+                    lineHeight:1,textShadow:`0 0 12px ${s.c}33`}}>{s.v}</div>
+                  <div className="bc7" style={{fontSize:".52rem",letterSpacing:".18em",
+                    color:"var(--text3)",marginTop:4}}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Form + Rival */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+              {/* Recent form */}
+              <div style={{padding:"12px 14px",background:"rgba(255,255,255,.02)",
+                border:"1px solid rgba(255,255,255,.05)",borderRadius:"0 6px 6px 0",
+                borderLeft:`3px solid ${p.color}33`}}>
+                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
+                  color:"var(--text3)",marginBottom:10}}>RECENT FORM</div>
+                <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                  {form.map((f,i)=>(
+                    <div key={i} style={{flex:1,height:6,borderRadius:1,
+                      background:f.win?p.color:"rgba(255,255,255,.1)",
+                      boxShadow:f.win?`0 0 7px ${p.color}66`:"none"}}/>
+                  ))}
+                  <span className="bc7" style={{fontSize:".65rem",color:"var(--text3)",
+                    flexShrink:0,marginLeft:4}}>
+                    {form.filter(f=>f.win).length}/5
+                  </span>
+                </div>
+                <div className="bc7" style={{fontSize:".6rem",color:"var(--text3)",
+                  marginTop:8,letterSpacing:".06em"}}>
+                  {form.filter(f=>f.win).length>=4?"Strong form":
+                   form.filter(f=>f.win).length>=2?"Decent form":"Rough patch"}
+                </div>
+              </div>
+              {/* Primary rival */}
+              {rivalP?(
+                <div style={{padding:"12px 14px",
+                  background:"linear-gradient(135deg,rgba(255,77,143,.07),rgba(0,0,0,.4))",
+                  border:"1px solid rgba(255,77,143,.2)",borderRadius:"0 6px 6px 0",
+                  borderLeft:"3px solid rgba(255,77,143,.5)"}}>
+                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
+                    color:"rgba(255,77,143,.6)",marginBottom:8}}>⚔️ PRIMARY RIVAL</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                    <Av p={rivalP} size={28} intel/>
+                    <div style={{minWidth:0}}>
+                      <div className="bc9" style={{fontSize:".82rem",color:rivalP.color,
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {dn(rivalP.username)}
+                      </div>
+                      <div className="bc7" style={{fontSize:".6rem",color:"var(--text3)"}}>
+                        {rivalSt?.wins||0}W · {rivalSt?.kills||0}K
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bc7" style={{fontSize:".62rem",color:"rgba(255,255,255,.35)",
+                    letterSpacing:".06em"}}>
+                    {rivalWins}–{rivalLoss} in {topRival?.total||0} meetings
+                  </div>
+                </div>
+              ):(
+                <div style={{padding:"12px 14px",background:"rgba(255,255,255,.02)",
+                  border:"1px solid rgba(255,255,255,.05)",borderRadius:"0 6px 6px 0",
+                  borderLeft:"3px solid rgba(255,255,255,.1)",display:"flex",
+                  alignItems:"center",justifyContent:"center"}}>
+                  <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
+                    textAlign:"center",letterSpacing:".08em"}}>NO RIVAL DATA YET</div>
+                </div>
               )}
             </div>
 
-            {/* Hero card */}
-            <div style={{...card({border:`3px solid ${p.color}66`,background:`linear-gradient(135deg,${p.color}12,var(--card))`}),
-              padding:28,marginBottom:20,position:"relative",overflow:"hidden"}}>
-              {streak>=3&&(
-                <div className="fire" style={{position:"absolute",top:14,right:16,
-                  fontSize:".84rem",background:"rgba(255,107,53,.18)",borderRadius:50,padding:"4px 12px",
-                  border:"1px solid rgba(255,107,53,.45)",color:"#FF6B35",fontWeight:800}}>
-                  🔥 {streak}-game streak
-                </div>
-              )}
-              <div style={{display:"flex",alignItems:"center",gap:18,flexWrap:"wrap",marginBottom:20}}>
-                <Av p={p} size={72} glow/>
-                <div>
-                  <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"clamp(1.4rem,5vw,2rem)"}}>{p.host?"👑 ":""}{dn(p.username)}</div>
-                  <div style={{fontFamily:"Fredoka One",color:rank.color,fontSize:"1rem",marginTop:2}}>{rank.title}</div>
-                  {/* Last Seen + Days Active */}
-                  {(()=>{
-                    const lastSeen=getLastSeen(p.id);
-                    const daysActive=getDaysActive(p.id);
-                    if(!lastSeen)return null;
-                    const ls=new Date(lastSeen+"T12:00:00Z");
-                    const diffDays=Math.floor((new Date()-ls)/(1000*60*60*24));
-                    const label=diffDays===0?"Today":diffDays===1?"Yesterday":`${diffDays}d ago`;
-                    return(
-                      <div style={{display:"flex",gap:10,marginTop:6,flexWrap:"wrap"}}>
-                        <span style={{fontSize:".68rem",color:"var(--text3)",fontWeight:700}}>
-                          🕐 Last seen <span style={{
-                            color:diffDays<=1?"#00FF94":diffDays<=3?"#FFD700":"var(--text2)",
-                            fontWeight:800}}>{label}</span>
-                        </span>
-                        <span style={{fontSize:".68rem",color:"var(--text3)",fontWeight:700}}>
-                          · 📅 <span style={{color:"var(--text2)",fontWeight:800}}>{daysActive}</span> session day{daysActive===1?"":"s"}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                  {badges.length>0&&(
-                    <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:8}}>
-                      {badges.map((b,i)=>(
-                        <span key={i} style={{background:"rgba(255,255,255,.1)",borderRadius:50,
-                          padding:"3px 10px",fontSize:".7rem",fontWeight:700,color:"#fff",border:"1px solid rgba(255,255,255,.2)"}}>
-                          {b.hot?<span className="fire" style={{display:"inline-block"}}>{b.icon}</span>:b.icon} {b.label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {/* Career Progress */}
+            <div style={{padding:"14px 16px",background:"rgba(255,255,255,.02)",
+              border:"1px solid rgba(255,255,255,.05)",borderRadius:"0 6px 6px 0",
+              borderLeft:`3px solid ${p.color}33`,marginBottom:12}}>
+              <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
+                color:"var(--text3)",marginBottom:14}}>
+                CAREER PROGRESS · {milestones.filter(m=>m.done).length}/{milestones.length} MILESTONES
               </div>
-              {/* Stat grid */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:8}}>
-                {[
-                  {l:"Wins",v:st.wins,c:"#FFD700",i:"🏆"},
-                  {l:"Kills",v:st.kills,c:"#FF4D8F",i:"💀"},
-                  {l:"K/G",v:st.kd,c:"#00E5FF",i:"⚡"},
-                  {l:"Win Rate",v:st.winRate+"%",c:"#00FF94",i:"🎯"},
-                  {l:"Lobbies",v:st.appearances,c:"#FFAB40",i:"📅"},
-                  {l:"Best Game",v:st.biggestGame+"K",c:"#C77DFF",i:"🌟"},
-                  {l:"Carry",v:getCarryScore(p.id),c:"#FF6B35",i:"🎖️"},
-                  {l:"Consistency",v:getConsistency(p.id)+"%",c:"#00FF94",i:"🧱"},
-                  ...(getDrought(p.id)>0?[{l:"Drought",v:getDrought(p.id)+" lobbies",c:"#FFAB40",i:"🌵"}]:[]),
-                ].map((s,i)=>(
-                  <div key={i} style={{background:"rgba(0,0,0,.4)",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
-                    <div style={{fontSize:".62rem",color:"var(--text3)",fontWeight:700,marginBottom:3}}>{s.i} {s.l}</div>
-                    <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:"1.2rem"}}>{s.v}</div>
+              <div style={{display:"flex",gap:0}}>
+                {milestones.map((m,i)=>(
+                  <div key={i} style={{flex:1,position:"relative"}}>
+                    {m.done&&<div style={{position:"absolute",bottom:10,left:"50%",
+                      transform:"translateX(-50%)",fontFamily:"Barlow Condensed",fontWeight:700,
+                      fontSize:".48rem",color:p.color,whiteSpace:"nowrap",letterSpacing:".08em"}}>
+                      {m.l}</div>}
+                    <div style={{height:4,
+                      background:m.done?p.color:"rgba(255,255,255,.1)",
+                      borderRadius:i===0?"2px 0 0 2px":i===milestones.length-1?"0 2px 2px 0":0,
+                      boxShadow:m.done?`0 0 6px ${p.color}55`:"none",
+                      transition:"background .3s"}}/>
+                    <div style={{position:"absolute",top:8,left:"50%",transform:"translateX(-50%)",
+                      fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".5rem",
+                      color:m.done?p.color:"var(--text3)",whiteSpace:"nowrap"}}>
+                      {m.done?"✓":"·"}
+                    </div>
                   </div>
                 ))}
               </div>
-              {/* Form guide strip */}
-              {(()=>{
-                const form=getFormGuide(p.id,8);
-                if(!form.length)return null;
-                const recent=form.slice(-5);
-                const wins=recent.filter(f=>f.win).length;
-                return(
-                  <div style={{marginTop:14,display:"flex",alignItems:"center",gap:12,
-                    background:"rgba(0,0,0,.3)",borderRadius:10,padding:"10px 14px"}}>
-                    <div style={{fontSize:".64rem",color:"var(--text3)",fontWeight:800,
-                      letterSpacing:1.5,textTransform:"uppercase",flexShrink:0}}>Form</div>
-                    <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                      {form.map((f,fi)=>(
-                        <div key={fi} style={{
-                          width:11,height:11,borderRadius:"50%",
-                          background:f.win?p.color:"rgba(255,255,255,.15)",
-                          boxShadow:f.win?`0 0 7px ${p.color}88`:"none",
-                          flexShrink:0,
-                          transform:fi>=form.length-5?"scale(1.2)":"scale(1)",
-                          opacity:fi>=form.length-5?1:0.5,
-                          transition:"transform .2s"}}/>
-                      ))}
-                    </div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:".84rem",
-                      color:wins>=4?"#00FF94":wins>=3?"#FFD700":wins<=1?"#FF4D8F":"var(--text2)",
-                      marginLeft:"auto",flexShrink:0}}>
-                      {wins}W–{5-wins}L last 5
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Benchmark — who they're chasing */}
-              {(()=>{
-                const bm=getBenchmark(p.id);
-                if(!bm)return null;
-                return(
-                  <div style={{marginTop:10,display:"flex",alignItems:"center",gap:12,
-                    background:"rgba(0,0,0,.25)",borderRadius:10,padding:"10px 14px",
-                    border:"1px solid rgba(255,255,255,.07)"}}>
-                    <div style={{fontSize:".64rem",color:"var(--text3)",fontWeight:800,
-                      letterSpacing:1.5,textTransform:"uppercase",flexShrink:0,minWidth:60}}>
-                      Chasing
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",gap:9,flex:1,minWidth:0}}>
-                      <div style={{width:26,height:26,borderRadius:"50%",flexShrink:0,
-                        background:`linear-gradient(135deg,${bm.target.color},${bm.target.color}88)`,
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                        fontFamily:"Fredoka One",fontSize:".7rem",color:"#fff"}}>
-                        {bm.target.username[0]}
-                      </div>
-                      <div style={{minWidth:0}}>
-                        <div style={{fontFamily:"Fredoka One",color:bm.target.color,
-                          fontSize:".88rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                          #{bm.rank-1} {bm.target.username}
-                        </div>
-                        <div style={{fontSize:".66rem",color:"var(--text3)",fontWeight:700}}>
-                          {bm.sameWins
-                            ?`Same wins — ${bm.killGap} kill${bm.killGap===1?"":"s"} behind on tiebreak`
-                            :`${bm.winGap} win${bm.winGap===1?"":"s"} ahead`}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:".8rem",
-                      color:"var(--text3)",flexShrink:0}}>#{bm.rank}</div>
-                  </div>
-                );
-              })()}
-
-              {/* Milestone alerts */}
-              {(()=>{
-                const milestones=getMilestones(p.id);
-                if(!milestones.length)return null;
-                return(
-                  <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:7}}>
-                    {milestones.map((m,i)=>(
-                      <div key={i} style={{
-                        display:"flex",alignItems:"center",gap:7,
-                        background:`${m.color}12`,
-                        border:`1px solid ${m.color}33`,
-                        borderRadius:9,padding:"6px 12px",
-                        animation:`popIn .3s ease ${i*.1}s both`}}>
-                        <span style={{fontSize:"1rem"}}>{m.icon}</span>
-                        <span style={{fontSize:".74rem",color:"var(--text2)",fontWeight:700}}>{m.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}} className="profile-2col">
-              {/* Kill sparkline */}
-              {spark.length>1&&(
-                <div style={{...card(),padding:18}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>📈 Kills Per Lobby</div>
-                    <div style={{fontFamily:"Fredoka One",color:p.color,fontSize:".9rem"}}>peak: {sparkMax}K</div>
-                  </div>
-                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:"block",overflow:"visible"}}>
-                    <defs>
-                      <linearGradient id={`grad-${p.id}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={p.color} stopOpacity="0.35"/>
-                        <stop offset="100%" stopColor={p.color} stopOpacity="0"/>
-                      </linearGradient>
-                    </defs>
-                    {/* Y-axis gridlines + labels */}
-                    {yTicks.map(t=>(
-                      <g key={t}>
-                        <line
-                          x1={PAD_L} y1={yPos(t)} x2={W-PAD_R} y2={yPos(t)}
-                          stroke="rgba(255,255,255,.08)" strokeWidth="1"
-                          strokeDasharray={t===0?"0":"3 3"}/>
-                        <text
-                          x={PAD_L-4} y={yPos(t)+3.5}
-                          textAnchor="end" fill="rgba(255,255,255,.35)"
-                          fontSize="8" fontFamily="Nunito, sans-serif" fontWeight="700">
-                          {t}
-                        </text>
-                      </g>
-                    ))}
-                    {/* Y-axis line */}
-                    <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T+CH} stroke="rgba(255,255,255,.15)" strokeWidth="1"/>
-                    {/* Area fill */}
-                    <polygon
-                      points={`${xPos(0)},${PAD_T+CH} ${pts} ${xPos(spark.length-1)},${PAD_T+CH}`}
-                      fill={`url(#grad-${p.id})`}/>
-                    {/* Line */}
-                    <polyline points={pts} fill="none" stroke={p.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                    {/* Data points — only on values > 0 or every few points */}
-                    {spark.map((v,i)=>(
-                      <g key={i}>
-                        <circle cx={xPos(i)} cy={yPos(v)} r="2.8" fill={p.color}
-                          opacity={v>0||i===0||i===spark.length-1?1:0.35}/>
-                        {/* Value label for peaks and edges */}
-                        {(i===spark.length-1||v===sparkMax)&&(
-                          <text
-                            x={xPos(i)+(i===spark.length-1?-2:0)} y={yPos(v)-5}
-                            textAnchor={i===spark.length-1?"end":"middle"}
-                            fill={p.color} fontSize="8.5" fontWeight="800" fontFamily="Fredoka One">
-                            {v}
-                          </text>
-                        )}
-                      </g>
-                    ))}
-                  </svg>
-                  <div style={{display:"flex",justifyContent:"space-between",marginTop:2,paddingLeft:PAD_L,fontSize:".6rem",color:"var(--text3)",fontWeight:700}}>
-                    <span>oldest</span><span>{spark.length} lobbies</span>
+            {/* Milestone alerts */}
+            {(()=>{
+              const alerts=getMilestones(p.id);
+              if(!alerts.length)return null;
+              return(
+                <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:12}}>
+                  {alerts.map((m,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:7,
+                      background:`${m.color}12`,border:`1px solid ${m.color}33`,
+                      borderRadius:4,padding:"6px 12px"}}>
+                      <span style={{fontSize:".95rem"}}>{m.icon}</span>
+                      <span className="bc7" style={{fontSize:".72rem",color:"var(--text2)",
+                        letterSpacing:".04em"}}>{m.text}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Badge flip collection */}
+            {badges.length>0&&(
+              <div style={{marginBottom:16}}>
+                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
+                  color:"var(--text3)",marginBottom:10}}>
+                  COMMENDATIONS · CLICK ANY BADGE TO REVEAL UNLOCK CONDITION
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {badges.map((b,bi)=><BadgeFlip key={bi} b={b} playerColor={p.color}/>)}
+                </div>
+              </div>
+            )}
+
+            {/* Kill sparkline */}
+            {spark.length>1&&(
+              <div style={{padding:"14px 16px",background:"rgba(0,0,0,.3)",
+                border:"1px solid rgba(255,255,255,.06)",borderRadius:"0 6px 6px 0",
+                borderLeft:`3px solid ${p.color}33`,marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",
+                  alignItems:"center",marginBottom:10}}>
+                  <div className="bc7" style={{fontSize:".6rem",letterSpacing:".22em",
+                    color:"var(--text3)"}}>KILLS PER LOBBY · LAST {spark.length}</div>
+                  <div className="bc7" style={{fontSize:".7rem",color:p.color}}>
+                    PEAK {sparkMax}K
                   </div>
                 </div>
-              )}
-              {/* Personal rivals */}
-              {pRivals.length>0&&(
-                <div style={{...card(),padding:18}}>
-                  <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>⚔️ Personal Rivals</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    {pRivals.map((r,i)=>{
-                      const isP1=r.p1===p.id;
-                      const oppId=isP1?r.p2:r.p1;
-                      const opp=players.find(x=>x.id===oppId);if(!opp)return null;
-                      const myW=isP1?r.p1wins:r.p2wins;
-                      const thW=isP1?r.p2wins:r.p1wins;
-                      return(
-                        <div key={i} onClick={()=>goProfile(opp.id)} style={{
-                          display:"flex",alignItems:"center",gap:10,
-                          background:"rgba(0,0,0,.3)",borderRadius:9,padding:"8px 11px",cursor:"pointer"}}>
-                          <Av p={opp} size={32}/>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontFamily:"Fredoka One",color:opp.color,fontSize:".84rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{opp.username}</div>
-                            <div style={{fontSize:".64rem",color:"var(--text3)",fontWeight:700}}>{r.total} meetings</div>
-                          </div>
-                          <div style={{fontFamily:"Fredoka One",fontSize:"1rem",color:myW>=thW?"#00FF94":"#FF4D8F"}}>
-                            {myW}–{thW}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Lobby history */}
-            <div style={{...card(),overflow:"hidden"}}>
-              <div style={{padding:"14px 18px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-                <span style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.05rem"}}>📋 Lobby History — {pSess.length} games</span>
-              </div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:".82rem"}}>
-                  <thead>
-                    <tr style={{background:"rgba(0,0,0,.5)",color:"var(--text3)",fontWeight:800,fontSize:".64rem",letterSpacing:1.5,textTransform:"uppercase"}}>
-                      {["Date","Lobby","Place","Kills","Winner"].map(h=>(
-                        <th key={h} style={{padding:"9px 14px",textAlign:h==="Place"||h==="Kills"?"center":"left",fontWeight:800,whiteSpace:"nowrap"}}>{h}</th>
+                <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:"block",overflow:"visible"}}>
+                  <defs>
+                    <linearGradient id={`grad-${p.id}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={p.color} stopOpacity="0.35"/>
+                      <stop offset="100%" stopColor={p.color} stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  {yTicks.map(t=>(
+                    <g key={t}>
+                      <line x1={PAD_L} y1={yPos(t)} x2={W-PAD_R} y2={yPos(t)}
+                        stroke="rgba(255,255,255,.07)" strokeWidth="1"
+                        strokeDasharray={t===0?"0":"3 3"}/>
+                      <text x={PAD_L-4} y={yPos(t)+3.5} textAnchor="end"
+                        fill="rgba(255,255,255,.3)" fontSize="8"
+                        fontFamily="Barlow Condensed" fontWeight="700">{t}</text>
+                    </g>
+                  ))}
+                  {spark.length>1&&(
+                    <>
+                      <polygon
+                        points={`${xPos(0)},${PAD_T+CH} ${pts} ${xPos(spark.length-1)},${PAD_T+CH}`}
+                        fill={`url(#grad-${p.id})`}/>
+                      <polyline points={pts} fill="none"
+                        stroke={p.color} strokeWidth="1.8" strokeLinejoin="round"/>
+                      {spark.map((v,i)=>(
+                        <circle key={i} cx={xPos(i)} cy={yPos(v)} r="2.5"
+                          fill={v===sparkMax?p.color:"var(--bg)"}
+                          stroke={p.color} strokeWidth="1.5"/>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pSess.slice(0,30).map((s,i)=>{
-                      const place=(s.placements||s.attendees).indexOf(p.id)+1;
-                      const kills=s.kills?.[p.id]||0;
-                      const winner=players.find(x=>x.id===s.winner);
-                      const isWin=s.winner===p.id;
-                      const medals=["🥇","🥈","🥉"];
-                      return(
-                        <tr key={s.id} onClick={()=>{setView("lobbies");setExpandedSid(s.id);(typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"}));}}
-                          style={{borderTop:"1px solid rgba(255,255,255,.05)",cursor:"pointer",
-                            background:isWin?"rgba(255,215,0,.05)":i%2===0?"transparent":"rgba(255,255,255,.02)"}}>
-                          <td style={{padding:"9px 14px",color:"var(--text3)",whiteSpace:"nowrap"}}>
-                            {new Date(s.date+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})}
-                          </td>
-                          <td style={{padding:"9px 14px",color:"var(--text2)",fontSize:".76rem"}}>{s.notes||s.id}</td>
-                          <td style={{padding:"9px 14px",textAlign:"center",fontFamily:"Fredoka One",fontSize:place<=3?"1rem":".9rem"}}>
-                            {place<=3?medals[place-1]:place}
-                          </td>
-                          <td style={{padding:"9px 14px",textAlign:"center",fontFamily:"Fredoka One",color:kills>0?"#FF4D8F":"var(--text3)",fontSize:".9rem"}}>{kills}</td>
-                          <td style={{padding:"9px 14px"}}>
-                            {winner&&<div style={{display:"flex",alignItems:"center",gap:6}}>
-                              <Av p={winner} size={20}/>
-                              <span style={{fontFamily:"Fredoka One",color:isWin?"#FFD700":winner.color,fontSize:".8rem"}}>{isWin?"✅ You":winner.username}</span>
-                            </div>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {pSess.length>30&&(
-                  <div style={{padding:"10px 18px",color:"var(--text3)",fontSize:".76rem",fontWeight:700,textAlign:"center",borderTop:"1px solid rgba(255,255,255,.06)"}}>
-                    Showing 30 of {pSess.length} lobbies
-                  </div>
-                )}
+                    </>
+                  )}
+                </svg>
               </div>
-            </div>
+            )}
+
+            {/* Rivals shortcut */}
+            {!p.host&&(
+              <button onClick={()=>{setH2hA(p.id);setH2hB("");go("rivals");
+                setTimeout(()=>document.querySelector(".h2h-scroll")?.scrollIntoView({behavior:"smooth"}),300);}}
+                style={{display:"flex",alignItems:"center",gap:6,
+                  background:"rgba(0,229,255,.08)",border:"1px solid rgba(0,229,255,.25)",
+                  borderRadius:4,padding:"8px 16px",color:"#00E5FF",cursor:"pointer",
+                  fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".72rem",
+                  letterSpacing:".15em",marginBottom:12}}>
+                ⚔️ OPEN FULL H2H COMPARISON
+              </button>
+            )}
           </div>
         );
       })()}
 
-      {/* ═══════════════ FAQ ═══════════════ */}
+
+      {/* ═══════════════ RECORDS / THE VAULT ═══════════════ */}
       {view==="records"&&(
         <div className="fade-up">
-          <div style={{textAlign:"center",marginBottom:32}}>
-            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>All Time</p>
-            <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
-              background:"linear-gradient(135deg,#FFD700,#FF6B35)",
-              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
-              🏅 Records
-            </h2>
+          {/* Vault header */}
+          <div style={{marginBottom:28}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              marginBottom:8,flexWrap:"wrap",gap:8}}>
+              <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
+                color:"rgba(199,125,255,.5)"}}>SECTOR: THE VAULT · PERMANENT ARCHIVE</span>
+              <span className="bc7" style={{fontSize:".62rem",letterSpacing:".2em",
+                color:"var(--text3)"}}>{sessions.length} SESSIONS · S1 FINALISED</span>
+            </div>
+            <h2 className="bc9" style={{fontSize:"clamp(2rem,8vw,4rem)",letterSpacing:".08em",
+              lineHeight:.9,color:"#C77DFF",textShadow:"0 0 28px rgba(199,125,255,.3)",
+              margin:"0 0 10px"}}>THE VAULT</h2>
+            <div style={{height:1,background:"linear-gradient(90deg,rgba(199,125,255,.44),transparent)",
+              marginBottom:8}}/>
+            <div className="bc7" style={{fontSize:".72rem",letterSpacing:".12em",color:"var(--text3)"}}>
+              All-time records · Numbers that do not move
+            </div>
           </div>
           {(()=>{
             const rec=getRecords();
@@ -6105,46 +5459,65 @@ export default function GameNight(){
             const topDayP=players.find(p=>p.id===rec.topDay.pid);
             const streakP=players.find(p=>p.id===rec.bestStreak.pid);
             const firstWinP=players.find(p=>p.id===rec.first?.winner);
+            const topDayKillP=players.find(p=>p.id===rec.topDayKill?.pid);
             const records=[
-              {icon:"🏆",color:"#FFD700",title:"Most Wins All Time",player:topWinP,stat:`${rec.topWinner[1]} wins`,sub:"All-time win leader"},
-              {icon:"💀",color:"#FF4D8F",title:"Most Kills All Time",player:topKillP,stat:`${rec.topKiller[1]} kills`,sub:"All-time kill leader"},
-              {icon:"☄️",color:"#FF6B35",title:"Highest Single Game",player:topGameP,stat:`${rec.topGame.k} kills`,sub:`${rec.topGame.sid} · ${rec.topGame.date}`},
-              {icon:"🔥",color:"#FF6B35",title:"Longest Win Streak",player:streakP,stat:`${rec.bestStreak.streak} in a row`,sub:"Best consecutive wins in one day"},
-              {icon:"📆",color:"#00E5FF",title:"Most Lobbies in One Day",player:topDayP,stat:`${rec.topDay.count} lobbies`,sub:rec.topDay.date},
-              {icon:"🎮",color:"#00FF94",title:"First Ever Win",player:firstWinP,stat:rec.first?.date||"—",sub:`In ${rec.first?.id||"—"}`},
+              {icon:"🏆",color:"#FFD700",title:"Most Wins All Time",  player:topWinP,  stat:`${rec.topWinner[1]} wins`,    sub:"All-time win leader"},
+              {icon:"💀",color:"#FF4D8F",title:"Most Kills All Time",  player:topKillP, stat:`${rec.topKiller[1]} kills`,   sub:"All-time kill leader"},
+              {icon:"☄️",color:"#FF6B35",title:"Highest Single Game",  player:topGameP, stat:`${rec.topGame.k}K`,           sub:`${rec.topGame.sid} · ${rec.topGame.date}`},
+              {icon:"🔥",color:"#FF6B35",title:"Longest Win Streak",   player:streakP,  stat:`${rec.bestStreak.streak} in a row`, sub:"Best consecutive wins · one day"},
+              {icon:"🌋",color:"#FF4D8F",title:"Most Kills in a Day",  player:topDayKillP, stat:`${rec.topDayKill?.k||0}K`, sub:rec.topDayKill?.date||""},
+              {icon:"📆",color:"#00E5FF",title:"Most Lobbies in a Day",player:topDayP,  stat:`${rec.topDay.count} lobbies`, sub:rec.topDay.date},
+              {icon:"🎮",color:"#00FF94",title:"Total Sessions",       player:null,     stat:rec.totalSessions,             sub:`${[...new Set(sessions.map(s=>s.date))].length} session days`},
+              {icon:"⚡",color:"#C77DFF",title:"First Ever Win",       player:firstWinP,stat:rec.first?.date||"—",          sub:`In ${rec.first?.id||"—"}`},
             ];
             return(
               <div>
-                <div className="records-grid" style={{marginBottom:32}}>
+                <div className="vault-grid" style={{marginBottom:28}}>
                   {records.map((r,i)=>(
-                    <div key={i} className="card-h" style={{
-                      background:`linear-gradient(135deg,${r.color}14,rgba(34,22,80,.9))`,
-                      border:`2px solid ${r.color}44`,borderRadius:16,padding:"20px 18px",
-                      animation:`fadeUp .4s ease both`,animationDelay:`${i*.06}s`}}>
-                      <div style={{fontSize:"2rem",marginBottom:8}}>{r.icon}</div>
-                      <div style={{fontSize:".7rem",color:"var(--text3)",fontWeight:800,
-                        letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>{r.title}</div>
-                      {r.player&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-                        <div style={{width:32,height:32,borderRadius:"50%",
-                          background:`linear-gradient(135deg,${r.player.color},${r.player.color}88)`,
-                          display:"flex",alignItems:"center",justifyContent:"center",
-                          fontFamily:"Fredoka One",fontSize:".8rem",color:"#fff",flexShrink:0}}>
-                          {r.player.username[0]}
+                    <div key={i} className="vault-card" style={{
+                      "--vc":r.color,
+                      background:`linear-gradient(135deg,${r.color}0a,rgba(0,0,0,.4))`,
+                      animation:`fadeUp .4s ease both`,animationDelay:`${i*.06}s`,
+                      cursor:r.player?"pointer":"default"}}
+                      onClick={()=>r.player&&goProfile(r.player.id)}>
+                      <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
+                        color:`${r.color}66`,marginBottom:8,textTransform:"uppercase"}}>
+                        {r.title}
+                      </div>
+                      {r.player&&(
+                        <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:8}}>
+                          <Av p={r.player} size={28} intel/>
+                          <div className="bc9" style={{fontSize:".85rem",color:r.player.color,
+                            letterSpacing:".04em",overflow:"hidden",textOverflow:"ellipsis",
+                            whiteSpace:"nowrap"}}>
+                            {r.player.host?"👑 ":""}{dn(r.player.username)}
+                          </div>
                         </div>
-                        <div style={{fontFamily:"Fredoka One",fontSize:"1rem",color:r.player.color,
-                          cursor:"pointer"}} onClick={()=>goProfile(r.player.id)}>
-                          {r.player.host?"👑 ":""}{r.player.username}
-                        </div>
-                      </div>}
-                      <div style={{fontFamily:"Fredoka One",fontSize:"1.4rem",color:r.color,marginBottom:2}}>{r.stat}</div>
-                      <div style={{fontSize:".75rem",color:"var(--text3)"}}>{r.sub}</div>
+                      )}
+                      <div className="bc9" style={{fontSize:"clamp(1.4rem,4vw,2rem)",
+                        color:r.color,lineHeight:1,marginBottom:4,
+                        textShadow:`0 0 16px ${r.color}44`}}>
+                        {r.icon} {r.stat}
+                      </div>
+                      <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",
+                        letterSpacing:".05em"}}>{r.sub}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{background:"rgba(0,0,0,.2)",borderRadius:16,padding:"20px 18px",marginBottom:32}}>
-                  <h3 style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:"#FF4D8F",marginBottom:4}}>🔫 Kill King by Day</h3>
-                  <p style={{fontSize:".8rem",color:"var(--text3)",marginBottom:16}}>Highest single-lobby kill count for each session day</p>
-                  <div style={{display:"flex",flexDirection:"column",gap:7}}>
+
+                {/* Kill King by Day */}
+                <div style={{padding:"18px 18px",marginBottom:20,
+                  background:"rgba(255,255,255,.02)",
+                  border:"1px solid rgba(255,77,143,.15)",
+                  borderLeft:"3px solid rgba(255,77,143,.4)",
+                  borderRadius:"0 8px 8px 0"}}>
+                  <div className="bc9" style={{fontSize:".88rem",color:"#FF4D8F",
+                    letterSpacing:".06em",marginBottom:4}}>💀 KILL KING BY DAY</div>
+                  <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
+                    marginBottom:14,letterSpacing:".06em"}}>
+                    Highest single-lobby kill count per session day
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
                     {(()=>{
                       const byDay={};
                       sessions.forEach(s=>{
@@ -6155,7 +5528,7 @@ export default function GameNight(){
                       });
                       return Object.values(byDay)
                         .sort((a,b)=>b.date.localeCompare(a.date))
-                        .slice(0,12)
+                        .slice(0,10)
                         .map((entry,i)=>{
                           const p=players.find(x=>x.id===entry.pid);
                           if(!p)return null;
@@ -6163,77 +5536,51 @@ export default function GameNight(){
                           const dateLabel=dd.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
                           return(
                             <div key={i} onClick={()=>goProfile(p.id)} style={{
-                              display:"flex",alignItems:"center",gap:12,
-                              background:"rgba(0,0,0,.3)",border:"1px solid rgba(255,77,143,.2)",
-                              borderRadius:11,padding:"9px 13px",cursor:"pointer",
+                              display:"flex",alignItems:"center",gap:10,
+                              padding:"9px 12px",cursor:"pointer",
+                              background:"rgba(0,0,0,.25)",
+                              borderLeft:`2px solid ${p.color}33`,
+                              borderRadius:"0 4px 4px 0",
                               animation:`fadeUp .3s ease ${i*.04}s both`}}>
-                              <div style={{fontFamily:"Fredoka One",fontSize:".78rem",
-                                color:"var(--text3)",width:72,flexShrink:0}}>{dateLabel}</div>
-                              <Av p={p} size={32}/>
-                              <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontFamily:"Fredoka One",color:p.color,fontSize:".9rem",
-                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                  {p.host?"👑 ":""}{dn(p.username)}
-                                </div>
-                                <div style={{fontSize:".65rem",color:"var(--text3)",fontWeight:700}}>{entry.sid}</div>
+                              <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
+                                width:72,flexShrink:0}}>{dateLabel}</div>
+                              <Av p={p} size={28} intel/>
+                              <div className="bc9" style={{flex:1,minWidth:0,fontSize:".85rem",
+                                color:p.color,overflow:"hidden",textOverflow:"ellipsis",
+                                whiteSpace:"nowrap",letterSpacing:".04em"}}>
+                                {p.host?"👑 ":""}{dn(p.username)}
                               </div>
-                              <div style={{fontFamily:"Fredoka One",fontSize:"1.3rem",
-                                color:"#FF4D8F",flexShrink:0}}>{entry.k}K</div>
+                              <div className="bc9" style={{fontSize:"1.1rem",color:"#FF4D8F",
+                                flexShrink:0,textShadow:"0 0 10px rgba(255,77,143,.5)"}}>
+                                {entry.k}K
+                              </div>
                             </div>
                           );
                         });
                     })()}
                   </div>
                 </div>
-                <div style={{background:"rgba(0,0,0,.2)",borderRadius:16,padding:"20px 18px",marginBottom:32}}>
-                  <h3 style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:"var(--cyan)",marginBottom:16}}>📊 Site Totals</h3>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
-                    {[
-                      {l:"Total Sessions",v:rec.totalSessions,c:"var(--gold)"},
-                      {l:"Total Kills",v:rec.totalKills,c:"var(--pink)"},
-                      {l:"Active Players",v:players.filter(p=>getStats(p.id).appearances>0).length,c:"var(--green)"},
-                      {l:"Unique Winners",v:[...new Set(sessions.filter(s=>s.winner).map(s=>s.winner))].length,c:"var(--orange)"},
-                      {l:"Days Played",v:[...new Set(sessions.map(s=>s.date))].length,c:"var(--cyan)"},
-                      {l:"Avg per Day",v:rec.totalSessions?Math.round(rec.totalSessions/[...new Set(sessions.map(s=>s.date))].length):0,c:"var(--purple)"},
-                    ].map((s,i)=>(
-                      <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:10,padding:"12px 14px",textAlign:"center"}}>
-                        <div style={{fontFamily:"Fredoka One",fontSize:"1.6rem",color:s.c}}>{s.v}</div>
-                        <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>{s.l}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{background:"rgba(0,0,0,.2)",borderRadius:16,padding:"20px 18px"}}>
-                  <h3 style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:"var(--gold)",marginBottom:4}}>🗓️ Activity Heatmap</h3>
-                  <p style={{fontSize:".8rem",color:"var(--text3)",marginBottom:16}}>Lobbies played per day — darker = more action</p>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                    {(()=>{
-                      const hm=getHeatmap();
-                      const dates=Object.keys(hm).sort();
-                      const maxV=Math.max(...Object.values(hm));
-                      return dates.map((d,i)=>{
-                        const v=hm[d]||0;
-                        const intensity=maxV>0?v/maxV:0;
-                        const bg=`rgba(0,229,255,${.12+intensity*.7})`;
-                        const dd=new Date(d+"T12:00:00Z");
-                        const label=`${dd.toLocaleDateString("en",{month:"short",day:"numeric"})}: ${v} lobbies`;
-                        return(
-                          <div key={d} className="heat-cell" title={label} style={{
-                            width:36,height:36,background:bg,
-                            border:`1.5px solid rgba(0,229,255,${.2+intensity*.4})`,
-                            borderRadius:6,display:"flex",flexDirection:"column",
-                            alignItems:"center",justifyContent:"center",cursor:"default"}}>
-                            <div style={{fontSize:".6rem",color:`rgba(255,255,255,${.5+intensity*.5})`,fontWeight:800,lineHeight:1}}>
-                              {dd.getDate()}
-                            </div>
-                            <div style={{fontSize:".55rem",color:`rgba(0,229,255,${.6+intensity*.4})`,fontWeight:700,lineHeight:1}}>
-                              {v}
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
+
+                {/* Site totals */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",
+                  gap:1,border:"1px solid rgba(199,125,255,.15)",
+                  borderRadius:2,overflow:"hidden"}}>
+                  {[
+                    {l:"TOTAL SESSIONS",  v:rec.totalSessions,   c:"#FFD700"},
+                    {l:"TOTAL KILLS",     v:rec.totalKills,      c:"#FF4D8F"},
+                    {l:"ACTIVE PLAYERS",  v:players.filter(p=>getStats(p.id).appearances>0).length, c:"#00FF94"},
+                    {l:"UNIQUE WINNERS",  v:[...new Set(sessions.filter(s=>s.winner).map(s=>s.winner))].length, c:"#FF6B35"},
+                    {l:"SESSION DAYS",    v:[...new Set(sessions.map(s=>s.date))].length, c:"#00E5FF"},
+                    {l:"AVG PER DAY",     v:rec.totalSessions?Math.round(rec.totalSessions/[...new Set(sessions.map(s=>s.date))].length):0, c:"#C77DFF"},
+                  ].map((s,i)=>(
+                    <div key={i} style={{padding:"14px 10px",textAlign:"center",
+                      background:"rgba(255,255,255,.02)",borderRight:"1px solid rgba(255,255,255,.04)"}}>
+                      <div className="bc9" style={{fontSize:"clamp(1.2rem,4vw,1.8rem)",
+                        color:s.c,lineHeight:1,textShadow:`0 0 14px ${s.c}33`}}>{s.v}</div>
+                      <div className="bc7" style={{fontSize:".52rem",letterSpacing:".18em",
+                        color:"var(--text3)",marginTop:5}}>{s.l}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -7458,7 +6805,6 @@ export default function GameNight(){
             letterSpacing:".08em",lineHeight:.9,
             color:lvlCard.color,textTransform:"uppercase",
             textShadow:`0 0 60px ${lvlCard.color}88`,
-            animation:"lvlText .6s cubic-bezier(.16,1,.3,1) both",
             animation:"lvlFlicker .8s ease both",
           }}>
             {lvlCard.label}
