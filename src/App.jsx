@@ -18,7 +18,7 @@ const isEventActive=()=>{
   const{start,startHour,end,endHour}=SEASONAL_EVENT;
   return(ds===start&&hr>=startHour)||(ds>start&&ds<end)||(ds===end&&hr<endHour);
 };
-const STORAGE_VERSION    = "gn-v82"; // bumped — terminal briefing, 8 stories, VotePanel live tracking, bios human rewrite
+const STORAGE_VERSION    = "gn-v84"; // bumped — daily MVP vote, anniversary banner, Day One badge, bio fixes, all views fill mobile, S2 all players
 const SITE_TITLE         = "Games Night";
 const HOSTED_BY          = "Mekula";
 const FEATURED_GAME      = "Bullet League";
@@ -1917,6 +1917,7 @@ const BADGE_CATALOGUE = [
   {icon:"📅",name:"Full House",   desc:"Attended every single lobby (min 4)",     how:"Never miss a Games Night"},
   {icon:"💥",name:"50 Kills",     desc:"50 total kills across all lobbies",       how:"Rack up 50 kills"},
   {icon:"🎖️",name:"100 Kills",   desc:"100 total kills — absolute menace",       how:"100 kills total. That's serious."},
+  {icon:"💀",name:"500 Kills",   desc:"500 total kills — you live in this lobby", how:"500 kills all time. Pure damage."},
   {icon:"⚡",name:"2.0+ K/G",     desc:"Kill/Game ratio 2.0+ (min 2 lobbies)",  how:"Stay above 2.0 K/G across 2+ games"},
   {icon:"🌟",name:"Big Game",     desc:"10+ kills in a single lobby",             how:"Drop 10 kills in one game"},
   {icon:"🎯",name:"50% Win Rate", desc:"Won half or more of your lobbies (min 3)",how:"Win 50%+ of games with 3+ played"},
@@ -1926,6 +1927,7 @@ const BADGE_CATALOGUE = [
   {icon:"🤝",name:"Never 1st",    desc:"Loyal squad member — never wins",          how:"Play 20+ lobbies without a single win (respect)"},
   {icon:"☄️",name:"Rampage",      desc:"6+ kills in a single lobby — 3 or more times", how:"Drop 6+ kills in 3 separate lobbies"},
   {icon:"🌊",name:"Hot Hand",     desc:"3+ wins in a single session day",             how:"Win 3 or more lobbies in one day"},
+  {icon:"🎂",name:"Day One",      desc:"Played in the first month of Games Night — Apr 4, 2026",     how:"Limited edition. You were there in month one."},
   {icon:"🥚",name:"Easter Egg",   desc:"Played on Easter Saturday — Apr 4, 2026",     how:"Limited edition. Show up on Easter Saturday."},
   {icon:"💪",name:"No Days Off",   desc:"Showed up on Good Friday — Apr 3, 2026",      how:"Limited edition. Frag on a public holiday."},
   {icon:"🚀",name:"First Blood S2", desc:"First win of Season 2 — Apr 2026",           how:"S2 exclusive. Win a lobby in Season 2 before anyone else."},
@@ -2259,7 +2261,6 @@ const CSS = `
   @keyframes jesterSpin{0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.2)}100%{transform:rotate(360deg) scale(1)}}
   @keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
   @keyframes glitchShift{0%,95%,100%{transform:translate(0,0)}96%{transform:translate(-3px,1px)}97%{transform:translate(2px,-2px)}98%{transform:translate(-1px,2px)}99%{transform:translate(3px,-1px)}}
-  @keyframes s1FadeIn{0%{opacity:0;transform:translateY(30px)}100%{opacity:1;transform:translateY(0)}}
   @keyframes numberRoll{0%{opacity:0;transform:scale(.6)}60%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
 
   /* ── HUD CLASSES ── */
@@ -2314,8 +2315,6 @@ const CSS = `
   }
   .jester-zone{position:relative;display:inline-block;}
   .confetti-piece{position:fixed;width:8px;height:8px;border-radius:2px;animation:confettiFall linear forwards;pointer-events:none;z-index:9998;}
-  .s1-farewell{background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,107,53,.07),rgba(199,125,255,.08));border:2px solid rgba(255,215,0,.45);border-radius:24px;padding:32px 28px;position:relative;overflow:hidden;}
-  .s1-farewell::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,215,0,.08),transparent 60%);pointer-events:none;}
   .stat-roll{animation:numberRoll .5s cubic-bezier(.34,1.56,.64,1) both;}
 
   .spin-a{animation:spinA 1.1s linear infinite;display:inline-block;}
@@ -2502,6 +2501,336 @@ function TypingText({text, speed=18, color="var(--text3)", style:s={}}) {
       {out}
       {!done && <span style={{color, opacity:blink?1:0, transition:"opacity .1s"}}>█</span>}
     </span>
+  );
+}
+
+// ── BadgeFlip — module-level so useState/useEffect are stable ──
+// Mobile was double-firing (touchstart + click) causing instant open-close.
+// Debounce lock blocks the second event within 400ms.
+function BadgeFlip({b,playerColor}){
+  const bc=BADGE_CATALOGUE.find(x=>x.name===b.label)||{how:"Earned through gameplay"};
+  const [flipped,setFlipped]=useState(false);
+  const [locked,setLocked]=useState(false);
+
+  useEffect(()=>{
+    if(!flipped)return;
+    const t=setTimeout(()=>setFlipped(false),5000);
+    return()=>clearTimeout(t);
+  },[flipped]);
+
+  const handle=(e)=>{
+    e.preventDefault();
+    if(locked)return;
+    setLocked(true);
+    setTimeout(()=>setLocked(false),400);
+    setFlipped(f=>!f);
+  };
+
+  return(
+    <div className={`badge-flip-wrap${flipped?" flipped":""}`}
+      title={flipped?"":"Tap to reveal"}
+      onClick={handle}
+      onTouchEnd={handle}
+      style={{touchAction:"manipulation",WebkitTapHighlightColor:"transparent"}}>
+      <div className="badge-flip-inner">
+        <div className="badge-flip-front" style={{
+          background:`${playerColor}14`,border:`1px solid ${playerColor}33`}}>
+          <span style={{fontSize:"1rem",flexShrink:0}}>{b.icon}</span>
+          <span className="bc7" style={{fontSize:".62rem",color:playerColor,
+            letterSpacing:".04em",lineHeight:1.3,overflow:"hidden",
+            display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>
+            {b.label}
+          </span>
+        </div>
+        <div className="badge-flip-back" style={{border:`1px solid ${playerColor}44`}}>
+          <span style={{fontFamily:"Nunito",fontWeight:700,fontSize:".6rem",
+            color:"#c8baff",lineHeight:1.4,textAlign:"center"}}>
+            {bc.how}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── DailyVotePanel — session MVP vote, resets each session day, shared for all visitors ──
+function DailyVotePanel({players,latestDate,latestSess,store,dn,Av,goProfile}){
+  const voteKey=`gn-daily-vote-${latestDate}`;
+  const winnerKey=`gn-daily-winner-${latestDate}`;
+  const myVoteKey=`gn-my-vote-${latestDate}`;
+
+  const [voteCounts,setVoteCounts]=useState({});
+  const [myVote,setMyVote]=useState(null);
+  const [phase,setPhase]=useState("voting"); // "voting" | "results"
+  const [prevWinner,setPrevWinner]=useState(null);
+
+  // Players who attended the latest session
+  const eligible=[...new Set((latestSess||[]).flatMap(s=>s.attendees||[]))]
+    .map(pid=>players.find(p=>p.id===pid)).filter(Boolean);
+
+  useEffect(()=>{
+    const load=async()=>{
+      try{
+        // Load my vote from local storage
+        const mv=typeof window!=="undefined"?window.localStorage?.getItem(myVoteKey):null;
+        if(mv)setMyVote(mv);
+        // Load shared vote counts
+        const r=typeof window!=="undefined"&&window.storage?.get
+          ?await window.storage.get(voteKey,true).catch(()=>null)
+          :await store.get(voteKey);
+        if(r?.value)setVoteCounts(JSON.parse(r.value));
+        // Load previous day winner
+        const days=[...new Set((latestSess||[]).map(s=>s.date))].sort().reverse();
+        const prevDate=days[1];
+        if(prevDate){
+          const pr=typeof window!=="undefined"&&window.storage?.get
+            ?await window.storage.get(`gn-daily-winner-${prevDate}`,true).catch(()=>null)
+            :await store.get(`gn-daily-winner-${prevDate}`);
+          if(pr?.value)setPrevWinner(JSON.parse(pr.value));
+        }
+      }catch{}
+    };
+    load();
+    const iv=setInterval(load,14000);
+    return()=>clearInterval(iv);
+  },[latestDate]);
+
+  const castVote=async(pid)=>{
+    if(myVote)return;
+    setMyVote(pid);
+    try{
+      window.localStorage?.setItem(myVoteKey,pid);
+      const counts={...voteCounts};
+      counts[pid]=(counts[pid]||0)+1;
+      setVoteCounts(counts);
+      const str=JSON.stringify(counts);
+      if(typeof window!=="undefined"&&window.storage?.set){
+        await window.storage.set(voteKey,str,true).catch(()=>{});
+        // Save winner (highest voted) to shared storage
+        const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+        if(top)await window.storage.set(winnerKey,JSON.stringify({pid:top[0],votes:top[1],date:latestDate}),true).catch(()=>{});
+      }
+      await store.set(voteKey,str);
+    }catch{}
+  };
+
+  const totalVotes=Object.values(voteCounts).reduce((a,b)=>a+b,0);
+  const topPid=Object.entries(voteCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  const topP=topPid?players.find(p=>p.id===topPid):null;
+  const prevWinP=prevWinner?.pid?players.find(p=>p.id===prevWinner.pid):null;
+
+  if(!eligible.length)return null;
+
+  return(
+    <div style={{marginBottom:22}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+        marginBottom:10,flexWrap:"wrap",gap:6}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
+            color:"rgba(255,215,0,.7)"}}>▸ SESSION MVP VOTE</div>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#FFD700",
+            flexShrink:0,boxShadow:"0 0 8px #FFD700",
+            animation:"hudBlink 1.4s ease-in-out infinite"}}/>
+        </div>
+        {totalVotes>0&&<div className="bc7" style={{fontSize:".6rem",
+          color:"var(--text3)",letterSpacing:".1em"}}>{totalVotes} vote{totalVotes===1?"":"s"} in</div>}
+      </div>
+
+      <div style={{background:"rgba(255,255,255,.02)",
+        border:"1px solid rgba(255,215,0,.18)",
+        borderLeft:"3px solid rgba(255,215,0,.5)",
+        borderRadius:"0 8px 8px 0",padding:"14px 16px"}}>
+
+        {/* Previous day winner banner */}
+        {prevWinP&&(
+          <div onClick={()=>goProfile(prevWinP.id)} style={{
+            display:"flex",alignItems:"center",gap:10,
+            background:"rgba(255,215,0,.07)",
+            border:"1px solid rgba(255,215,0,.2)",
+            borderRadius:6,padding:"8px 12px",marginBottom:14,cursor:"pointer"}}>
+            <span style={{fontSize:"1.1rem"}}>🏅</span>
+            <div style={{flex:1,minWidth:0}}>
+              <div className="bc7" style={{fontSize:".56rem",letterSpacing:".2em",
+                color:"rgba(255,215,0,.6)",marginBottom:2}}>LAST SESSION MVP WINNER</div>
+              <div className="bc9" style={{fontSize:".82rem",color:"#FFD700",
+                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {dn(prevWinP.username)}
+                <span className="bc7" style={{fontSize:".65rem",color:"var(--text3)",
+                  marginLeft:8}}>{prevWinner.votes} vote{prevWinner.votes===1?"":"s"}</span>
+              </div>
+            </div>
+            <span style={{fontSize:"1.4rem"}}>👑</span>
+          </div>
+        )}
+
+        {/* Live leader if votes exist */}
+        {totalVotes>0&&topP&&(
+          <div style={{marginBottom:12}}>
+            <div className="bc7" style={{fontSize:".56rem",letterSpacing:".18em",
+              color:"var(--text3)",marginBottom:6}}>CURRENT LEADER</div>
+            {Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([pid,count])=>{
+              const vp=players.find(p=>p.id===pid);
+              if(!vp)return null;
+              const pct=Math.round((count/totalVotes)*100);
+              const isTop=pid===topPid;
+              return(
+                <div key={pid} style={{marginBottom:6}}>
+                  <div style={{display:"flex",justifyContent:"space-between",
+                    alignItems:"center",marginBottom:2}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <Av p={vp} size={18}/>
+                      <span className="bc9" style={{fontSize:".72rem",
+                        color:isTop?"#FFD700":"var(--text2)"}}>
+                        {isTop?"👑 ":""}{dn(vp.username)}
+                      </span>
+                    </div>
+                    <span className="bc7" style={{fontSize:".66rem",
+                      color:isTop?"#FFD700":"var(--text3)"}}>
+                      {count}v · {pct}%
+                    </span>
+                  </div>
+                  <div style={{height:3,background:"rgba(255,255,255,.08)",
+                    borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",
+                      background:isTop?"linear-gradient(90deg,rgba(255,215,0,.6),#FFD700)":"rgba(255,255,255,.2)",
+                      width:`${pct}%`,borderRadius:2,transition:"width .5s ease"}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Vote prompt or locked */}
+        {myVote?(
+          <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
+            textAlign:"center",padding:"4px 0"}}>
+            Your vote is in.
+            {players.find(p=>p.id===myVote)&&(
+              <span style={{color:players.find(p=>p.id===myVote).color,marginLeft:6}}>
+                {dn(players.find(p=>p.id===myVote).username)}
+              </span>
+            )}
+          </div>
+        ):(
+          <>
+            <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",
+              marginBottom:8,letterSpacing:".06em"}}>
+              Who ran the session last night?
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {eligible.map(player=>(
+                <button key={player.id} onClick={()=>castVote(player.id)} style={{
+                  display:"flex",alignItems:"center",gap:6,
+                  background:`${player.color}0a`,
+                  border:`1px solid ${player.color}22`,
+                  borderRadius:5,padding:"6px 10px",cursor:"pointer",
+                  outline:"none",transition:"all .1s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=`${player.color}1a`;e.currentTarget.style.borderColor=`${player.color}55`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=`${player.color}0a`;e.currentTarget.style.borderColor=`${player.color}22`;}}>
+                  <Av p={player} size={22}/>
+                  <span className="bc9" style={{fontSize:".7rem",color:player.color,
+                    whiteSpace:"nowrap"}}>
+                    {player.host?"👑 ":""}{dn(player.username)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── LeaderSlideshow — auto-cycles through 4 season leader cards ──
+function LeaderSlideshow({slides}){
+  const [idx,setIdx]=useState(0);
+  const [animDir,setAnimDir]=useState("in"); // "in" | "out"
+
+  useEffect(()=>{
+    if(!slides.length)return;
+    const iv=setInterval(()=>{
+      setAnimDir("out");
+      setTimeout(()=>{
+        setIdx(i=>(i+1)%slides.length);
+        setAnimDir("in");
+      },380);
+    },7000);
+    return()=>clearInterval(iv);
+  },[slides.length]);
+
+  const goTo=(i)=>{
+    if(i===idx)return;
+    setAnimDir("out");
+    setTimeout(()=>{setIdx(i);setAnimDir("in");},320);
+  };
+
+  if(!slides.length)return null;
+  const s=slides[idx];
+  if(!s||!s.player)return null;
+
+  const slideStyle={
+    opacity:animDir==="in"?1:0,
+    transform:animDir==="in"?"translateX(0)":"translateX(18px)",
+    transition:"opacity .36s ease, transform .36s ease",
+  };
+
+  return(
+    <div style={{marginBottom:20}}>
+      <div style={{
+        background:`linear-gradient(135deg,${s.player.color}0e,rgba(0,0,0,.55))`,
+        border:`1px solid ${s.player.color}33`,
+        borderLeft:`3px solid ${s.player.color}`,
+        borderRadius:"0 8px 8px 0",padding:"18px 20px",
+        position:"relative",overflow:"hidden",minHeight:92}}>
+        {/* Watermark letter */}
+        <div style={{position:"absolute",right:-6,top:-8,fontFamily:"Barlow Condensed",
+          fontWeight:900,fontSize:"7rem",color:s.player.color,opacity:.05,
+          lineHeight:1,pointerEvents:"none",userSelect:"none"}}>{s.player.username[0]}</div>
+        {/* Slide content */}
+        <div style={{display:"flex",alignItems:"center",gap:16,...slideStyle}}>
+          <div style={{flexShrink:0,width:58,height:58,borderRadius:"50%",
+            background:`linear-gradient(135deg,${s.player.color},${s.player.color}88)`,
+            display:"flex",alignItems:"center",justifyContent:"center",
+            fontFamily:"Barlow Condensed",fontWeight:900,
+            fontSize:"1.5rem",color:"#fff",
+            boxShadow:`0 0 22px ${s.player.color}55`,
+            flexDirection:"column",gap:0}}>
+            {s.player.username[0].toUpperCase()}
+          </div>
+          <div style={{flex:1,minWidth:0,position:"relative",zIndex:1}}>
+            <div className="bc7" style={{fontSize:".58rem",letterSpacing:".3em",
+              color:`${s.player.color}66`,marginBottom:4}}>
+              ▸ {s.label}
+            </div>
+            <div className="bc9" style={{fontSize:"clamp(1.2rem,5vw,1.9rem)",
+              letterSpacing:".06em",color:s.player.color,
+              textShadow:`0 0 18px ${s.player.color}44`,lineHeight:1,
+              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {s.player.host?"👑 ":""}{s.player.username.toUpperCase()}
+            </div>
+            <div className="bc7" style={{fontSize:".75rem",color:"var(--text2)",
+              marginTop:5,letterSpacing:".05em"}}>{s.stat}</div>
+            {s.sub&&<div className="bc7" style={{fontSize:".62rem",
+              color:"var(--text3)",marginTop:2}}>{s.sub}</div>}
+          </div>
+          <div style={{fontSize:"clamp(1.8rem,5vw,2.8rem)",flexShrink:0,
+            textShadow:`0 0 20px ${s.player.color}55`}}>{s.icon}</div>
+        </div>
+        {/* Dot nav */}
+        <div style={{display:"flex",gap:5,justifyContent:"center",marginTop:12,
+          position:"relative",zIndex:2}}>
+          {slides.map((_,i)=>(
+            <div key={i} onClick={()=>goTo(i)} style={{
+              width:i===idx?18:6,height:6,borderRadius:3,cursor:"pointer",
+              background:i===idx?s.player.color:"rgba(255,255,255,.18)",
+              transition:"all .3s ease",
+              boxShadow:i===idx?`0 0 8px ${s.player.color}77`:"none"}}/>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2948,6 +3277,7 @@ export default function GameNight(){
     else if(streak>=2)b.push({icon:"🔥",label:`${streak} Streak`});
     if(st.wins>0)b.push({icon:"🏆",label:"Winner"});
     if(st.appearances>=sessions.length&&sessions.length>=4)b.push({icon:"📅",label:"Full House"});
+    if(st.kills>=500)b.push({icon:"💀",label:"500 Kills"});
     if(st.kills>=100)b.push({icon:"🎖️",label:"100 Kills"});
     else if(st.kills>=50)b.push({icon:"💥",label:"50 Kills"});
     if(st.kd>=2&&st.appearances>=2)b.push({icon:"⚡",label:"2.0+ K/G"});
@@ -2974,6 +3304,8 @@ export default function GameNight(){
     // Easter Egg: played on Apr 4, 2026
     const playedEaster=sessions.some(s=>s.date==="2026-04-04"&&s.attendees?.includes(pid));
     if(playedEaster)b.push({icon:"🥚",label:"Easter Egg"});
+    // Day One: played at any point during month one (March or first week of April 2026)
+    if(st.appearances>=1)b.push({icon:"🎂",label:"Day One"});
     // No Days Off: played on Good Friday Apr 3, 2026
     const playedGoodFriday=sessions.some(s=>s.date==="2026-04-03"&&s.attendees?.includes(pid));
     if(playedGoodFriday)b.push({icon:"💪",label:"No Days Off"});
@@ -3550,7 +3882,7 @@ export default function GameNight(){
     }
 
     // Kill milestone right there
-    const killMilestones=[50,100,150,200,300,400];
+    const killMilestones=[50,100,150,200,300,400,500];
     let bestChase={pid:"",gap:999,milestone:0};
     players.forEach(p=>{
       const st=getStats(p.id);
@@ -3890,27 +4222,6 @@ export default function GameNight(){
 
   // ── TypedBio — proper component so it can use hooks ──
   // ── Badge flip — DOM classList toggle, no hooks ──
-  const BadgeFlip=({b,playerColor})=>{
-    const bc=BADGE_CATALOGUE.find(x=>x.name===b.label)||{how:"Earned through gameplay"};
-    return(
-      <div className="badge-flip-wrap" title="Click to reveal"
-        onClick={e=>e.currentTarget.classList.toggle("flipped")}>
-        <div className="badge-flip-inner">
-          <div className="badge-flip-front" style={{
-            background:`${playerColor}14`,border:`1px solid ${playerColor}33`}}>
-            <span style={{fontSize:"1rem",flexShrink:0}}>{b.icon}</span>
-            <span className="bc7" style={{fontSize:".62rem",color:playerColor,letterSpacing:".04em",
-              lineHeight:1.3,overflow:"hidden",display:"-webkit-box",
-              WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{b.label}</span>
-          </div>
-          <div className="badge-flip-back" style={{border:`1px solid ${playerColor}44`}}>
-            <span style={{fontFamily:"Nunito",fontWeight:700,fontSize:".6rem",
-              color:"#c8baff",lineHeight:1.4,textAlign:"center"}}>{bc.how}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // ── Game boot screen ──
   if(!loaded||bootPhase<2)return(
@@ -4196,7 +4507,7 @@ export default function GameNight(){
 
       {/* ═══════════════ HOME ═══════════════ */}
       {view==="home"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* ── April Fools floating jesters ── */}
           {foolsDay&&(
             <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:5}}>
@@ -4235,6 +4546,40 @@ export default function GameNight(){
             const gapW=byS2W[1]?(byS2W[0].wins-byS2W[1].wins):0;
             const missions=getWeeklyMissions();
 
+            // ── Slideshow data — 4 slides (hoisted before return so esbuild stays in JS mode) ──
+            const s2StatsSorted=allStats(seasonSess).filter(p=>p.appearances>0);
+            const slide1P=s2ChampP;
+            const slide1St=slide1P?getStats(slide1P.id,seasonSess):null;
+            const slide1Sub=slide1P&&secondP&&gapW>=0?`${dn(secondP.username)} is ${gapW}W behind`:null;
+            const s2KillsLeader=[...s2StatsSorted].sort((a,b)=>b.kills-a.kills)[0];
+            const slide2P=s2KillsLeader?players.find(p=>p.id===s2KillsLeader.id):null;
+            const s2KillsTwo=[...s2StatsSorted].sort((a,b)=>b.kills-a.kills)[1];
+            const slide2SubP=s2KillsTwo?players.find(p=>p.id===s2KillsTwo.id):null;
+            const slide2Sub=slide2SubP?`${dn(slide2SubP.username)} has ${s2KillsTwo.kills}K`:null;
+            let s2BestPid="",s2BestK=0,s2BestSid="";
+            for(let _si=0;_si<seasonSess.length;_si++){
+              const _s=seasonSess[_si];const _ks=Object.keys(_s.kills||{});
+              for(let _ki=0;_ki<_ks.length;_ki++){const _p=_ks[_ki];const _k=_s.kills[_p];if(_k>s2BestK){s2BestK=_k;s2BestPid=_p;s2BestSid=_s.id;}}
+            }
+            const slide3P=s2BestPid?players.find(p=>p.id===s2BestPid):null;
+            const s2AppLeader=[...s2StatsSorted].sort((a,b)=>b.appearances-a.appearances)[0];
+            const slide4P=s2AppLeader?players.find(p=>p.id===s2AppLeader.id):null;
+            const slide4St=slide4P?getStats(slide4P.id,seasonSess):null;
+            // Slide 5: best current streak in S2 (most consecutive wins)
+            let s2BestStreakPid="",s2BestStreakV=0;
+            players.forEach(pl=>{
+              const v=getStreak(pl.id);
+              if(v>s2BestStreakV){s2BestStreakV=v;s2BestStreakPid=pl.id;}
+            });
+            const slide5P=s2BestStreakPid&&s2BestStreakV>=2?players.find(p=>p.id===s2BestStreakPid):null;
+            const slide5St=slide5P?getStats(slide5P.id,seasonSess):null;
+            const leaderSlides=[
+              slide1P&&slide1St&&{label:`${currentSeason.name.toUpperCase()} WINS LEADER`,player:slide1P,stat:`${slide1St.wins}W this season · ${getStats(slide1P.id).wins}W all time`,sub:slide1Sub,icon:"🏆"},
+              slide2P&&s2KillsLeader&&{label:`${currentSeason.name.toUpperCase()} KILL LEADER`,player:slide2P,stat:`${s2KillsLeader.kills} kills this season · ${s2KillsLeader.appearances} lobbies`,sub:slide2Sub,icon:"💀"},
+              slide3P&&s2BestK>0&&{label:"BEST SINGLE GAME THIS SEASON",player:slide3P,stat:`${s2BestK} kills in one lobby`,sub:`Lobby ${s2BestSid}`,icon:"☄️"},
+              slide4P&&slide4St&&{label:`${currentSeason.name.toUpperCase()} MOST APPEARANCES`,player:slide4P,stat:`${slide4St.appearances} lobbies · ${slide4St.wins}W`,sub:"Most committed player this season",icon:"📅"},
+              slide5P&&slide5St&&{label:"BEST WIN STREAK THIS SEASON",player:slide5P,stat:`${s2BestStreakV} consecutive wins`,sub:`${slide5St.wins}W from ${slide5St.appearances} lobbies in ${currentSeason.name}`,icon:"🔥"},
+            ].filter(Boolean);
             return(<>
               {/* Status row */}
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -4307,6 +4652,44 @@ export default function GameNight(){
                 })()}
               </div>
 
+              {/* 1-month anniversary banner — shows from Apr 4, 2026 based on real date */}
+              {todayStr()>="2026-04-04"&&(
+                <div style={{
+                  marginBottom:20,
+                  background:"linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,107,53,.07),rgba(199,125,255,.08))",
+                  border:"1px solid rgba(255,215,0,.3)",
+                  borderLeft:"3px solid #FFD700",
+                  borderRadius:"0 10px 10px 0",
+                  padding:"18px 20px",
+                  position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",right:12,top:"50%",
+                    transform:"translateY(-50%)",fontSize:"3.5rem",opacity:.07,
+                    pointerEvents:"none",userSelect:"none"}}>🎂</div>
+                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".3em",
+                    color:"rgba(255,215,0,.65)",marginBottom:6}}>▸ ONE MONTH IN · APRIL 4, 2026</div>
+                  <div className="bc9" style={{fontSize:"clamp(1rem,4vw,1.35rem)",
+                    color:"#FFD700",lineHeight:1.25,marginBottom:8}}>
+                    Games Night is officially one month old.
+                  </div>
+                  <div className="bc7" style={{fontSize:".8rem",color:"var(--text2)",
+                    lineHeight:1.7,maxWidth:520}}>
+                    What started as a daily lobby has turned into {sessions.length} sessions, {players.filter(p=>getStats(p.id).appearances>0).length} players
+                    on the board, and a real community that keeps showing up every single week.
+                    Thank you to everyone who played, who watched, who kept coming back after a bad night.
+                    This is only the start. Every player who was part of month one gets the Day One badge permanently.
+                  </div>
+                  <div style={{display:"flex",gap:7,marginTop:10,flexWrap:"wrap",alignItems:"center"}}>
+                    {["🎂","🏆","💀","🔥","⚡","🥚"].map((e,i)=>(
+                      <span key={i} style={{fontSize:"1.1rem",
+                        animation:`eggBounce ${1.8+i*.25}s ease-in-out ${i*.12}s infinite`,
+                        display:"inline-block"}}>{e}</span>
+                    ))}
+                    <span className="bc7" style={{fontSize:".68rem",color:"rgba(255,215,0,.5)",
+                      marginLeft:4,letterSpacing:".1em"}}>MEKULA · GAMES NIGHT</span>
+                  </div>
+                </div>
+              )}
+
               {/* Season stat strip */}
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(76px,1fr))",
                 gap:1,marginBottom:24,border:"1px solid rgba(255,215,0,.12)",borderRadius:2,overflow:"hidden"}}>
@@ -4327,42 +4710,8 @@ export default function GameNight(){
                 ))}
               </div>
 
-              {/* Current leader card */}
-              {leaderP&&leaderSt&&(
-                <div style={{
-                  background:`linear-gradient(135deg,${leaderP.color}0e,rgba(0,0,0,.5))`,
-                  border:`1px solid ${leaderP.color}33`,borderLeft:`3px solid ${leaderP.color}`,
-                  borderRadius:"0 8px 8px 0",padding:"18px 20px",marginBottom:20,
-                  display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",
-                  position:"relative",overflow:"hidden"}}>
-                  <div style={{position:"absolute",right:-8,top:-10,fontFamily:"Barlow Condensed",
-                    fontWeight:900,fontSize:"7rem",color:leaderP.color,opacity:.05,
-                    lineHeight:1,pointerEvents:"none"}}>{leaderP.username[0]}</div>
-                  <Av p={leaderP} size={58} glow intel/>
-                  <div style={{flex:1,minWidth:0,position:"relative",zIndex:1}}>
-                    <div className="bc7" style={{fontSize:".6rem",letterSpacing:".35em",
-                      color:`${leaderP.color}66`,marginBottom:4}}>
-                      ▸ {currentSeason.name.toUpperCase()} CURRENT LEADER
-                    </div>
-                    <div className="bc9" style={{fontSize:"clamp(1.3rem,5vw,2rem)",
-                      letterSpacing:".06em",color:leaderP.color,
-                      textShadow:`0 0 18px ${leaderP.color}44`,lineHeight:1}}>
-                      {leaderP.host?"👑 ":""}{dn(leaderP.username).toUpperCase()}
-                    </div>
-                    <div className="bc7" style={{fontSize:".75rem",color:"var(--text2)",
-                      marginTop:5,letterSpacing:".06em"}}>
-                      {s2LeaderSt?.wins||0}W this season · {leaderSt.wins}W all time · {getRank(leaderP.id).title}
-                    </div>
-                    {secondP&&gapW>=0&&(
-                      <div className="bc7" style={{fontSize:".62rem",color:"var(--text3)",marginTop:3}}>
-                        ← {dn(secondP.username)} is {gapW}W behind in {currentSeason.name}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{fontSize:"clamp(2rem,6vw,3.2rem)",color:"#FFD700",
-                    textShadow:"0 0 24px rgba(255,215,0,.55)",flexShrink:0}}>🏆</div>
-                </div>
-              )}
+              {/* Leader slideshow */}
+              <LeaderSlideshow slides={leaderSlides}/>
 
               {/* Intelligence Briefing — terminal typewriter */}
               {(()=>{
@@ -4534,6 +4883,17 @@ export default function GameNight(){
                 );
               })()}
 
+              {/* Daily Session MVP Vote */}
+              <DailyVotePanel
+                players={players}
+                latestDate={latestDate}
+                latestSess={sessions.filter(s=>s.date===latestDate)}
+                store={store}
+                dn={dn}
+                Av={Av}
+                goProfile={goProfile}
+              />
+
               {/* Weekly Mission Board */}
               <div style={{marginBottom:22}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -4578,67 +4938,40 @@ export default function GameNight(){
                 </div>
               </div>
 
-              {/* Next session countdown */}
+              {/* Next session countdown — big and bold */}
               {!live&&(
-                <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
-                  <div className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
-                    color:"var(--text3)"}}>NEXT SESSION IN</div>
-                  <div style={{display:"flex",gap:4}}>
-                    {[{v:String(cd.d>0?cd.d:cd.h).padStart(2,"0"),l:cd.d>0?"DAYS":"HRS"},
-                      {v:String(cd.m).padStart(2,"0"),l:"MIN"},
-                      {v:String(cd.s).padStart(2,"0"),l:"SEC"}].map((d,i)=>(
-                      <div key={i} style={{textAlign:"center"}}>
-                        <div className="bc9" style={{fontSize:"clamp(1.6rem,5vw,2.4rem)",
-                          color:"#00E5FF",lineHeight:1,background:"var(--card)",padding:"6px 12px",
-                          borderRadius:2,border:"1px solid rgba(0,229,255,.33)",
-                          textShadow:"0 0 12px rgba(0,229,255,.44)",minWidth:54}}>{d.v}</div>
-                        <div className="bc7" style={{fontSize:".52rem",letterSpacing:".2em",
-                          color:"var(--text3)",marginTop:4}}>{d.l}</div>
+                <div style={{marginBottom:4}}>
+                  <div className="bc7" style={{fontSize:".6rem",letterSpacing:".35em",
+                    color:"rgba(0,229,255,.5)",marginBottom:12}}>
+                    ▸ NEXT SESSION IN
+                  </div>
+                  <div style={{display:"flex",gap:6,alignItems:"flex-end",flexWrap:"wrap"}}>
+                    {[
+                      {v:String(cd.d).padStart(2,"0"), l:"DAYS",    show:cd.d>0},
+                      {v:String(cd.d>0?cd.h:cd.h).padStart(2,"0"),l:"HOURS", show:true},
+                      {v:String(cd.m).padStart(2,"0"), l:"MINUTES", show:true},
+                      {v:String(cd.s).padStart(2,"0"), l:"SECONDS", show:true},
+                    ].filter(d=>d.show||d.l==="HOURS"||d.l==="MINUTES"||d.l==="SECONDS").map((d,i)=>(
+                      <div key={i} style={{textAlign:"center",minWidth:cd.d>0?60:70}}>
+                        <div className="bc9" style={{
+                          fontSize:cd.d>0?"clamp(2.4rem,8vw,4rem)":"clamp(2.8rem,10vw,5rem)",
+                          color:"#00E5FF",lineHeight:1,
+                          textShadow:"0 0 24px rgba(0,229,255,.5),0 0 48px rgba(0,229,255,.2)",
+                          letterSpacing:"-.01em"}}>
+                          {d.v}
+                        </div>
+                        <div className="bc7" style={{fontSize:".55rem",letterSpacing:".22em",
+                          color:"rgba(0,229,255,.45)",marginTop:5}}>{d.l}</div>
+                        {i<3&&cd.d>0===false&&<div style={{position:"absolute"}}/>}
                       </div>
                     ))}
                   </div>
+                  <div className="bc7" style={{fontSize:".68rem",color:"var(--text3)",
+                    marginTop:10,letterSpacing:".08em"}}>
+                    MON–SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
+                  </div>
                 </div>
               )}
-
-              {/* S1 Farewell */}
-              {(()=>{
-                const today=todayStr();
-                if(today<"2026-03-31")return null;
-                const s1=sessions.filter(s=>s.date>="2026-03-01"&&s.date<="2026-03-31");
-                if(!s1.length)return null;
-                const s1Stats=allStats(s1).filter(p=>p.appearances>0);
-                const s1Champ=s1Stats.sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
-                const champP=s1Champ?players.find(p=>p.id===s1Champ.id):null;
-                return(
-                  <div className="s1-farewell" style={{marginTop:28,animation:"s1FadeIn .8s ease both"}}>
-                    <div className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
-                      color:"rgba(255,215,0,.6)",marginBottom:14}}>
-                      🏁 SEASON 1 · OFFICIALLY CLOSED
-                    </div>
-                    {champP&&(
-                      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,flexWrap:"wrap"}}>
-                        <Av p={champP} size={52} glow intel/>
-                        <div>
-                          <div className="bc9" style={{fontSize:"clamp(1.1rem,4vw,1.6rem)",
-                            color:"#FFD700",letterSpacing:".06em",
-                            textShadow:"0 0 20px rgba(255,215,0,.5)"}}>
-                            👑 {dn(champP.username).toUpperCase()}
-                          </div>
-                          <div className="bc7" style={{fontSize:".78rem",color:"var(--text2)",marginTop:4}}>
-                            {s1Champ.wins}W · {s1Champ.kills}K · Season 1 Champion
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="bc7" style={{fontSize:".82rem",color:"var(--text3)",
-                      lineHeight:1.7,letterSpacing:".04em"}}>
-                      {s1.length} lobbies. {s1Stats.length} players.{" "}
-                      {s1Stats.reduce((n,p)=>n+p.kills,0)} kills.{" "}
-                      Every single lobby is in the record. Season 2 starts clean. The legacy stays.
-                    </div>
-                  </div>
-                );
-              })()}
             </>);
           })()}
         </div>
@@ -4646,7 +4979,7 @@ export default function GameNight(){
 
       {/* ═══════════════ HALL OF FAME ═══════════════ */}
       {view==="hof"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* Legends Wing header */}
           <div style={{marginBottom:28}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
@@ -4835,7 +5168,7 @@ export default function GameNight(){
 
       {/* ═══════════════ LEADERBOARD ═══════════════ */}
       {view==="leaderboard"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* Arena header */}
           <div style={{marginBottom:28,position:"relative"}}>
             {/* Top coordinate bar */}
@@ -5212,7 +5545,7 @@ export default function GameNight(){
 
       {/* ═══════════════ RIVALS ═══════════════ */}
       {view==="rivals"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:28}}>
             <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Who dominates who</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
@@ -5404,7 +5737,7 @@ export default function GameNight(){
 
       {/* ═══════════════ LOBBIES ═══════════════ */}
       {view==="lobbies"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:28}}>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
               background:"linear-gradient(135deg,#FF4D8F,#C77DFF)",
@@ -5804,31 +6137,31 @@ export default function GameNight(){
           const s2Note=s2St.wins>0?` ${s2St.wins}W in Season 2 so far.`:"";
 
           const bios={
-            p01:`Mekula runs the whole thing and still leads the all-time kill chart. ${s.kills} kills. That number does not happen by accident — it means he is in every fight, every lobby, every night. The wins do not always come but the damage always does.${s2Note}${streakNote}`,
-            p02:`${s.wins} wins. That is the number. Teriqstp has been the most consistent player in this lobby from the start and Season 1 was not even close — they ran it wire to wire. Everyone who sits down across from them knows what they are getting into.${s2Note}`,
-            p03:`Sanctus. ${s.appearances} lobbies in, one win on the board. The big performances are there if you look back through the records — they just do not come every night.${droughtNote}`,
-            p04:`DjxHunter can take over a lobby completely when the mood is right. ${s.wins} wins, a 6-kill best game, Season 1 podium. The issue is consistency — some nights it all clicks, other nights it just does not.${droughtNote}${streakNote}`,
+            p01:`Mekula runs the whole thing and still leads the all-time kill chart. ${s.kills} kills. That number does not happen by accident. He is in every fight, every lobby, every night. The wins do not always come but the damage always does.${s2Note}${streakNote}`,
+            p02:`${s.wins} wins. That is the number. Teriqstp has been the most consistent player in this lobby from the start and Season 1 was not even close. They ran it wire to wire. Everyone who sits down across from them knows what they are getting into.${s2Note}`,
+            p03:`Sanctus. ${s.appearances} lobbies in, one win on the board. The big performances are there if you look back through the records. They just do not come every night.${droughtNote}`,
+            p04:`DjxHunter can take over a lobby completely when the mood is right. ${s.wins} wins, a 6-kill best game, Season 1 podium. The issue is consistency. Some nights it all clicks, other nights it just does not.${droughtNote}${streakNote}`,
             p05:`Bohdanmain shows up, says nothing, and sometimes wins four lobbies in a row. ${s.wins} wins from ${s.appearances} games. The quiet ones are always the ones you forget to watch.${s2Note}`,
-            p06:`One of the early guys. 8 wins, ${s.appearances} lobbies, helped set the tone before a lot of the current regulars even showed up. The record is there.`,
-            p07:`${s.wins} wins and ${s.kills} kills. Dhemo is probably the most well-rounded player in the lobby — wins consistently, kills consistently, shows up consistently. Hard to find a weakness on paper.${droughtNote}`,
+            p06:`One of the early guys. 8 wins, ${s.appearances} lobbies, helped set the tone in the first weeks before a lot of the regulars found their way in. The record is there.`,
+            p07:`${s.wins} wins and ${s.kills} kills. Dhemo is probably the most well-rounded player in the lobby. Wins consistently, kills consistently, shows up consistently. Hard to find a weakness on paper.${droughtNote}`,
             p08:`${s.wins} wins across ${s.appearances} lobbies and counting. Chugrud grinds every session without making a fuss about it. Not the flashiest player but they close out lobbies and that is what the record shows.${s2Note}`,
-            p09:`${s.appearances} lobbies played. Zero wins. SirHaazy99 has been in more games than players who have five wins — pure loyalty to the lobby. The first one is going to feel different when it comes.`,
+            p09:`${s.appearances} lobbies played. Zero wins. SirHaazy99 has been in more games than players who have five wins. Pure loyalty to the lobby. The first one is going to feel different when it comes.`,
             p10:`Dipped in for ${s.appearances} games and made an impression. Izzyboi is in the archive now.`,
             p11:`Loudmouth has ${s.wins} wins from ${s.appearances} lobbies and has been part of some of the best sessions this league has had. The win rate looks modest but the nights when they go off, everyone remembers.${droughtNote}`,
             p12:`${s.wins}W and ${s.kills}K from ${s.appearances} games. Michkyle comes and goes but when they are in the lobby they compete properly. The record would look different with more appearances.`,
             p13:`${s.wins} wins from ${s.appearances} lobbies. TheLostOG has one of the better win rates among the new faces and is building something in Season 2.${s2Note} Less time in the lobby but they make it count.`,
-            p14:`${s.wins} wins, ${s.kills} kills, and a legitimate case for being the most dangerous player in Season 2 right now. Hackqam went from occasional starter to proper contender across the last few months.${s2Note}`,
+            p14:`${s.wins} wins, ${s.kills} kills, and a legitimate case for being the most dangerous player in Season 2 right now. Hackqam went from showing up occasionally to being one of the more dangerous players in the lobby over the last few weeks.${s2Note}`,
             p15:`${s.wins} wins and Nellywaz is still finding another gear. The Season 2 run has been the best stretch of their time in the lobby so far.${s2Note}${streakNote} Quiet player who lets the results speak.`,
-            p16:`${s.wins} wins from ${s.appearances} games. Zakipro has one of the better win rates in the lobby relative to time spent — just does not log as many sessions as the regulars.${s2Note}`,
+            p16:`${s.wins} wins from ${s.appearances} games. Zakipro has one of the better win rates in the lobby relative to time spent, just does not log as many sessions as the regulars.${s2Note}`,
             p17:`ZapGrupoBulletBR. ${s.appearances} games logged. Longest name in the lobby by a mile and still shows up.`,
-            p18:`${s.appearances} lobbies. CelesteHI5 has played more games than most people realize and has been part of this from very early on. ${s.wins} wins, ${s.kills} kills, here every week.${s2Note}`,
+            p18:`${s.appearances} lobbies. CelesteHI5 has played more games than most people realise. Been here since the first few weeks. ${s.wins} wins, ${s.kills} kills, here every week.${s2Note}`,
             p19:`6 games played and a win among them. xLilithx left a mark quickly and has a better win rate than a lot of players with five times the appearances.`,
             p20:`${s.wins}W from ${s.appearances} lobbies. DeadlySoaringSeagull6 competes properly when they are in the room. Not a regular yet but the record is respectable.`,
             p21:`${s.appearances} lobbies in, first win still to come. Beedee4PF keeps showing up. That counts for something in a lobby this competitive.`,
             p22:`On the roster. Bxdguy's first lobby is the only thing standing between a blank record and a story.`,
             p23:`One lobby. One kill. ReyzinhoPL has a record in this league now and that is permanent.`,
             p24:`${s.wins} wins, best game of 4 kills, ${s.appearances} lobbies. Web3guy brings proper competition when they show up. The sessions where they are in the lobby are usually livelier.`,
-            p25:`12 wins from 33 lobbies and the best win rate among the regulars. FKxKingLurius is not a kills player — they manage lobbies and close them out. That is a specific kind of good.`,
+            p25:`12 wins from 33 lobbies and the best win rate among the regulars. FKxKingLurius is not a kills player. They manage lobbies and close them out. That is a specific kind of good.`,
             p26:`Web3hustlre is on the books. First game writes the first line.`,
             p27:`FKxPhanteon is registered. Everything else is still to happen.`,
             p28:`Lazerine is on the roster. Waiting.`,
@@ -5863,7 +6196,7 @@ export default function GameNight(){
         const lastSeenLabel=diffDays===0?"Today":diffDays===1?"Yesterday":diffDays!=null?`${diffDays}d ago`:"—";
 
         return(
-          <div className="fade-up">
+          <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
             {/* Zone header */}
             <div style={{marginBottom:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -5964,27 +6297,37 @@ export default function GameNight(){
             <TypedBio text={bio} color={p.color}/>
 
             {/* Stat grid */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(88px,1fr))",
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",
               gap:1,border:`1px solid ${p.color}14`,borderRadius:2,overflow:"hidden",marginBottom:12}}>
-              {[
-                {l:"S2 WINS",  v:s2St.wins,        c:"#00E5FF"},
-                {l:"ALL WINS", v:st.wins,           c:"#FFD700"},
-                {l:"KILLS",    v:st.kills,          c:"#FF4D8F"},
-                {l:"WIN RATE", v:st.winRate+"%",    c:"#00FF94"},
-                {l:"K/G",      v:st.kd,             c:"#00E5FF"},
-                {l:"CARRY",    v:carry,             c:"#FF6B35"},
-                {l:"CONSISTENCY",v:consistency+"%", c:"#00FF94"},
-                {l:"DROUGHT",  v:drought>0?drought+"G":"ACTIVE",
-                  c:drought>5?"#FF6B35":drought>0?"#FFD700":"#00FF94"},
-              ].map((s,i)=>(
-                <div key={i} style={{padding:"12px 8px",textAlign:"center",
-                  background:"rgba(255,255,255,.025)",borderRight:"1px solid rgba(255,255,255,.04)"}}>
-                  <div className="bc9" style={{fontSize:"clamp(1rem,3.5vw,1.5rem)",color:s.c,
-                    lineHeight:1,textShadow:`0 0 12px ${s.c}33`}}>{s.v}</div>
-                  <div className="bc7" style={{fontSize:".52rem",letterSpacing:".18em",
-                    color:"var(--text3)",marginTop:4}}>{s.l}</div>
-                </div>
-              ))}
+              {(()=>{
+                // Max appearances in a single session day
+                const dayMap={};
+                sessions.filter(s=>s.attendees?.includes(p.id)).forEach(s=>{
+                  dayMap[s.date]=(dayMap[s.date]||0)+1;
+                });
+                const maxDay=Object.values(dayMap).length?Math.max(...Object.values(dayMap)):0;
+                return[
+                  {l:"S2 WINS",    v:s2St.wins,         c:"#00E5FF"},
+                  {l:"ALL WINS",   v:st.wins,            c:"#FFD700"},
+                  {l:"KILLS",      v:st.kills,           c:"#FF4D8F"},
+                  {l:"BEST GAME",  v:st.biggestGame+"K", c:"#FF6B35"},
+                  {l:"WIN RATE",   v:st.winRate+"%",     c:"#00FF94"},
+                  {l:"K/G",        v:st.kd,              c:"#00E5FF"},
+                  {l:"MAX/DAY",    v:maxDay+"G",         c:"#C77DFF"},
+                  {l:"CARRY",      v:carry,              c:"#FF6B35"},
+                  {l:"CONSISTENCY",v:consistency+"%",    c:"#00FF94"},
+                  {l:"DROUGHT",    v:drought>0?drought+"G":"ACTIVE",
+                    c:drought>5?"#FF6B35":drought>0?"#FFD700":"#00FF94"},
+                ].map((s,i)=>(
+                  <div key={i} style={{padding:"10px 6px",textAlign:"center",
+                    background:"rgba(255,255,255,.025)",borderRight:"1px solid rgba(255,255,255,.04)"}}>
+                    <div className="bc9" style={{fontSize:"clamp(.9rem,3vw,1.35rem)",color:s.c,
+                      lineHeight:1,textShadow:`0 0 12px ${s.c}33`}}>{s.v}</div>
+                    <div className="bc7" style={{fontSize:".5rem",letterSpacing:".14em",
+                      color:"var(--text3)",marginTop:4}}>{s.l}</div>
+                  </div>
+                ));
+              })()}
             </div>
 
             {/* Form + Rival */}
@@ -6177,7 +6520,7 @@ export default function GameNight(){
 
       {/* ═══════════════ RECORDS / THE VAULT ═══════════════ */}
       {view==="records"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* Vault header */}
           <div style={{marginBottom:28}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -6347,7 +6690,7 @@ export default function GameNight(){
       )}
 
       {view==="charts"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:32}}>
             <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Per Player</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
@@ -6510,7 +6853,7 @@ export default function GameNight(){
       )}
 
       {view==="season1"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:32}}>
             <p style={{color:"var(--gold)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>March 2026</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.4rem)",
@@ -6766,7 +7109,7 @@ export default function GameNight(){
           SEASON 2 VIEW
       ══════════════════════════════════════════════ */}
       {view==="season2"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:32}}>
             <p style={{color:"#00E5FF",fontWeight:800,fontSize:".7rem",letterSpacing:3,
               textTransform:"uppercase",marginBottom:8}}>April 2026</p>
@@ -6778,7 +7121,7 @@ export default function GameNight(){
             </h2>
             <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600}}>
               {todayStr()<"2026-04-01"
-                ? "Season 2 hasn't started yet — check back April 1st."
+                ? "Season 2 hasn't started yet. Check back April 1st."
                 : "Fresh season, same arena. Rankings reset. Who owns April?"}
             </p>
           </div>
@@ -6904,7 +7247,7 @@ export default function GameNight(){
                         <div style={{flex:1,minWidth:120}}>
                           {isLeading?(
                             <div style={{fontFamily:"Fredoka One",color:"#00FF94",fontSize:"1rem"}}>
-                              🔥 Currently leading S2 — good call.
+                              🔥 Currently leading S2. Good call.
                             </div>
                           ):pickRank>0&&leaderPlayer?(
                             <div>
@@ -7046,7 +7389,7 @@ export default function GameNight(){
                     📊 Full Season 2 Leaderboard
                   </h3>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {byWins.slice(0,15).map((p,i)=>{
+                    {byWins.map((p,i)=>{
                       const player=players.find(x=>x.id===p.id);
                       if(!player)return null;
                       return(
@@ -7091,7 +7434,7 @@ export default function GameNight(){
       )}
 
       {view==="faq"&&(
-        <div className="fade-up">
+        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:36}}>
             <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Everything you need to know</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
@@ -7106,7 +7449,7 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <span style={{fontSize:"1.6rem"}}>🏅</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>Rank Titles — What Do They Mean?</h3>
+                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>Rank Titles: What Do They Mean?</h3>
                 <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Titles appear under every player name. Only one person can hold each top title at a time.</p>
               </div>
             </div>
@@ -7128,8 +7471,8 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <span style={{fontSize:"1.6rem"}}>🎖️</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.3rem"}}>Badges — How to Earn Them</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Badges stack — you can hold multiple at once. Tap to expand.</p>
+                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.3rem"}}>Badges: How to Earn Them</h3>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Badges stack. You can hold multiple at once. Tap to expand.</p>
               </div>
             </div>
             <div>
@@ -7139,7 +7482,7 @@ export default function GameNight(){
                     <span style={{display:"flex",alignItems:"center",gap:8}}>
                       <span style={{fontSize:"1.1rem"}}>{b.icon}</span>
                       <strong style={{color:"var(--text)"}}>{b.name}</strong>
-                      <span style={{color:"var(--text3)",fontWeight:600,fontSize:".84rem"}}>— {b.desc}</span>
+                      <span style={{color:"var(--text3)",fontWeight:600,fontSize:".84rem"}}>{b.desc}</span>
                     </span>
                     <span style={{color:"var(--text3)",marginLeft:8,flexShrink:0,fontSize:"1rem"}}>{faqOpen===i?"▲":"▼"}</span>
                   </div>
@@ -7172,9 +7515,9 @@ export default function GameNight(){
                 {icon:"🌟",term:"Best Game",        color:"#C77DFF",def:"Your highest single-lobby kill count ever. One lobby where you went off."},
                 {icon:"🔥",term:"Win Streak",       color:"#FF6B35",def:"Consecutive wins within the same session day. Resets each new day, so a 5-streak in one night matters."},
                 {icon:"⚔️",term:"Duels (Rivals)",   color:"#FF4D8F",def:"Times you and another player finished 1st and 2nd in the same lobby. The Rivals page tracks who wins those matchups."},
-                {icon:"⚡",term:"Latest Day",       color:"#00E5FF",def:"Filters the leaderboard to the most recent session date — see who ran the table that night specifically."},
+                {icon:"⚡",term:"Latest Day",       color:"#00E5FF",def:"Filters the leaderboard to the most recent session date. See who ran the table that night specifically."},
                 {icon:"🎖️",term:"Carry Score",     color:"#FF6B35",def:"Wins where you also had the most kills in the lobby. You won it AND you did the damage. The complete performance."},
-                {icon:"🧱",term:"Consistency",      color:"#00FF94",def:"% of lobbies where you finished in the top half. You don't have to win every game — you just have to not be mid. This rewards players who reliably perform."},
+                {icon:"🧱",term:"Consistency",      color:"#00FF94",def:"% of lobbies where you finished in the top half. You don't have to win every game. You just have to not be mid. This rewards players who reliably perform."},
                 {icon:"🌵",term:"Drought",          color:"#FFAB40",def:"How many lobbies since your last win. Zero means your most recent game was a W. The higher this gets, the more the community is watching."},
               ].map((s,i)=>(
                 <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"13px 16px",border:`1px solid ${s.color}22`}}>
@@ -7185,6 +7528,52 @@ export default function GameNight(){
                   <p style={{color:"var(--text2)",fontSize:".8rem",lineHeight:1.5}}>{s.def}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* ── Level System ── */}
+          <div style={{...card({border:"2px solid rgba(199,125,255,.25)"}),padding:26,marginBottom:18}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+              <span style={{fontSize:"1.6rem"}}>⚡</span>
+              <div>
+                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>How Levels Work</h3>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>
+                  Every player earns XP just by playing. Your level shows on the Arena table and your Combat File.
+                </p>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",
+              gap:8,marginBottom:16}}>
+              {[
+                {icon:"📅",label:"1 XP",        desc:"Per lobby played"},
+                {icon:"🏆",label:"3 XP",        desc:"Per lobby won"},
+                {icon:"💀",label:"0.5 XP",      desc:"Per kill"},
+                {icon:"🎖️",label:"10 XP",       desc:"Per badge earned"},
+                {icon:"🚀",label:"25 XP",       desc:"Per season played in"},
+              ].map((s,i)=>(
+                <div key={i} style={{
+                  background:"rgba(199,125,255,.06)",
+                  border:"1px solid rgba(199,125,255,.18)",
+                  borderRadius:8,padding:"12px 14px",
+                  display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:"1.3rem",flexShrink:0}}>{s.icon}</span>
+                  <div>
+                    <div style={{fontFamily:"Barlow Condensed",fontWeight:900,
+                      fontSize:"1rem",color:"#C77DFF",letterSpacing:".05em"}}>{s.label}</div>
+                    <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                      fontSize:".72rem",color:"var(--text3)"}}>{s.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:"rgba(0,0,0,.3)",borderRadius:8,padding:"12px 16px",
+              borderLeft:"3px solid rgba(199,125,255,.4)"}}>
+              <div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",lineHeight:1.7}}>
+                Level is calculated from total XP using a square root curve — so the early levels come fast but higher levels take real commitment.
+                The mini progress bar in the Arena and your Combat File shows how close you are to the next level.
+                Earning badges is one of the fastest ways to jump levels since each badge is worth 10 XP.
+                The 500 Kills badge alone is worth 10 XP on top of the 250 XP you already earned from the kills themselves.
+              </div>
             </div>
           </div>
 
@@ -7200,9 +7589,9 @@ export default function GameNight(){
             {[
               {q:"When do sessions run?",         a:"Mon–Sat, 5:00 PM – 7:00 PM UTC. Hosted by Mekula. Join the Discord to get pinged before each lobby starts."},
               {q:"How do I get added to the roster?",a:"Join the Discord and ask Mekula to add you. Once you're in the roster, your stats track automatically from the next session."},
-              {q:"What is Bullet League?",        a:"Bullet League is the featured game for Games Night — a fast-paced multiplayer battle game. Players compete in friend lobbies every session."},
+              {q:"What is Bullet League?",        a:"Bullet League is the featured game for Games Night. A fast-paced multiplayer battle game. Players compete in friend lobbies every session."},
               {q:"How are winners determined?",   a:"The player who places 1st on the in-game leaderboard at the end of each round wins that lobby. Kills shown next to names are that lobby's kill count."},
-              {q:"Why does my Win Rate show 0% even if I played?",a:"Win Rate only counts as meaningful once you've won at least once. Keep showing up — your appearance count still grows."},
+              {q:"Why does my Win Rate show 0% even if I played?",a:"Win Rate only counts as meaningful once you've won at least once. Keep showing up. Your appearance count still grows."},
               {q:"What is the Rivals page?",      a:"Rivals tracks 1st-vs-2nd place finishes. Any time two players finish at the top of the same lobby, that's a duel. Who wins those head-to-head moments most often?"},
               {q:"How do I watch the stream?",   a:'Sessions are streamed on Twitch at twitch.tv/mekulavick. Click the Twitch button in the nav to go straight there.'},
             ].map((item,i)=>(
@@ -7315,8 +7704,8 @@ export default function GameNight(){
                       </div>
                       <div style={{fontFamily:"Fredoka One",color:"#FF6B35",fontSize:".9rem"}}>
                         {recap.killKingsList?.length>1
-                          ? recap.killKingsList.map(k=>k.player?.username).filter(Boolean).join(" & ")+" — "+recap.killKing.k+"K"
-                          : recap.killKing.player?.username+" — "+recap.killKing.k+"K in one lobby"
+                          ? recap.killKingsList.map(k=>k.player?.username).filter(Boolean).join(" & ")+" · "+recap.killKing.k+"K"
+                          : recap.killKing.player?.username+" · "+recap.killKing.k+"K in one lobby"
                         }
                       </div>
                     </div>
@@ -7424,7 +7813,7 @@ export default function GameNight(){
                   <div style={{fontSize:".66rem",color:"var(--text3)",fontWeight:800,
                     textTransform:"uppercase",letterSpacing:1}}>Lobby Kill King</div>
                   <div style={{fontFamily:"Fredoka One",color:"var(--orange)",fontSize:".95rem"}}>
-                    {tkPlayer.username} — {tkKills}K
+                    {tkPlayer.username} {tkKills}K
                   </div>
                 </div>
               </div>}
