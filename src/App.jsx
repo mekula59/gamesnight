@@ -18,7 +18,7 @@ const isEventActive=()=>{
   const{start,startHour,end,endHour}=SEASONAL_EVENT;
   return(ds===start&&hr>=startHour)||(ds>start&&ds<end)||(ds===end&&hr<endHour);
 };
-const STORAGE_VERSION    = "gn-v84"; // bumped — daily MVP vote, anniversary banner, Day One badge, bio fixes, all views fill mobile, S2 all players
+const STORAGE_VERSION    = "gn-v85"; // bumped — Easter Saturday 16 lobbies (s379–s394), FKxPhanteon debuts
 const SITE_TITLE         = "Games Night";
 const HOSTED_BY          = "Mekula";
 const FEATURED_GAME      = "Bullet League";
@@ -1874,6 +1874,87 @@ const INITIAL_SESSIONS = [
     placements:["p15","p29","p04","p01","p05","p30","p02","p18"],
     kills:{"p15":1,"p29":0,"p04":1,"p01":4,"p05":1}},
 
+  // ── Sat 4 Apr 2026 — Easter Saturday · 16 lobbies ──
+  {id:"s379",date:"2026-04-04",notes:"Easter Saturday · Lobby 1",
+    winner:"p02",attendees:["p02","p18","p30","p04","p01","p03","p14"],
+    placements:["p02","p18","p30","p04","p01","p03","p14"],
+    kills:{"p02":2,"p30":2}},
+
+  {id:"s380",date:"2026-04-04",notes:"Easter Saturday · Lobby 2",
+    winner:"p04",attendees:["p04","p02","p30","p14","p01","p18","p08"],
+    placements:["p04","p02","p30","p14","p01","p18","p08"],
+    kills:{"p04":1,"p02":2,"p30":1,"p01":2}},
+
+  {id:"s381",date:"2026-04-04",notes:"Easter Saturday · Lobby 3",
+    winner:"p08",attendees:["p08","p14","p01","p30","p04","p02","p03","p18"],
+    placements:["p08","p14","p01","p30","p04","p02","p03","p18"],
+    kills:{"p08":3,"p30":2,"p04":1}},
+
+  {id:"s382",date:"2026-04-04",notes:"Easter Saturday · Lobby 4",
+    winner:"p01",attendees:["p01","p30","p02","p04","p14","p21","p03","p18","p08"],
+    placements:["p01","p30","p02","p04","p14","p21","p03","p18","p08"],
+    kills:{"p01":4,"p30":2,"p02":1,"p21":1}},
+
+  {id:"s383",date:"2026-04-04",notes:"Easter Saturday · Lobby 5",
+    winner:"p30",attendees:["p30","p21","p01","p02","p14","p18","p08","p04"],
+    placements:["p30","p21","p01","p02","p14","p18","p08","p04"],
+    kills:{"p30":4,"p01":1,"p02":1}},
+
+  {id:"s384",date:"2026-04-04",notes:"Easter Saturday · Lobby 6",
+    winner:"p27",attendees:["p27","p08","p14","p04","p02","p01","p18"],
+    placements:["p27","p08","p14","p04","p02","p01","p18"],
+    kills:{"p27":3,"p14":3}},
+
+  {id:"s385",date:"2026-04-04",notes:"Easter Saturday · Lobby 7",
+    winner:"p01",attendees:["p01","p27","p02","p18","p14","p21","p04"],
+    placements:["p01","p27","p02","p18","p14","p21","p04"],
+    kills:{"p01":2,"p02":2,"p27":1}},
+
+  {id:"s386",date:"2026-04-04",notes:"Easter Saturday · Lobby 8",
+    winner:"p01",attendees:["p01","p14","p02","p27","p05","p30","p04","p18"],
+    placements:["p01","p14","p02","p27","p05","p30","p04","p18"],
+    kills:{"p01":5,"p14":1,"p04":1}},
+
+  {id:"s387",date:"2026-04-04",notes:"Easter Saturday · Lobby 9",
+    winner:"p30",attendees:["p30","p08","p04","p05","p27","p14","p02","p18","p01","p21"],
+    placements:["p30","p08","p04","p05","p27","p14","p02","p18","p01","p21"],
+    kills:{"p30":3,"p08":2,"p04":1,"p05":1,"p14":1}},
+
+  {id:"s388",date:"2026-04-04",notes:"Easter Saturday · Lobby 10",
+    winner:"p14",attendees:["p14","p05","p11","p01","p03","p02","p04","p08","p21","p30","p18","p27"],
+    placements:["p14","p05","p11","p01","p03","p02","p04","p08","p21","p30","p18","p27"],
+    kills:{"p14":3,"p11":2,"p01":3,"p21":1,"p30":1}},
+
+  {id:"s389",date:"2026-04-04",notes:"Easter Saturday · Lobby 11",
+    winner:"p02",attendees:["p02","p27","p11","p04","p03","p01","p08","p30","p18","p14","p21","p05"],
+    placements:["p02","p27","p11","p04","p03","p01","p08","p30","p18","p14","p21","p05"],
+    kills:{"p02":2,"p11":2,"p01":3,"p08":1,"p30":2,"p27":1}},
+
+  {id:"s390",date:"2026-04-04",notes:"Easter Saturday · Lobby 12",
+    winner:"p02",attendees:["p02","p27","p03","p08","p05","p01","p14","p04","p11","p21"],
+    placements:["p02","p27","p03","p08","p05","p01","p14","p04","p11","p21"],
+    kills:{"p02":2,"p03":2,"p01":1,"p14":1}},
+
+  {id:"s391",date:"2026-04-04",notes:"Easter Saturday · Lobby 13",
+    winner:"p05",attendees:["p05","p14","p01","p30","p04","p11","p02","p08","p03"],
+    placements:["p05","p14","p01","p30","p04","p11","p02","p08","p03"],
+    kills:{"p05":2,"p14":1,"p30":5}},
+
+  {id:"s392",date:"2026-04-04",notes:"Easter Saturday · Lobby 14",
+    winner:"p02",attendees:["p02","p05","p14","p30","p11","p01","p15","p18","p08"],
+    placements:["p02","p05","p14","p30","p11","p01","p15","p18","p08"],
+    kills:{"p02":2,"p05":2,"p14":2,"p30":2}},
+
+  {id:"s393",date:"2026-04-04",notes:"Easter Saturday · Lobby 15",
+    winner:"p30",attendees:["p30","p15","p04","p01","p02","p14","p11","p05","p18"],
+    placements:["p30","p15","p04","p01","p02","p14","p11","p05","p18"],
+    kills:{"p30":5,"p04":1,"p01":1,"p14":1}},
+
+  {id:"s394",date:"2026-04-04",notes:"Easter Saturday · Lobby 16",
+    winner:"p02",attendees:["p02","p15","p30","p14","p01","p04","p18"],
+    placements:["p02","p15","p30","p14","p01","p04","p18"],
+    kills:{"p02":2,"p15":1,"p30":3}},
+
 ];
 
 // ═══════════════════════════════════════════════════
@@ -2743,37 +2824,48 @@ function DailyVotePanel({players,latestDate,latestSess,store,dn,Av,goProfile}){
   );
 }
 
-// ── LeaderSlideshow — auto-cycles through 4 season leader cards ──
+// ── LeaderSlideshow — auto-cycles through season leader cards ──
 function LeaderSlideshow({slides}){
   const [idx,setIdx]=useState(0);
-  const [animDir,setAnimDir]=useState("in"); // "in" | "out"
+  const [animDir,setAnimDir]=useState("in");
 
   useEffect(()=>{
     if(!slides.length)return;
+    // Reset to first slide when slide list changes
+    setIdx(0);
+    setAnimDir("in");
+  },[slides.length]);
+
+  useEffect(()=>{
+    if(!slides.length)return;
+    let timeout=null;
     const iv=setInterval(()=>{
       setAnimDir("out");
-      setTimeout(()=>{
+      timeout=setTimeout(()=>{
         setIdx(i=>(i+1)%slides.length);
         setAnimDir("in");
-      },380);
-    },7000);
-    return()=>clearInterval(iv);
+      },340);
+    },5000);
+    return()=>{
+      clearInterval(iv);
+      if(timeout)clearTimeout(timeout);
+    };
   },[slides.length]);
 
   const goTo=(i)=>{
     if(i===idx)return;
     setAnimDir("out");
-    setTimeout(()=>{setIdx(i);setAnimDir("in");},320);
+    setTimeout(()=>{setIdx(i);setAnimDir("in");},280);
   };
 
   if(!slides.length)return null;
-  const s=slides[idx];
+  const s=slides[idx]||slides[0];
   if(!s||!s.player)return null;
 
   const slideStyle={
     opacity:animDir==="in"?1:0,
-    transform:animDir==="in"?"translateX(0)":"translateX(18px)",
-    transition:"opacity .36s ease, transform .36s ease",
+    transform:animDir==="in"?"translateX(0)":"translateX(14px)",
+    transition:"opacity .3s ease, transform .3s ease",
   };
 
   return(
@@ -2784,19 +2876,16 @@ function LeaderSlideshow({slides}){
         borderLeft:`3px solid ${s.player.color}`,
         borderRadius:"0 8px 8px 0",padding:"18px 20px",
         position:"relative",overflow:"hidden",minHeight:92}}>
-        {/* Watermark letter */}
         <div style={{position:"absolute",right:-6,top:-8,fontFamily:"Barlow Condensed",
           fontWeight:900,fontSize:"7rem",color:s.player.color,opacity:.05,
           lineHeight:1,pointerEvents:"none",userSelect:"none"}}>{s.player.username[0]}</div>
-        {/* Slide content */}
         <div style={{display:"flex",alignItems:"center",gap:16,...slideStyle}}>
           <div style={{flexShrink:0,width:58,height:58,borderRadius:"50%",
             background:`linear-gradient(135deg,${s.player.color},${s.player.color}88)`,
             display:"flex",alignItems:"center",justifyContent:"center",
             fontFamily:"Barlow Condensed",fontWeight:900,
             fontSize:"1.5rem",color:"#fff",
-            boxShadow:`0 0 22px ${s.player.color}55`,
-            flexDirection:"column",gap:0}}>
+            boxShadow:`0 0 22px ${s.player.color}55`}}>
             {s.player.username[0].toUpperCase()}
           </div>
           <div style={{flex:1,minWidth:0,position:"relative",zIndex:1}}>
@@ -2818,7 +2907,6 @@ function LeaderSlideshow({slides}){
           <div style={{fontSize:"clamp(1.8rem,5vw,2.8rem)",flexShrink:0,
             textShadow:`0 0 20px ${s.player.color}55`}}>{s.icon}</div>
         </div>
-        {/* Dot nav */}
         <div style={{display:"flex",gap:5,justifyContent:"center",marginTop:12,
           position:"relative",zIndex:2}}>
           {slides.map((_,i)=>(
@@ -4882,17 +4970,6 @@ export default function GameNight(){
                   </div>
                 );
               })()}
-
-              {/* Daily Session MVP Vote */}
-              <DailyVotePanel
-                players={players}
-                latestDate={latestDate}
-                latestSess={sessions.filter(s=>s.date===latestDate)}
-                store={store}
-                dn={dn}
-                Av={Av}
-                goProfile={goProfile}
-              />
 
               {/* Weekly Mission Board */}
               <div style={{marginBottom:22}}>
