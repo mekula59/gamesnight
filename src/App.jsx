@@ -18,7 +18,7 @@ const isEventActive=()=>{
   const{start,startHour,end,endHour}=SEASONAL_EVENT;
   return(ds===start&&hr>=startHour)||(ds>start&&ds<end)||(ds===end&&hr<endHour);
 };
-const STORAGE_VERSION    = "gn-v75"; // bumped — Apr 2 sessions (Lobbies 350–364)
+const STORAGE_VERSION    = "gn-v82"; // bumped — terminal briefing, 8 stories, VotePanel live tracking, bios human rewrite
 const SITE_TITLE         = "Games Night";
 const HOSTED_BY          = "Mekula";
 const FEATURED_GAME      = "Bullet League";
@@ -69,6 +69,7 @@ const INITIAL_PLAYERS = [
   {id:"p34",username:"TMIyc",              color:"#00E5B0"},
   {id:"p35",username:"Demejii55",          color:"#FF6F91"},
   {id:"p36",username:"0netwoo",             color:"#00E676"},
+  {id:"p37",username:"FKxVanBR",            color:"#FF6D00"},
 ];
 
 const ACCENT_COLORS = [
@@ -1802,6 +1803,77 @@ const INITIAL_SESSIONS = [
     placements:["p01","p14","p30","p20","p02","p08","p11","p18"],
     kills:{"p01":2,"p14":1,"p30":2,"p02":1}},
 
+  // ── Fri 3 Apr 2026 — Good Friday · 14 lobbies ──
+  {id:"s365",date:"2026-04-03",notes:"Lobby 365",
+    winner:"p29",attendees:["p29","p15","p04","p02","p18","p13","p08","p14","p37","p01"],
+    placements:["p29","p15","p04","p02","p18","p13","p08","p14","p37","p01"],
+    kills:{"p29":4,"p15":1,"p13":2,"p14":1}},
+
+  {id:"s366",date:"2026-04-03",notes:"Lobby 366",
+    winner:"p02",attendees:["p02","p01","p29","p13","p18","p12","p04","p14","p15"],
+    placements:["p02","p01","p29","p13","p18","p12","p04","p14","p15"],
+    kills:{"p02":3,"p01":2,"p13":1}},
+
+  {id:"s367",date:"2026-04-03",notes:"Lobby 367",
+    winner:"p02",attendees:["p02","p13","p08","p01","p15","p04","p11","p29","p18","p17","p12","p14"],
+    placements:["p02","p13","p08","p01","p15","p04","p11","p29","p18","p17","p12","p14"],
+    kills:{"p02":2,"p13":2,"p01":5}},
+
+  {id:"s368",date:"2026-04-03",notes:"Lobby 368",
+    winner:"p29",attendees:["p29","p14","p03","p02","p16","p15","p08","p17","p18","p13","p11","p12","p01"],
+    placements:["p29","p14","p03","p02","p16","p15","p08","p17","p18","p13","p11","p12","p01"],
+    kills:{"p29":2,"p14":3,"p03":2,"p17":1,"p18":1,"p13":2}},
+
+  {id:"s369",date:"2026-04-03",notes:"Lobby 369",
+    winner:"p29",attendees:["p29","p08","p01","p16","p04","p11","p15","p13","p02","p03","p21","p14","p18"],
+    placements:["p29","p08","p01","p16","p04","p11","p15","p13","p02","p03","p21","p14","p18"],
+    kills:{"p29":2,"p08":1,"p01":3,"p04":3,"p15":1,"p13":1}},
+
+  {id:"s370",date:"2026-04-03",notes:"Lobby 370",
+    winner:"p13",attendees:["p13","p29","p11","p04","p01","p03","p16","p02","p10","p08","p14","p18"],
+    placements:["p13","p29","p11","p04","p01","p03","p16","p02","p10","p08","p14","p18"],
+    kills:{"p13":2,"p29":3,"p04":0,"p01":2,"p16":1,"p10":1}},
+
+  {id:"s371",date:"2026-04-03",notes:"Lobby 371",
+    winner:"p29",attendees:["p29","p18","p02","p13","p04","p14","p01","p03","p11"],
+    placements:["p29","p18","p02","p13","p04","p14","p01","p03","p11"],
+    kills:{"p29":1,"p18":1,"p13":2,"p14":1}},
+
+  {id:"s372",date:"2026-04-03",notes:"Lobby 372",
+    winner:"p04",attendees:["p04","p29","p18","p16","p02","p11","p14","p03","p01"],
+    placements:["p04","p29","p18","p16","p02","p11","p14","p03","p01"],
+    kills:{"p04":3,"p18":1,"p16":1,"p11":1,"p14":1}},
+
+  {id:"s373",date:"2026-04-03",notes:"Lobby 373",
+    winner:"p01",attendees:["p01","p30","p04","p18","p03","p14","p15","p29","p02","p11","p16","p08","p09"],
+    placements:["p01","p30","p04","p18","p03","p14","p15","p29","p02","p11","p16","p08","p09"],
+    kills:{"p01":1,"p30":4,"p04":1,"p18":1,"p03":1,"p14":1}},
+
+  {id:"s374",date:"2026-04-03",notes:"Lobby 374",
+    winner:"p02",attendees:["p02","p15","p16","p08","p14","p01","p11","p04","p03","p18"],
+    placements:["p02","p15","p16","p08","p14","p01","p11","p04","p03","p18"],
+    kills:{"p02":2,"p15":1,"p16":3}},
+
+  {id:"s375",date:"2026-04-03",notes:"Lobby 375",
+    winner:"p05",attendees:["p05","p29","p04","p02","p18","p11","p14","p01","p30","p16"],
+    placements:["p05","p29","p04","p02","p18","p11","p14","p01","p30","p16"],
+    kills:{"p05":4,"p29":2,"p04":1,"p30":0}},
+
+  {id:"s376",date:"2026-04-03",notes:"Lobby 376",
+    winner:"p04",attendees:["p04","p05","p29","p01","p15","p02","p11","p18"],
+    placements:["p04","p05","p29","p01","p15","p02","p11","p18"],
+    kills:{"p04":1,"p05":3,"p29":2,"p15":0,"p02":0}},
+
+  {id:"s377",date:"2026-04-03",notes:"Lobby 377",
+    winner:"p15",attendees:["p15","p01","p29","p02","p05","p18","p30","p04"],
+    placements:["p15","p01","p29","p02","p05","p18","p30","p04"],
+    kills:{"p15":1,"p01":3,"p29":2,"p05":1}},
+
+  {id:"s378",date:"2026-04-03",notes:"Lobby 378",
+    winner:"p15",attendees:["p15","p29","p04","p01","p05","p30","p02","p18"],
+    placements:["p15","p29","p04","p01","p05","p30","p02","p18"],
+    kills:{"p15":1,"p29":0,"p04":1,"p01":4,"p05":1}},
+
 ];
 
 // ═══════════════════════════════════════════════════
@@ -1912,6 +1984,28 @@ const CSS = `
   @keyframes easterShimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}
   @keyframes easterScan{0%{transform:translateY(-100%)}100%{transform:translateY(800%)}}
   @keyframes hudBlink{0%,100%{opacity:1}48%{opacity:1}50%{opacity:.15}52%{opacity:1}}
+  @keyframes typeIn{from{max-width:0;opacity:1}to{max-width:100%;opacity:1}}
+  @keyframes briefingReveal{
+    0%{opacity:0;transform:translateX(-8px);}
+    100%{opacity:1;transform:translateX(0);}
+  }
+  @keyframes briefingType{
+    from{width:0;}
+    to{width:100%;}
+  }
+  @keyframes briefingCursor{
+    0%,100%{opacity:1;}
+    50%{opacity:0;}
+  }
+  @keyframes cursorPulse{0%,100%{border-color:var(--tw-color,#00E5FF)}49%{border-color:var(--tw-color,#00E5FF)}51%,99%{border-color:transparent}}
+  .typewriter-wrap{overflow:hidden;}
+  .typewriter-text{
+    display:block;overflow:hidden;max-width:0;
+    white-space:pre-wrap;word-break:break-word;
+    border-right:2px solid;
+    animation:typeIn var(--tw-dur,2s) steps(var(--tw-steps,60),end) forwards,
+              cursorPulse .8s step-end var(--tw-dur,2s) infinite;
+  }
   @keyframes easterRain{0%{transform:translateY(-20px) rotate(0deg);opacity:.9}100%{transform:translateY(340px) rotate(540deg);opacity:0}}
   @keyframes borderRun{0%{background-position:0 0,100% 0,100% 100%,0 100%}100%{background-position:300px 0,100% 300px,-300px 100%,0 -300px}}
   @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}}
@@ -1940,19 +2034,25 @@ const CSS = `
 
   /* Intel hover card */
   .intel-card{
-    position:absolute;bottom:calc(100% + 8px);left:50%;
+    position:absolute;bottom:calc(100% + 10px);left:50%;
     transform:translateX(-50%);
-    z-index:500;pointer-events:none;
-    background:var(--card2);
-    border-radius:0 8px 8px 8px;
-    padding:10px 14px;min-width:170px;white-space:nowrap;
-    box-shadow:0 12px 32px rgba(0,0,0,.75),0 0 20px rgba(0,0,0,.2);
-    animation:intelIn .14s ease;
+    z-index:9000;pointer-events:none;
+    background:#1e1245;
+    border-radius:4px 8px 8px 8px;
+    padding:10px 14px;min-width:160px;max-width:220px;white-space:nowrap;
+    box-shadow:0 12px 32px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.06);
   }
-  @keyframes intelIn{from{opacity:0;transform:translateX(-50%) translateY(5px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @keyframes intelIn{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
   .av-wrap{position:relative;display:inline-flex;flex-shrink:0;}
-  .av-wrap .intel-card{opacity:0;pointer-events:none;transition:opacity .15s ease;}
-  .av-wrap:hover .intel-card{opacity:1;pointer-events:auto;}
+  .av-wrap .intel-card{
+    opacity:0;pointer-events:none;
+    transition:opacity .12s ease,transform .12s ease;
+    transform:translateX(-50%) translateY(4px);
+  }
+  .av-wrap:hover .intel-card{
+    opacity:1;pointer-events:auto;
+    transform:translateX(-50%) translateY(0);
+  }
 
   /* Badge flip card */
   .badge-flip-wrap{width:118px;height:64px;cursor:pointer;perspective:900px;flex-shrink:0;}
@@ -2041,8 +2141,8 @@ const CSS = `
     .hof-grid{grid-template-columns:1fr!important;}
     .stats-4{grid-template-columns:repeat(2,1fr)!important;}
     .lb-table{display:none!important;} .lb-cards{display:flex!important;}
-    .hero-h1{font-size:clamp(2.6rem,15vw,5rem)!important;}
-    .cd-wrap{gap:8px!important;} .cd-seg{padding:12px 10px!important;min-width:62px!important;}
+    .hero-h1{font-size:clamp(2.4rem,14vw,4.5rem)!important;}
+    .cd-wrap{gap:6px!important;} .cd-seg{padding:10px 8px!important;min-width:56px!important;}
     .comm-row{flex-direction:column!important;}
     .nav-desktop{display:none!important;} .ham-btn{display:flex!important;}
     .rival-grid{grid-template-columns:1fr!important;}
@@ -2055,11 +2155,21 @@ const CSS = `
     .season-recap-grid{grid-template-columns:1fr!important;}
     .h2h-grid{grid-template-columns:1fr!important;}
     .badge-grid{grid-template-columns:repeat(2,1fr)!important;}
-    .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
-    .card-h{min-width:0!important;}
-    .lb-card{min-width:0!important;}
-    .rival-card{min-width:0!important;}
-    .comm-card{min-width:0!important;width:100%!important;}
+    .mission-board{grid-template-columns:1fr!important;}
+    .vault-grid{grid-template-columns:1fr!important;}
+    .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow-x:hidden!important;}
+    .card-h,.lb-card,.rival-card,.comm-card{min-width:0!important;width:100%!important;}
+    main{padding-left:8px!important;padding-right:8px!important;overflow-x:hidden!important;}
+    .combat-selector{gap:3px!important;}
+    .combat-selector button{font-size:.6rem!important;padding:4px 8px!important;}
+    .stat-strip-mob{grid-template-columns:repeat(2,1fr)!important;}
+    .arena-row .mob-hide{display:none!important;}
+    .badge-flip-wrap{width:calc(50% - 3px)!important;height:58px!important;}
+    .records-grid{grid-template-columns:1fr!important;}
+    .kill-king-grid{grid-template-columns:72px 1fr!important;}
+  }
+  @media(max-width:400px){
+    .bc9.hero-big{font-size:clamp(2.8rem,16vw,5rem)!important;}
   }
 
   .records-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
@@ -2366,6 +2476,212 @@ function isLiveNow(){
 // ═══════════════════════════════════════════════════
 //  COMPONENT
 // ═══════════════════════════════════════════════════
+
+// ── useTyping hook ──────────────────────────────────────────────────────────
+function useTyping(text, speed=18) {
+  const [out, setOut] = React.useState("");
+  const [done, setDone] = React.useState(false);
+  React.useEffect(()=>{
+    setOut(""); setDone(false); let i=0;
+    const t=setInterval(()=>{
+      if(i<text.length){ setOut(text.slice(0,++i)); }
+      else{ setDone(true); clearInterval(t); }
+    }, speed);
+    return()=>clearInterval(t);
+  },[text]);
+  return [out, done];
+}
+
+// ── TypingText component ─────────────────────────────────────────────────────
+function TypingText({text, speed=18, color="var(--text3)", style:s={}}) {
+  const [out, done] = useTyping(text, speed);
+  const [blink, setBlink] = React.useState(true);
+  React.useEffect(()=>{ const t=setInterval(()=>setBlink(x=>!x),520); return()=>clearInterval(t); },[]);
+  return (
+    <span style={s}>
+      {out}
+      {!done && <span style={{color, opacity:blink?1:0, transition:"opacity .1s"}}>█</span>}
+    </span>
+  );
+}
+
+// ── VotePanel — module-level so hooks are stable ──
+function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToast,dn,Av}){
+  const voteKey="gn-s2-vote-mvp";
+  const [voteCounts,setVoteCounts]=useState({});
+
+  useEffect(()=>{
+    const load=async()=>{
+      try{
+        const r=typeof window!=="undefined"&&window.storage?.get
+          ?await window.storage.get(voteKey,true).catch(()=>null)
+          :await store.get(voteKey);
+        if(r?.value)setVoteCounts(JSON.parse(r.value));
+      }catch{}
+    };
+    load();
+    const iv=setInterval(load,12000);
+    return()=>clearInterval(iv);
+  },[]);
+
+  const castVote=async(pid)=>{
+    if(s2Prediction)return;
+    setS2Prediction(pid);
+    try{
+      const counts={...voteCounts};
+      counts[pid]=(counts[pid]||0)+1;
+      setVoteCounts(counts);
+      const str=JSON.stringify(counts);
+      if(typeof window!=="undefined"&&window.storage?.set){
+        await window.storage.set(voteKey,str,true).catch(()=>{});
+      }
+      await store.set(voteKey,str);
+    }catch{}
+    const name=players.find(p=>p.id===pid)?.username||"?";
+    showToast(`Vote locked in for ${dn(name)}!`);
+  };
+
+  const votePlayers=allStats().filter(p=>p.appearances>=3)
+    .sort((a,b)=>b.wins-a.wins||b.kills-a.kills)
+    .slice(0,16)
+    .map(s=>players.find(p=>p.id===s.id))
+    .filter(Boolean);
+
+  const totalVotes=Object.values(voteCounts).reduce((a,b)=>a+b,0);
+  const topVotedId=Object.entries(voteCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+
+  return(
+    <div style={{
+      background:"linear-gradient(135deg,rgba(199,125,255,.08),rgba(0,229,255,.04))",
+      border:"1px solid rgba(199,125,255,.3)",
+      borderLeft:"3px solid rgba(199,125,255,.6)",
+      borderRadius:"0 12px 12px 0",padding:"20px 20px",marginBottom:20}}>
+      <div style={{marginBottom:14}}>
+        <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
+          letterSpacing:".25em",color:"rgba(199,125,255,.8)",marginBottom:6}}>
+          🗳️ S2 MVP VOTE · LIVE
+        </div>
+        <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#fff",marginBottom:4}}>
+          Who is the MVP of Season 2 so far?
+        </div>
+        <div style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
+          color:"var(--text3)",letterSpacing:".04em"}}>
+          {totalVotes>0
+            ?`${totalVotes} vote${totalVotes===1?"":"s"} in. Results refresh every 12 seconds.`
+            :"Cast your vote. Everyone sees the count in real time."}
+          {s2Prediction?" Your vote is locked in.":""}
+        </div>
+      </div>
+
+      {totalVotes>0&&(
+        <div style={{marginBottom:14}}>
+          {Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([pid,count])=>{
+            const vp=players.find(p=>p.id===pid);
+            if(!vp)return null;
+            const pct=Math.round((count/totalVotes)*100);
+            const isTop=pid===topVotedId;
+            return(
+              <div key={pid} style={{marginBottom:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",
+                  alignItems:"center",marginBottom:3}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+                    <Av p={vp} size={20}/>
+                    <span style={{fontFamily:"Barlow Condensed",fontWeight:900,
+                      fontSize:".75rem",color:isTop?vp.color:"var(--text2)"}}>
+                      {isTop?"👑 ":""}{dn(vp.username)}
+                    </span>
+                  </div>
+                  <span style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                    fontSize:".72rem",color:isTop?vp.color:"var(--text3)"}}>
+                    {count}v · {pct}%
+                  </span>
+                </div>
+                <div style={{height:4,background:"rgba(255,255,255,.08)",
+                  borderRadius:2,overflow:"hidden"}}>
+                  <div style={{height:"100%",
+                    background:isTop?`linear-gradient(90deg,${vp.color}77,${vp.color})`:`${vp.color}44`,
+                    width:`${pct}%`,borderRadius:2,transition:"width .6s ease",
+                    boxShadow:isTop?`0 0 8px ${vp.color}55`:"none"}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{display:"grid",
+        gridTemplateColumns:"repeat(auto-fill,minmax(145px,1fr))",gap:5}}>
+        {votePlayers.map(player=>{
+          const isVoted=s2Prediction===player.id;
+          const vcount=voteCounts[player.id]||0;
+          return(
+            <button key={player.id} onClick={()=>castVote(player.id)}
+              disabled={!!s2Prediction} style={{
+                display:"flex",alignItems:"center",gap:8,
+                background:isVoted?`${player.color}20`:`${player.color}08`,
+                border:isVoted?`1.5px solid ${player.color}66`:`1px solid ${player.color}1a`,
+                borderRadius:6,padding:"8px 10px",cursor:s2Prediction?"default":"pointer",
+                textAlign:"left",transition:"all .12s",outline:"none",
+                opacity:s2Prediction&&!isVoted?.5:1}}>
+              <Av p={player} size={26}/>
+              <div style={{minWidth:0}}>
+                <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
+                  color:player.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {player.host?"👑 ":""}{dn(player.username)}{isVoted?" ✓":""}
+                </div>
+                <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                  fontSize:".58rem",color:"var(--text3)"}}>
+                  {vcount>0?`${vcount} vote${vcount===1?"":"s"}`:"no votes yet"}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── TypedBio — module-level component so its reference is stable ──
+// Must be outside GameNight or React remounts it on every parent render,
+// killing the interval before it finishes.
+function TypedBio({text,color}){
+  const [out,setOut]=useState("");
+  const [done,setDone]=useState(false);
+  useEffect(()=>{
+    setOut("");
+    setDone(false);
+    if(!text)return;
+    let i=0;
+    const id=setInterval(()=>{
+      i++;
+      if(i<=text.length){
+        setOut(text.slice(0,i));
+        if(i===text.length)setDone(true);
+      } else {
+        clearInterval(id);
+      }
+    },20);
+    return()=>clearInterval(id);
+  },[text]);
+  return(
+    <div style={{padding:"12px 16px",marginBottom:12,
+      background:"rgba(255,255,255,.02)",
+      borderLeft:`3px solid ${color}33`,
+      borderRadius:"0 6px 6px 0",minHeight:52}}>
+      <span style={{
+        fontFamily:"'Share Tech Mono',monospace",
+        fontSize:".77rem",lineHeight:1.9,
+        color:"var(--text3)",letterSpacing:".04em",
+        display:"block",wordBreak:"break-word"}}>
+        {out}
+        {!done&&<span style={{color,opacity:.9,
+          animation:"hudBlink 0.8s step-end infinite"}}>█</span>}
+      </span>
+    </div>
+  );
+}
+
 export default function GameNight(){
   const [view,       setView]      = useState("home");
   const [players,    setPlayers]   = useState([]);
@@ -2725,6 +3041,26 @@ export default function GameNight(){
   };
 
   // ── latest session day MVP ──
+  // ── Player Level — XP: appearances×1, wins×3, kills×0.5, badges×10, seasons×25 ──
+  const getPlayerLevel=(pid)=>{
+    const st=getStats(pid);
+    const badges=getBadges(pid);
+    const seasonsPlayed=SEASONS.filter(s=>sessions.some(x=>x.date>=s.start&&x.date<=s.end&&x.attendees?.includes(pid))).length;
+    const xp=Math.floor(
+      st.appearances*1 +
+      st.wins*3 +
+      st.kills*0.5 +
+      badges.length*10 +
+      seasonsPlayed*25
+    );
+    const lvl=Math.max(1,Math.floor(Math.sqrt(xp/8)));
+    const xpForNext=Math.pow(lvl+1,2)*8;
+    const xpForCurrent=Math.pow(lvl,2)*8;
+    const progress=Math.min(100,Math.round(((xp-xpForCurrent)/(xpForNext-xpForCurrent))*100));
+    return{xp,lvl,progress,xpForNext};
+  };
+
+  // ── Daily MVP ──
   const getDailyMVP=()=>{
     const latestDate=getLatestSessionDate();
     const latestSess=sessions.filter(s=>s.date===latestDate);
@@ -3086,7 +3422,7 @@ export default function GameNight(){
     if(cons>=45&&cons<50&&st.appearances>=5)alerts.push({icon:"🧱",text:`${50-cons}% consistency away from top-half badge`,gap:1,color:"#00FF94"});
     // Carry milestone
     const carry=getCarryScore(pid);
-    if(carry>=1&&carry<5){const g=5-carry;alerts.push({icon:"🎖️",text:`${g} more carry win${g===1?"":"s"} — proving it means doing the damage too`,gap:g,color:"#FF6B35"});}
+    if(carry>=1&&carry<5){const g=5-carry;alerts.push({icon:"🎖️",text:`${g} more carry win${g===1?"":"s"}: proving it means doing the damage too`,gap:g,color:"#FF6B35"});}
     return alerts.slice(0,2);
   };
 
@@ -3116,126 +3452,182 @@ export default function GameNight(){
     return[...new Set(sessions.filter(s=>s.attendees?.includes(pid)).map(s=>s.date))].length;
   };
 
-  // ── Storylines engine — auto-written narrative from the data ──
+  // ── Storylines engine — 8 lines, human, passionate, varied, no em dashes ──
   const getStorylines=()=>{
-    const lines=[];
-    if(!sessions.length||!players.length)return lines;
-    const sorted=[...sessions].sort((a,b)=>new Date(a.date)-new Date(a.date)||parseInt(a.id.slice(1))-parseInt(b.id.slice(1)));
-    const active=allStats().filter(p=>p.appearances>=3);
-    if(!active.length)return lines;
+    if(!sessions.length||!players.length)return[];
+    const allSt=allStats();
+    const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
+    const s2St=allStats(s2Sess).filter(p=>p.appearances>0);
+    const latestDate=getLatestSessionDate();
+    const latestSess=sessions.filter(s=>s.date===latestDate);
+    const seed=parseInt(latestDate.replace(/-/g,"").slice(-3),10)||0;
+    const candidates=[];
 
-    // 1 — Current win leader's dominance
-    const leader=allStats().sort((a,b)=>b.wins-a.wins)[0];
-    const leaderP=leader?players.find(p=>p.id===leader.id):null;
-    if(leaderP&&leader.wins>0){
-      const sessionDays=[...new Set(sessions.map(s=>s.date))].sort();
-      const lastN=sessionDays.slice(-6);
-      const leaderDayWins=lastN.filter(d=>sessions.some(s=>s.date===d&&s.winner===leader.id)).length;
-      if(leaderDayWins>=4)
-        lines.push({icon:"👑",text:`${leaderP.username} has won on ${leaderDayWins} of the last ${lastN.length} session days. Nobody's touching them right now.`,color:"#FFD700"});
-      else
-        lines.push({icon:"👑",text:`${leaderP.username} leads all-time with ${leader.wins} wins — ${leader.kills} kills deep and still going.`,color:"#FFD700"});
-    }
-
-    // 2 — Longest active drought (most appearances since last win)
-    let droughtKing={pid:"",gap:0};
-    players.forEach(p=>{
-      const pSess=[...sessions].filter(s=>s.attendees?.includes(p.id))
-        .sort((a,b)=>new Date(b.date)-new Date(a.date)||parseInt(b.id.slice(1))-parseInt(a.id.slice(1)));
-      if(!pSess.length)return;
-      if(pSess[0].winner===p.id)return; // already won recently
-      const lastWin=pSess.findIndex(s=>s.winner===p.id);
-      const gap=lastWin===-1?pSess.length:lastWin;
-      if(gap>=5&&gap>droughtKing.gap)droughtKing={pid:p.id,gap};
-    });
-    if(droughtKing.gap>0){
-      const dp=players.find(p=>p.id===droughtKing.pid);
-      if(dp){
-        const droughtSt=getStats(dp.id);
-        if(droughtSt.wins===0)
-          lines.push({icon:"🤝",text:`${dp.username} has played ${droughtSt.appearances} lobbies without a single win. The community's most dedicated runner-up.`,color:"#FFAB40"});
+    // S2 standings tension
+    if(s2St.length>=2){
+      const [first,second]=s2St.sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
+      const fp=players.find(p=>p.id===first.id);
+      const sp=players.find(p=>p.id===second.id);
+      const gap=first.wins-second.wins;
+      if(fp&&sp){
+        if(gap===0)
+          candidates.push({icon:"👑",text:`${dn(fp.username)} and ${dn(sp.username)} are sitting on the same win count in Season 2. Dead level. The next person to win a lobby takes the lead outright.`,color:"#FFD700",w:6});
+        else if(gap===1)
+          candidates.push({icon:"👑",text:`${dn(fp.username)} leads Season 2 by a single win. ${dn(sp.username)} is right there and this season is nowhere near over.`,color:"#FFD700",w:6});
+        else if(gap<=3)
+          candidates.push({icon:"👑",text:`${dn(fp.username)} is ${gap} wins clear in Season 2 with ${first.wins} on the board. ${dn(sp.username)} needs a strong session to get back in the race.`,color:"#FFD700",w:5});
         else
-          lines.push({icon:"🌵",text:`${dp.username} hasn't closed out a lobby in ${droughtKing.gap} appearances. They've got the wins — just not lately.`,color:"#FFAB40"});
+          candidates.push({icon:"👑",text:`${dn(fp.username)} has opened up a ${gap}-win lead in Season 2. That kind of gap does not build by accident.`,color:"#FFD700",w:4});
       }
     }
 
-    // 3 — Hottest active streak from the last session
-    const liveStreakers=getLiveStreaks();
-    if(liveStreakers.length>0){
-      const top=liveStreakers[0];
-      lines.push({icon:"🔥",text:`${top.username} ended the last session on a ${top.streak}-win streak. Come into the next one on tilt.`,color:"#FF6B35"});
+    // All-time kill gap story
+    const byKills=[...allSt].sort((a,b)=>b.kills-a.kills);
+    const [k1,k2]=byKills;
+    const kp1=k1?players.find(p=>p.id===k1.id):null;
+    const kp2=k2?players.find(p=>p.id===k2.id):null;
+    if(kp1&&k1.kills>0){
+      const gap=k2?k1.kills-k2.kills:k1.kills;
+      if(gap<15&&kp2)
+        candidates.push({icon:"💀",text:`${dn(kp1.username)} still leads the all-time kill chart but ${dn(kp2.username)} is only ${gap} behind. That is one good session away from a new kill leader.`,color:"#FF4D8F",w:5});
+      else if(gap<50&&kp2)
+        candidates.push({icon:"💀",text:`${dn(kp1.username)} sits on ${k1.kills} all-time kills. ${dn(kp2.username)} is the closest challenger at ${k2.kills}. The gap is real but killable.`,color:"#FF4D8F",w:4});
+      else
+        candidates.push({icon:"💀",text:`${dn(kp1.username)} has ${k1.kills} all-time kills. Nobody else is close. Session after session, the damage adds up.`,color:"#FF4D8F",w:3});
     }
 
-    // 4 — Closest rivalry (most head-to-head meetings)
-    const topRival=getRivals().find(r=>{
-      const p1=players.find(x=>x.id===r.p1),p2=players.find(x=>x.id===r.p2);
-      return p1&&p2&&r.total>=4;
+    // Last session big winner
+    if(latestSess.length>0){
+      const lastWinMap={};
+      latestSess.forEach(s=>{if(s.winner)lastWinMap[s.winner]=(lastWinMap[s.winner]||0)+1;});
+      const topLast=Object.entries(lastWinMap).sort((a,b)=>b[1]-a[1])[0];
+      if(topLast){
+        const tp=players.find(p=>p.id===topLast[0]);
+        if(tp&&topLast[1]>=3)
+          candidates.push({icon:"🔥",text:`${dn(tp.username)} won ${topLast[1]} lobbies last session. Not a fluke, not luck. That was a controlled performance.`,color:"#FF6B35",w:6});
+        else if(tp&&topLast[1]>=2)
+          candidates.push({icon:"🔥",text:`${dn(tp.username)} took ${topLast[1]} wins in the last session. Starting to build something.`,color:"#FF6B35",w:4});
+      }
+      // Last session kill highlight
+      let topKid="",topKv=0,topKsid="";
+      latestSess.forEach(s=>Object.entries(s.kills||{}).forEach(([pid,k])=>{if(k>topKv){topKv=k;topKid=pid;topKsid=s.id;}}));
+      const tkp=topKid?players.find(p=>p.id===topKid):null;
+      if(tkp&&topKv>=4)
+        candidates.push({icon:"☄️",text:`${dn(tkp.username)} dropped ${topKv} kills in a single lobby last session (${topKsid}). That is the kind of game that gets talked about.`,color:"#FF6B35",w:5});
+    }
+
+    // Drought with personality
+    let worstDrought={pid:"",gap:0};
+    players.forEach(p=>{
+      const pSess=[...sessions].filter(s=>s.attendees?.includes(p.id))
+        .sort((a,b)=>new Date(b.date)-new Date(a.date)||parseInt(b.id.slice(1))-parseInt(a.id.slice(1)));
+      if(!pSess.length||pSess[0].winner===p.id)return;
+      const lastWin=pSess.findIndex(s=>s.winner===p.id);
+      const gap=lastWin===-1?pSess.length:lastWin;
+      if(gap>=5&&gap>worstDrought.gap)worstDrought={pid:p.id,gap};
     });
-    if(topRival){
-      const rp1=players.find(p=>p.id===topRival.p1),rp2=players.find(p=>p.id===topRival.p2);
-      const leader2=topRival.p1wins>topRival.p2wins?rp1:topRival.p2wins>topRival.p1wins?rp2:null;
-      const trailer=leader2?.id===rp1?.id?rp2:rp1;
-      const lW=Math.max(topRival.p1wins,topRival.p2wins),tW=Math.min(topRival.p1wins,topRival.p2wins);
-      if(leader2&&trailer&&lW!==tW)
-        lines.push({icon:"⚔️",text:`${leader2.username} leads ${trailer.username} ${lW}–${tW} in ${topRival.total} head-to-head finishes. That rivalry isn't going anywhere.`,color:"#FF4D8F"});
-      else if(rp1&&rp2)
-        lines.push({icon:"⚔️",text:`${rp1.username} and ${rp2.username} have met at the top of ${topRival.total} lobbies and they're dead even. Something's gotta give.`,color:"#FF4D8F"});
+    if(worstDrought.gap>0){
+      const dp=players.find(p=>p.id===worstDrought.pid);
+      const dSt=dp?getStats(dp.id):null;
+      if(dp&&dSt){
+        if(dSt.wins===0)
+          candidates.push({icon:"🤝",text:`${dn(dp.username)} has played ${dSt.appearances} lobbies and has not won one yet. But they keep coming back, which already puts them ahead of most.`,color:"#FFAB40",w:2});
+        else if(worstDrought.gap>=12)
+          candidates.push({icon:"🌵",text:`${dn(dp.username)} is ${worstDrought.gap} games deep into a rough stretch. They have ${dSt.wins} wins in this lobby. The drought ends when they decide it does.`,color:"#FFAB40",w:4});
+        else
+          candidates.push({icon:"🌵",text:`${dn(dp.username)} has not won in ${worstDrought.gap} games. Someone with that many career wins knows how to turn it around.`,color:"#FFAB40",w:3});
+      }
     }
 
-    // 5 — Kill badge milestone chasing
-    const killMilestones=[50,100,150,200];
+    // Streak going into next session
+    const streamers=getLiveStreaks();
+    if(streamers.length>0){
+      const top=streamers[0];
+      if(top.streak>=4)
+        candidates.push({icon:"🔥",text:`${dn(top.username)} is on fire. ${top.streak} wins in a row to close the last session. Walk into the next lobby expecting them to keep going.`,color:"#FF6B35",w:5});
+      else if(top.streak>=2)
+        candidates.push({icon:"🔥",text:`${dn(top.username)} closed the last session winning ${top.streak} straight. There is momentum there and the lobby knows it.`,color:"#FF6B35",w:4});
+    }
+
+    // Kill milestone right there
+    const killMilestones=[50,100,150,200,300,400];
     let bestChase={pid:"",gap:999,milestone:0};
     players.forEach(p=>{
       const st=getStats(p.id);
-      if(st.appearances<3)return;
       for(const m of killMilestones){
         const gap=m-st.kills;
-        if(gap>0&&gap<=12&&gap<bestChase.gap)bestChase={pid:p.id,gap,milestone:m};
+        if(gap>0&&gap<=8&&gap<bestChase.gap)bestChase={pid:p.id,gap,milestone:m};
       }
     });
     if(bestChase.pid){
       const cp=players.find(p=>p.id===bestChase.pid);
-      if(cp)lines.push({icon:"💀",text:`${cp.username} is ${bestChase.gap} kill${bestChase.gap===1?"":"s"} away from ${bestChase.milestone} all-time. That badge is right there.`,color:"#FF4D8F"});
+      if(cp)candidates.push({icon:"💥",text:`${dn(cp.username)} is ${bestChase.gap} kill${bestChase.gap===1?"":"s"} away from ${bestChase.milestone} total. That could happen in one lobby tonight.`,color:"#00E5FF",w:4});
     }
 
-    // 6 — Win milestone chasing (close to Legend = 10W, or Veteran = 6W)
-    let bestWinChase={pid:"",gap:999,milestone:0,title:""};
-    players.forEach(p=>{
-      const st=getStats(p.id);
-      if(st.appearances<3)return;
-      for(const [m,title] of [[10,"Legend"],[6,"Veteran"],[3,"Gunslinger"]]){
-        const gap=m-st.wins;
-        if(gap>0&&gap<=3&&gap<bestWinChase.gap)bestWinChase={pid:p.id,gap,milestone:m,title};
-      }
-    });
-    if(bestWinChase.pid){
-      const wp=players.find(p=>p.id===bestWinChase.pid);
-      if(wp)lines.push({icon:"⭐",text:`${wp.username} needs ${bestWinChase.gap} more win${bestWinChase.gap===1?"":"s"} to hit ${bestWinChase.title} rank. Clock's ticking.`,color:"#C77DFF"});
-    }
-
-    // 7 — Most improved in form (biggest win rate jump in last 2 session days vs before)
-    const allDays=[...new Set(sessions.map(s=>s.date))].sort();
-    if(allDays.length>=4){
-      const recentDays=allDays.slice(-2);
-      const recentSess=sessions.filter(s=>recentDays.includes(s.date));
-      const beforeSess=sessions.filter(s=>!recentDays.includes(s.date));
-      let hottest={pid:"",gain:-99};
+    // Win rank milestone
+    for(const [m,rank,icon] of [[100,"100 wins","👑"],[50,"50 wins","🏆"],[25,"25 wins","⭐"],[10,"Legend","⚡"]]){
+      let closest={pid:"",gap:999};
       players.forEach(p=>{
-        const rSt=getStats(p.id,recentSess);
-        const bSt=getStats(p.id,beforeSess);
-        if(rSt.appearances<2||bSt.appearances<3)return;
-        const gain=rSt.winRate-bSt.winRate;
-        if(gain>20&&gain>hottest.gain)hottest={pid:p.id,gain};
+        const st=getStats(p.id);
+        const gap=m-st.wins;
+        if(gap>0&&gap<=3&&gap<closest.gap)closest={pid:p.id,gap};
       });
-      if(hottest.pid){
-        const hp=players.find(p=>p.id===hottest.pid);
-        const hSt=getStats(hp?.id,recentSess);
-        if(hp&&hSt.wins>0)lines.push({icon:"📈",text:`${hp.username} is on a tear lately — ${hSt.wins}W in their last ${hSt.appearances} lobbies. Whatever they changed, it's working.`,color:"#00FF94"});
+      if(closest.pid){
+        const wp=players.find(p=>p.id===closest.pid);
+        if(wp){
+          candidates.push({icon,text:`${dn(wp.username)} is ${closest.gap} win${closest.gap===1?"":"s"} away from ${rank}. That is within reach tonight.`,color:"#C77DFF",w:4});
+          break;
+        }
       }
     }
 
-    return lines.slice(0,5);
+    // H2H rivalry
+    const rivalData=getRivals().filter(r=>r.total>=6);
+    if(rivalData.length>0){
+      const r=rivalData[seed%rivalData.length];
+      const rp1=players.find(p=>p.id===r.p1),rp2=players.find(p=>p.id===r.p2);
+      if(rp1&&rp2){
+        const leader=r.p1wins>r.p2wins?rp1:r.p2wins>r.p1wins?rp2:null;
+        const trailer=leader?.id===rp1.id?rp2:rp1;
+        const lW=Math.max(r.p1wins,r.p2wins),tW=Math.min(r.p1wins,r.p2wins);
+        if(leader&&trailer&&lW!==tW)
+          candidates.push({icon:"⚔️",text:`When ${dn(leader.username)} and ${dn(trailer.username)} land 1st and 2nd in the same lobby, ${dn(leader.username)} has come out on top ${lW} times versus ${tW}. ${dn(trailer.username)} is not done trying.`,color:"#FF4D8F",w:3});
+        else if(rp1&&rp2)
+          candidates.push({icon:"⚔️",text:`${dn(rp1.username)} versus ${dn(rp2.username)}. Exactly ${r.total} times they have finished 1st and 2nd in the same lobby. Still level. Still running it back.`,color:"#FF4D8F",w:3});
+      }
+    }
+
+    // Efficiency angle
+    const highEff=[...allSt].filter(p=>p.appearances>=10&&p.winRate>=25).sort((a,b)=>b.winRate-a.winRate)[0];
+    const hep=highEff?players.find(p=>p.id===highEff.id):null;
+    if(hep)candidates.push({icon:"📊",text:`${dn(hep.username)} wins ${highEff.winRate}% of the lobbies they enter. Out of ${highEff.appearances} games, ${highEff.wins} wins. That rate puts them in a different bracket.`,color:"#00FF94",w:2});
+
+    // Rising S2 player
+    const rising=s2St.filter(p=>p.appearances>=3&&p.wins>=2)
+      .sort((a,b)=>b.wins-a.wins)
+      .find(p=>allSt.find(x=>x.id===p.id&&x.wins<=8));
+    if(rising){
+      const rp=players.find(p=>p.id===rising.id);
+      if(rp)candidates.push({icon:"🎯",text:`${dn(rp.username)} is one of the stories of Season 2 so far with ${rising.wins}W already. Getting better every session and people are starting to notice.`,color:"#00E5FF",w:3});
+    }
+
+    // Sort by weight, use seed offset as tiebreaker for variety
+    candidates.sort((a,b)=>b.w-a.w||(a.text.charCodeAt(2)+seed)%7-(b.text.charCodeAt(2)+seed)%7);
+    return candidates.slice(0,8).map(({icon,text,color})=>({icon,text,color}));
   };
+    const lines=[];
+    if(!sessions.length||!players.length)return lines;
+    const allSt=allStats();
+    const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
+    const s2St=allStats(s2Sess).filter(p=>p.appearances>0);
+    const latestDate=getLatestSessionDate();
+    const latestSess=sessions.filter(s=>s.date===latestDate);
+    const allDays=[...new Set(sessions.map(s=>s.date))].sort();
+    // Seed rotation from date so it changes each session day
+    const seed=latestDate.replace(/-/g,"").slice(-3);
+    const rotate=(arr,n)=>arr.slice(n%arr.length).concat(arr.slice(0,n%arr.size));
+    const offset=parseInt(seed,10)||0;
+
   const getShareData=(sid)=>{
     const s=sessions.find(x=>x.id===sid);
     if(!s)return null;
@@ -3327,14 +3719,16 @@ export default function GameNight(){
 
   // ── leaderboard ──
   const getSortedLB=()=>{
-    let src=getPeriodSessions();
-    if(lbSeason!=="all"){const s=SEASONS.find(x=>x.id===lbSeason);if(s)src=src.filter(x=>x.date>=s.start&&x.date<=s.end);}
-    return allStats(src).sort((a,b)=>{
-      // For "today" period: participants always float above non-participants first, then respect sortBy
-      if(lbPeriod==="today"){
-        const aPlayed=a.appearances>0?1:0, bPlayed=b.appearances>0?1:0;
-        if(bPlayed!==aPlayed) return bPlayed-aPlayed;
-      }
+    let src=sessions;
+    if(lbSeason==="s1"){src=sessions.filter(x=>x.date>="2026-03-01"&&x.date<="2026-03-31");}
+    else if(lbSeason==="s2"){src=sessions.filter(x=>x.date>="2026-04-01"&&x.date<="2026-04-30");}
+    else if(lbSeason!=="all"){const s=SEASONS.find(x=>x.id===lbSeason);if(s)src=src.filter(x=>x.date>=s.start&&x.date<=s.end);}
+    // For season/period views show only players who actually appeared; for all-time show everyone
+    const base=allStats(src);
+    const ranked= lbSeason==="all"&&lbPeriod==="all"
+      ? base  // all time — show all
+      : base.filter(p=>p.appearances>0);  // season/period — only who played
+    return ranked.sort((a,b)=>{
       if(sortBy==="wins")       return b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances;
       if(sortBy==="kills")      return b.kills-a.kills||b.wins-a.wins;
       if(sortBy==="kd")         return b.kd-a.kd;
@@ -3342,8 +3736,8 @@ export default function GameNight(){
       if(sortBy==="appearances")return b.appearances-a.appearances;
       if(sortBy==="carry")      return getCarryScore(b.id,src)-getCarryScore(a.id,src);
       if(sortBy==="consistency")return getConsistency(b.id,src)-getConsistency(a.id,src);
-      if(sortBy==="drought")    return getDrought(a.id)-getDrought(b.id); // ascending — least drought first
-      return 0;
+      if(sortBy==="drought")    return getDrought(a.id)-getDrought(b.id);
+      return b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances;
     });
   };
 
@@ -3377,7 +3771,7 @@ export default function GameNight(){
       return `${["🥇","🥈","🥉"][i]} **${p?.username||pid}**${k>0?" ("+k+"K)":""}`;
     }).join("\n");
     const body={embeds:[{
-      title:"🎮 Games Night — Lobby Result",
+      title:"🎮 Games Night · Lobby Result",
       color:0xFF6B35,
       fields:[
         {name:"🏆 Winner",value:winner?.username||"?",inline:true},
@@ -3410,7 +3804,7 @@ export default function GameNight(){
     setEditingSess(s);
     setSf({date:s.date,attendees:s.attendees||[],winner:s.winner||"",kills:s.kills||{},deaths:s.deaths||{},notes:s.notes||"",placements:s.placements||[],clip:s.clip||""});
     setAdminTab("session");setView("admin");(typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"}));
-    showToast("✏️ Editing lobby — make changes and save");
+    showToast("✏️ Editing lobby. Make changes and save");
   };
   const handleAddPlayer=()=>{
     if(!np.username.trim()){showToast("Enter a username!");return;}
@@ -3494,6 +3888,7 @@ export default function GameNight(){
     </div>
   );
 
+  // ── TypedBio — proper component so it can use hooks ──
   // ── Badge flip — DOM classList toggle, no hooks ──
   const BadgeFlip=({b,playerColor})=>{
     const bc=BADGE_CATALOGUE.find(x=>x.name===b.label)||{how:"Earned through gameplay"};
@@ -3646,7 +4041,7 @@ export default function GameNight(){
             fontSize:".72rem",color:"#FFD700",
             letterSpacing:5,textTransform:"uppercase",
             marginBottom:24,opacity:.8}}>
-            March 2026 — Closed
+            March 2026 · Closed
           </div>
           <div style={{
             fontFamily:"Fredoka One",
@@ -3969,35 +4364,175 @@ export default function GameNight(){
                 </div>
               )}
 
-              {/* Intelligence Briefing */}
-              <div style={{marginBottom:22}}>
-                <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
-                  color:"var(--text3)",marginBottom:12}}>▸ INTELLIGENCE BRIEFING</div>
-                <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                  {getStorylines().map((s,i)=>(
-                    <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,
-                      padding:"9px 14px",background:"rgba(255,255,255,.025)",
-                      borderLeft:`2px solid ${s.color}44`,borderRadius:"0 4px 4px 0"}}>
-                      <span style={{fontSize:".85rem",flexShrink:0,marginTop:1}}>{s.icon}</span>
-                      <span className="bc7" style={{fontSize:".82rem",letterSpacing:".03em",
-                        color:"var(--text2)",lineHeight:1.5}}>{s.text}</span>
+              {/* Intelligence Briefing — terminal typewriter */}
+              {(()=>{
+                const stories=getStorylines();
+                return(
+                  <div style={{marginBottom:22}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
+                        color:"var(--text3)"}}>▸ INTELLIGENCE BRIEFING</div>
+                      <div style={{width:6,height:6,borderRadius:"50%",background:"#00FF94",
+                        flexShrink:0,boxShadow:"0 0 8px #00FF94",
+                        animation:"hudBlink 1.4s ease-in-out infinite"}}/>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div style={{
+                      background:"rgba(0,0,0,.45)",
+                      border:"1px solid rgba(255,255,255,.08)",
+                      borderTop:"2px solid rgba(0,255,148,.3)",
+                      borderRadius:"0 6px 6px 0",
+                      borderLeft:"3px solid rgba(0,255,148,.35)",
+                      padding:"14px 16px",
+                      fontFamily:"'Share Tech Mono',monospace",
+                      overflow:"hidden"}}>
+                      {stories.map((s,i)=>(
+                        <div key={i} style={{
+                          display:"flex",gap:10,alignItems:"flex-start",
+                          marginBottom:i<stories.length-1?10:0,
+                          opacity:0,
+                          animation:`briefingReveal .3s ease both`,
+                          animationDelay:`${0.4+i*0.55}s`}}>
+                          <span style={{fontSize:".8rem",flexShrink:0,marginTop:1,
+                            opacity:0,
+                            animation:`briefingReveal .2s ease both`,
+                            animationDelay:`${0.4+i*0.55}s`}}>{s.icon}</span>
+                          <div style={{flex:1,minWidth:0,position:"relative",overflow:"hidden"}}>
+                            <div style={{
+                              fontSize:".78rem",lineHeight:1.65,
+                              color:"rgba(200,186,255,.85)",
+                              letterSpacing:".02em",
+                              display:"inline-block",
+                              whiteSpace:"pre-wrap",wordBreak:"break-word",
+                              width:0,overflow:"hidden",
+                              animation:`briefingType ${Math.max(0.8,s.text.length*0.018)}s steps(${Math.min(s.text.length,150)},end) both`,
+                              animationDelay:`${0.55+i*0.55}s`,
+                              borderRight:`1.5px solid ${s.color}`,
+                              animationFillMode:"forwards",maxWidth:"100%",
+                            }}>
+                              {s.text}
+                            </div>
+                            <div style={{
+                              position:"absolute",bottom:0,right:0,
+                              width:8,height:"1.2em",
+                              background:s.color,opacity:.7,
+                              animation:`briefingCursor .65s step-end infinite`,
+                              animationDelay:`${0.55+i*0.55}s`,
+                            }}/>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
-              {/* Season narrative */}
-              <div style={{padding:"13px 18px",marginBottom:22,
-                background:"rgba(255,255,255,.02)",
-                borderLeft:"3px solid rgba(255,107,53,.33)",
-                borderRadius:"0 6px 6px 0"}}>
-                <div className="bc7" style={{fontSize:".86rem",lineHeight:1.85,
-                  color:"var(--text3)",letterSpacing:".04em"}}>
-                  {currentSeason.name} is live. The standings shift every session.
-                  {leaderP&&` ${dn(leaderP.username)} leads${s2LeaderSt?.wins?` with ${s2LeaderSt.wins}W`:""} — but it is only ${currentSeason.label}.`}
-                  {" Every lobby is a record waiting to happen."}
-                </div>
-              </div>
+              {/* ── LAST SESSION · Recap + MVP merged ── */}
+              {(()=>{
+                const mvp=getDailyMVP();
+                const recap=getDayRecap(latestDate);
+                if(!recap||!recap.lobbies)return null;
+                const dd=new Date(latestDate+"T12:00:00Z");
+                const dateLabel=dd.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+                const specialTag=latestDate==="2026-04-03"?"🌅 Good Friday · "
+                  :latestDate==="2026-04-01"?"🃏 April Fools · "
+                  :latestDate==="2026-04-04"?"🥚 Easter Saturday · ":"";
+                const tw=mvp&&mvp.topWinner?players.find(p=>p.id===mvp.topWinner.id):null;
+                const tk=mvp&&mvp.topKiller?players.find(p=>p.id===mvp.topKiller.id):null;
+                const ta=mvp&&mvp.topAppear?players.find(p=>p.id===mvp.topAppear.id):null;
+                const kk=mvp&&mvp.killKing?players.find(p=>p.id===mvp.killKing.id):null;
+                const mvpCards=[
+                  {icon:"🏆",label:"MOST WINS",       player:tw,stat:mvp?.topWinner?.wins+"W",       sub:"lobbies won",     c:"#FFD700"},
+                  {icon:"💀",label:"MOST KILLS",       player:tk,stat:mvp?.topKiller?.kills+"K",      sub:"total kills",     c:"#FF4D8F"},
+                  {icon:"☄️",label:"BEST SINGLE GAME", player:kk,stat:mvp?.killKing?.killKingK+"K",   sub:mvp?.killKing?.killKingSid||"", c:"#FF6B35"},
+                  {icon:"📅",label:"MOST APPEARANCES", player:ta,stat:mvp?.topAppear?.appearances+"G",sub:"lobbies played",  c:"#00E5FF"},
+                ].filter(c=>c.player);
+                return(
+                  <div style={{marginBottom:22,
+                    background:"rgba(255,255,255,.02)",
+                    border:"1px solid rgba(255,255,255,.07)",
+                    borderLeft:"3px solid rgba(255,215,0,.4)",
+                    borderRadius:"0 8px 8px 0",padding:"16px 18px"}}>
+                    {/* Header */}
+                    <div style={{display:"flex",justifyContent:"space-between",
+                      alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:6}}>
+                      <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
+                        color:"rgba(255,215,0,.7)"}}>
+                        ▸ {specialTag}LAST SESSION
+                      </div>
+                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".15em",
+                        color:"var(--text3)"}}>{dateLabel.toUpperCase()}</div>
+                    </div>
+                    {/* Stat strip */}
+                    <div style={{display:"grid",
+                      gridTemplateColumns:"repeat(4,1fr)",
+                      gap:1,border:"1px solid rgba(255,255,255,.06)",
+                      borderRadius:2,overflow:"hidden",marginBottom:14}}>
+                      {[
+                        {l:"LOBBIES", v:recap.lobbies,         c:"#00E5FF"},
+                        {l:"PLAYERS", v:recap.uniquePlayers,   c:"#C77DFF"},
+                        {l:"KILLS",   v:recap.totalKills,      c:"#FF4D8F"},
+                        {l:"WINNERS", v:recap.winnersList?.length||0,c:"#FFD700"},
+                      ].map((s,i)=>(
+                        <div key={i} style={{padding:"9px 6px",textAlign:"center",
+                          background:"rgba(255,255,255,.025)"}}>
+                          <div className="bc9" style={{fontSize:"clamp(.9rem,3vw,1.3rem)",
+                            color:s.c,lineHeight:1}}>{s.v}</div>
+                          <div className="bc7" style={{fontSize:".5rem",letterSpacing:".15em",
+                            color:"var(--text3)",marginTop:3}}>{s.l}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* MVP cards */}
+                    {mvpCards.length>0&&(
+                      <div style={{display:"grid",
+                        gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:5}}>
+                        {mvpCards.map((c,i)=>(
+                          <div key={i} onClick={()=>goProfile(c.player.id)} style={{
+                            padding:"10px 12px",cursor:"pointer",
+                            background:`${c.c}08`,
+                            border:`1px solid ${c.c}1a`,
+                            borderLeft:`2px solid ${c.c}55`,
+                            borderRadius:"0 4px 4px 0",
+                            transition:"transform .1s"}}
+                            onMouseEnter={e=>e.currentTarget.style.transform="translateX(2px)"}
+                            onMouseLeave={e=>e.currentTarget.style.transform="translateX(0)"}>
+                            <div className="bc7" style={{fontSize:".54rem",letterSpacing:".2em",
+                              color:`${c.c}77`,marginBottom:6}}>{c.icon} {c.label}</div>
+                            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
+                              <Av p={c.player} size={24}/>
+                              <div className="bc9" style={{fontSize:".78rem",
+                                color:c.player.color,overflow:"hidden",
+                                textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
+                                {dn(c.player.username)}
+                              </div>
+                            </div>
+                            <div className="bc9" style={{fontSize:"1.1rem",color:c.c,
+                              lineHeight:1,textShadow:`0 0 10px ${c.c}44`}}>{c.stat}</div>
+                            {c.sub&&<div className="bc7" style={{fontSize:".56rem",
+                              color:"var(--text3)",marginTop:3,letterSpacing:".08em"}}>{c.sub}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* All winners line */}
+                    {recap.winnersList&&recap.winnersList.length>1&&(
+                      <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
+                        lineHeight:1.8,marginTop:12,paddingTop:12,
+                        borderTop:"1px solid rgba(255,255,255,.06)"}}>
+                        {recap.winnersList.slice(0,6).map((w,i)=>(
+                          <span key={i}>
+                            {i>0?" · ":""}
+                            <span style={{color:w.player?.color||"#fff",cursor:"pointer"}}
+                              onClick={()=>w.player&&goProfile(w.player.id)}>
+                              {dn(w.player?.username||"?")}{w.wins>1?` ×${w.wins}`:""}
+                            </span>
+                          </span>
+                        ))} won lobbies
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Weekly Mission Board */}
               <div style={{marginBottom:22}}>
@@ -4078,7 +4613,7 @@ export default function GameNight(){
                   <div className="s1-farewell" style={{marginTop:28,animation:"s1FadeIn .8s ease both"}}>
                     <div className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
                       color:"rgba(255,215,0,.6)",marginBottom:14}}>
-                      🏁 SEASON 1 — OFFICIALLY CLOSED
+                      🏁 SEASON 1 · OFFICIALLY CLOSED
                     </div>
                     {champP&&(
                       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,flexWrap:"wrap"}}>
@@ -4099,7 +4634,7 @@ export default function GameNight(){
                       lineHeight:1.7,letterSpacing:".04em"}}>
                       {s1.length} lobbies. {s1Stats.length} players.{" "}
                       {s1Stats.reduce((n,p)=>n+p.kills,0)} kills.{" "}
-                      Every single lobby is in the record. Season 2 starts clean — the legacy stays.
+                      Every single lobby is in the record. Season 2 starts clean. The legacy stays.
                     </div>
                   </div>
                 );
@@ -4148,7 +4683,7 @@ export default function GameNight(){
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
                   <div>
                     <span style={{fontSize:".68rem",color:season.color,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>{ended?"🏁 Final Results":"📅 In Progress"}</span>
-                    <h3 style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.2rem",marginTop:2}}>{season.name} — {season.label}</h3>
+                    <h3 style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.2rem",marginTop:2}}>{season.name}: {season.label}</h3>
                     <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>{sSess.length} lobbies · {sStats.length} players</p>
                   </div>
                   {ended&&champ&&<div style={{textAlign:"center"}}>
@@ -4283,7 +4818,7 @@ export default function GameNight(){
               {BADGE_CATALOGUE.map((b,i)=>(
                 <div key={i} className="faq-item">
                   <div className="faq-q" onClick={()=>setFaqOpen(faqOpen===i?null:i)}>
-                    <span>{b.icon} <strong>{b.name}</strong> — <span style={{color:"var(--text3)",fontWeight:600}}>{b.desc}</span></span>
+                    <span>{b.icon} <strong>{b.name}</strong>: <span style={{color:"var(--text3)",fontWeight:600}}>{b.desc}</span></span>
                     <span style={{color:"var(--text3)",marginLeft:8,flexShrink:0}}>{faqOpen===i?"▲":"▼"}</span>
                   </div>
                   {faqOpen===i&&(
@@ -4336,37 +4871,52 @@ export default function GameNight(){
             {foolsDay&&(
               <div style={{textAlign:"center",fontFamily:"Fredoka One",color:"#FF4D8F",
                 fontSize:".82rem",marginTop:8,letterSpacing:1}}>
-                🃏 Upside Down Edition — Last place is first today
+                🃏 Upside Down Edition. Last place is first today
               </div>
             )}
           </div>
 
-          {/* Period tabs */}
-          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+          {/* View tabs — All Time / Season 1 / Season 2 */}
+          <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
             {[
-              {id:"all",  l:"🌐 All Time"},
-              {id:"week", l:"📅 This Week"},
-              {id:"today",l:`⚡ Latest Day`},
-            ].map(t=>(
-              <button key={t.id} className={`period-tab${lbPeriod===t.id?" active":""}`}
-                onClick={()=>{setLbPeriod(t.id);setLbSeason("all");}}>{t.l}</button>
-            ))}
-          </div>
-          {/* Season tabs */}
-          <div style={{display:"flex",gap:7,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{color:"var(--text3)",fontSize:".72rem",fontWeight:800,letterSpacing:1,textTransform:"uppercase",flexShrink:0}}>Season:</span>
-            {[{id:"all",label:"All",color:"#fff"},...SEASONS].map(s=>(
-              <button key={s.id} onClick={()=>setLbSeason(s.id)} style={{
-                padding:"4px 12px",borderRadius:50,fontWeight:700,fontSize:".76rem",cursor:"pointer",
-                background:lbSeason===s.id?(s.color||"var(--orange)"):"var(--card)",
-                color:lbSeason===s.id?"#000":"var(--text2)",
-                border:lbSeason===s.id?"none":`1.5px solid ${s.color||"var(--border)"}44`}}>
-                {s.label||s.name||"All"}
-              </button>
-            ))}
-            <span style={{marginLeft:"auto",color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>
-              {getSortedLB().filter(p=>p.appearances>0).length} players
-            </span>
+              {id:"all",  l:"🌐 ALL TIME",  sub:"Every lobby ever",       c:"#C77DFF"},
+              {id:"s2",   l:"🚀 SEASON 2",  sub:"Apr 2026 · Active",      c:"#00E5FF"},
+              {id:"s1",   l:"🏆 SEASON 1",  sub:"Mar 2026 · Closed",      c:"#FFD700"},
+            ].map(t=>{
+              const active=lbSeason===t.id;
+              const sid=t.id==="all"?"all":t.id==="s2"?"s2":"s1";
+              return(
+                <button key={t.id} onClick={()=>{setLbSeason(sid);setLbPeriod("all");}} style={{
+                  padding:"8px 16px",cursor:"pointer",outline:"none",
+                  background:active?`${t.c}18`:"rgba(255,255,255,.03)",
+                  border:active?`1px solid ${t.c}55`:"1px solid rgba(255,255,255,.08)",
+                  borderBottom:active?`2px solid ${t.c}`:"2px solid transparent",
+                  borderRadius:"4px 4px 0 0",
+                  fontFamily:"Barlow Condensed",fontWeight:900,
+                  fontSize:".72rem",letterSpacing:".15em",
+                  color:active?t.c:"var(--text3)",transition:"all .12s"}}>
+                  <div>{t.l}</div>
+                  <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                    fontSize:".55rem",letterSpacing:".12em",opacity:.6,marginTop:2}}>{t.sub}</div>
+                </button>
+              );
+            })}
+            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <span className="bc7" style={{fontSize:".6rem",letterSpacing:".2em",color:"var(--text3)"}}>SORT</span>
+              {[
+                {id:"wins",l:"WINS"},{id:"kills",l:"KILLS"},
+                {id:"winrate",l:"WIN%"},{id:"kd",l:"K/G"},
+              ].map(s=>(
+                <button key={s.id} onClick={()=>setSortBy(s.id)} style={{
+                  padding:"4px 10px",cursor:"pointer",outline:"none",
+                  background:sortBy===s.id?"rgba(255,255,255,.08)":"none",
+                  border:sortBy===s.id?"1px solid rgba(255,255,255,.2)":"1px solid transparent",
+                  borderRadius:3,fontFamily:"Barlow Condensed",fontWeight:700,
+                  fontSize:".62rem",letterSpacing:".1em",color:sortBy===s.id?"#fff":"var(--text3)"}}>
+                  {s.l}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Search */}
@@ -4455,11 +5005,11 @@ export default function GameNight(){
           {/* Desktop table */}
           <div className="lb-table hud-bg" style={{...card(),overflow:"hidden",border:"1.5px solid rgba(255,255,255,.1)"}}>
             {/* Arena header */}
-            <div style={{display:"grid",gridTemplateColumns:"46px 1fr 74px 74px 74px 74px 74px",
+            <div style={{display:"grid",gridTemplateColumns:"46px 1fr 60px 60px 60px 60px 60px 52px",
               padding:"10px 18px",
               background:"linear-gradient(90deg,rgba(0,0,0,.7),rgba(0,0,0,.4))",
               borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-              {["#","PLAYER","W","K","K/G","WIN%","G"].map((h,i)=>(
+              {["#","PLAYER","W","K","K/G","WIN%","G","LVL"].map((h,i)=>(
                 <span key={i} style={{
                   fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".72rem",
                   letterSpacing:".15em",color:"rgba(255,255,255,.3)",
@@ -4474,12 +5024,13 @@ export default function GameNight(){
               const isHL=spotlight===player.id;
               const isFirst=globalRank===0&&sessions.length>0&&!foolsDay;
               const streak=getStreak(player.id);
+              const lvl=getPlayerLevel(player.id);
               return(
                 <div key={player.id}
                   className={`arena-row${isFirst?" arena-row-1":""}`}
                   onClick={()=>goProfile(player.id)}
                   style={{
-                    display:"grid",gridTemplateColumns:"46px 1fr 74px 74px 74px 74px 74px",
+                    display:"grid",gridTemplateColumns:"46px 1fr 60px 60px 60px 60px 60px 52px",
                     padding:"11px 18px",alignItems:"center",cursor:"pointer",
                     borderTop:"1px solid rgba(255,255,255,.04)",
                     background:isHL?`${player.color}14`:isFirst?"linear-gradient(90deg,rgba(255,215,0,.07),transparent)":"transparent",
@@ -4499,7 +5050,7 @@ export default function GameNight(){
                   {/* Player info */}
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
                     <div style={{position:"relative"}}>
-                      <Av p={player} size={34} glow={isHL||isFirst}/>
+                      <Av p={player} size={34} glow={isHL||isFirst} intel/>
                       {isFirst&&<div style={{
                         position:"absolute",inset:-2,borderRadius:"50%",
                         border:"1.5px solid rgba(255,215,0,.5)",
@@ -4556,9 +5107,9 @@ export default function GameNight(){
                   </div>
                   {/* HUD stats */}
                   {[
-                    {v:player.wins,     c:"#FFD700"},
-                    {v:player.kills,    c:"#FF4D8F"},
-                    {v:player.kd,       c:"#00E5FF"},
+                    {v:player.wins,       c:"#FFD700"},
+                    {v:player.kills,      c:"#FF4D8F"},
+                    {v:player.kd,         c:"#00E5FF"},
                     {v:player.winRate+"%",c:"#00FF94"},
                     {v:player.appearances,c:"#FFAB40"},
                   ].map((s,si)=>(
@@ -4570,6 +5121,17 @@ export default function GameNight(){
                       textShadow:isFirst?`0 0 12px ${s.c}66`:"none",
                     }}>{s.v}</span>
                   ))}
+                  {/* Level */}
+                  <div style={{textAlign:"center"}}>
+                    <div className="bc9" style={{fontSize:".88rem",
+                      color:`${player.color}cc`,lineHeight:1}}>{lvl.lvl}</div>
+                    <div style={{height:2,background:"rgba(255,255,255,.08)",
+                      borderRadius:1,overflow:"hidden",marginTop:3}}>
+                      <div style={{height:"100%",borderRadius:1,
+                        background:player.color,width:`${lvl.progress}%`,
+                        transition:"width .4s ease"}}/>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -4623,10 +5185,11 @@ export default function GameNight(){
                       {v:player.kills,        c:"#FF4D8F",l:"K"},
                       {v:player.winRate+"%",  c:"#00FF94",l:"WR"},
                       {v:player.appearances,  c:"#FFAB40",l:"G"},
+                      {v:"LV"+getPlayerLevel(player.id).lvl, c:"#C77DFF",l:"LVL"},
                     ].map((s,j)=>(
-                      <div key={j} style={{textAlign:"center",minWidth:26}}>
-                        <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:".88rem"}}>{s.v}</div>
-                        <div style={{fontSize:".48rem",color:"var(--text3)",fontWeight:700,letterSpacing:.3}}>{s.l}</div>
+                      <div key={j} className="mob-hide" style={{textAlign:"center",minWidth:28}}>
+                        <div className="bc9" style={{color:s.c,fontSize:".9rem",lineHeight:1}}>{s.v}</div>
+                        <div className="bc7" style={{fontSize:".48rem",color:"var(--text3)",letterSpacing:".1em"}}>{s.l}</div>
                       </div>
                     ))}
                   </div>
@@ -4798,7 +5361,7 @@ export default function GameNight(){
 
           {/* All matchups grid */}
           <h3 style={{fontFamily:"Fredoka One",color:"var(--text2)",fontSize:"1rem",marginBottom:14,marginTop:22}}>
-            All 1st-vs-2nd Duels — {filteredRivals.length} matchups
+            All 1st-vs-2nd Duels · {filteredRivals.length} matchups
           </h3>
           <div className="rival-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}}>
             {filteredRivals.map((r,i)=>{
@@ -5164,7 +5727,7 @@ export default function GameNight(){
 
           {adminTab==="manage"&&(
             <div style={{...card(),padding:22,maxWidth:580}}>
-              <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.1rem",marginBottom:14}}>🗂️ Roster — {players.length} Players</h3>
+              <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.1rem",marginBottom:14}}>🗂️ Roster · {players.length} Players</h3>
               <div style={{display:"flex",flexDirection:"column",gap:7}}>
                 {players.map((p,i)=>{
                   const st=getStats(p.id);
@@ -5230,15 +5793,59 @@ export default function GameNight(){
           {l:"50W", done:st.wins>=50},
           {l:"100W",done:st.wins>=100},
         ];
-        // Auto-generated bio from real data
-        const bioLines=[];
-        if(st.wins>=1) bioLines.push(`${st.wins} career wins. ${st.kills} kills across ${st.appearances} lobbies.`);
-        else bioLines.push(`${st.appearances} lobbies played. Still hunting that first win.`);
-        if(drought>5) bioLines.push(`Currently ${drought} games without a win. The drought is real.`);
-        else if(streak>=3) bioLines.push(`On a ${streak}-game streak right now. Nobody hotter today.`);
-        else if(drought===0&&st.wins>0) bioLines.push(`Won their most recent lobby. Form is good.`);
-        if(rivalP&&topRival?.total>=3) bioLines.push(`Biggest rivalry: ${dn(rivalP.username)} — ${rivalWins}–${rivalLoss} in ${topRival.total} head-to-head finishes.`);
-        const bio=bioLines.join(" ");
+        // ── Per-player bios — human, direct, no filler ──
+        const getBio=(pid)=>{
+          const s=st;
+          const kpg=s.appearances>0?parseFloat((s.kills/s.appearances).toFixed(1)):0;
+          const dr=drought;
+          const sk=streak;
+          const droughtNote=dr>5?` ${dr} games without a win right now.`:dr>2?` A few dry games lately.`:"";
+          const streakNote=sk>=3?` Coming in on a ${sk}-game streak.`:"";
+          const s2Note=s2St.wins>0?` ${s2St.wins}W in Season 2 so far.`:"";
+
+          const bios={
+            p01:`Mekula runs the whole thing and still leads the all-time kill chart. ${s.kills} kills. That number does not happen by accident — it means he is in every fight, every lobby, every night. The wins do not always come but the damage always does.${s2Note}${streakNote}`,
+            p02:`${s.wins} wins. That is the number. Teriqstp has been the most consistent player in this lobby from the start and Season 1 was not even close — they ran it wire to wire. Everyone who sits down across from them knows what they are getting into.${s2Note}`,
+            p03:`Sanctus. ${s.appearances} lobbies in, one win on the board. The big performances are there if you look back through the records — they just do not come every night.${droughtNote}`,
+            p04:`DjxHunter can take over a lobby completely when the mood is right. ${s.wins} wins, a 6-kill best game, Season 1 podium. The issue is consistency — some nights it all clicks, other nights it just does not.${droughtNote}${streakNote}`,
+            p05:`Bohdanmain shows up, says nothing, and sometimes wins four lobbies in a row. ${s.wins} wins from ${s.appearances} games. The quiet ones are always the ones you forget to watch.${s2Note}`,
+            p06:`One of the early guys. 8 wins, ${s.appearances} lobbies, helped set the tone before a lot of the current regulars even showed up. The record is there.`,
+            p07:`${s.wins} wins and ${s.kills} kills. Dhemo is probably the most well-rounded player in the lobby — wins consistently, kills consistently, shows up consistently. Hard to find a weakness on paper.${droughtNote}`,
+            p08:`${s.wins} wins across ${s.appearances} lobbies and counting. Chugrud grinds every session without making a fuss about it. Not the flashiest player but they close out lobbies and that is what the record shows.${s2Note}`,
+            p09:`${s.appearances} lobbies played. Zero wins. SirHaazy99 has been in more games than players who have five wins — pure loyalty to the lobby. The first one is going to feel different when it comes.`,
+            p10:`Dipped in for ${s.appearances} games and made an impression. Izzyboi is in the archive now.`,
+            p11:`Loudmouth has ${s.wins} wins from ${s.appearances} lobbies and has been part of some of the best sessions this league has had. The win rate looks modest but the nights when they go off, everyone remembers.${droughtNote}`,
+            p12:`${s.wins}W and ${s.kills}K from ${s.appearances} games. Michkyle comes and goes but when they are in the lobby they compete properly. The record would look different with more appearances.`,
+            p13:`${s.wins} wins from ${s.appearances} lobbies. TheLostOG has one of the better win rates among the new faces and is building something in Season 2.${s2Note} Less time in the lobby but they make it count.`,
+            p14:`${s.wins} wins, ${s.kills} kills, and a legitimate case for being the most dangerous player in Season 2 right now. Hackqam went from occasional starter to proper contender across the last few months.${s2Note}`,
+            p15:`${s.wins} wins and Nellywaz is still finding another gear. The Season 2 run has been the best stretch of their time in the lobby so far.${s2Note}${streakNote} Quiet player who lets the results speak.`,
+            p16:`${s.wins} wins from ${s.appearances} games. Zakipro has one of the better win rates in the lobby relative to time spent — just does not log as many sessions as the regulars.${s2Note}`,
+            p17:`ZapGrupoBulletBR. ${s.appearances} games logged. Longest name in the lobby by a mile and still shows up.`,
+            p18:`${s.appearances} lobbies. CelesteHI5 has played more games than most people realize and has been part of this from very early on. ${s.wins} wins, ${s.kills} kills, here every week.${s2Note}`,
+            p19:`6 games played and a win among them. xLilithx left a mark quickly and has a better win rate than a lot of players with five times the appearances.`,
+            p20:`${s.wins}W from ${s.appearances} lobbies. DeadlySoaringSeagull6 competes properly when they are in the room. Not a regular yet but the record is respectable.`,
+            p21:`${s.appearances} lobbies in, first win still to come. Beedee4PF keeps showing up. That counts for something in a lobby this competitive.`,
+            p22:`On the roster. Bxdguy's first lobby is the only thing standing between a blank record and a story.`,
+            p23:`One lobby. One kill. ReyzinhoPL has a record in this league now and that is permanent.`,
+            p24:`${s.wins} wins, best game of 4 kills, ${s.appearances} lobbies. Web3guy brings proper competition when they show up. The sessions where they are in the lobby are usually livelier.`,
+            p25:`12 wins from 33 lobbies and the best win rate among the regulars. FKxKingLurius is not a kills player — they manage lobbies and close them out. That is a specific kind of good.`,
+            p26:`Web3hustlre is on the books. First game writes the first line.`,
+            p27:`FKxPhanteon is registered. Everything else is still to happen.`,
+            p28:`Lazerine is on the roster. Waiting.`,
+            p29:`${s.wins} wins from ${s.appearances} lobbies at a 35% win rate. ElderRovingWorm81 walked into Season 2 and immediately started collecting wins. Efficient, dangerous, and clearly been practising.${s2Note}`,
+            p30:`7 kills in a single lobby. That is the all-time record and EZEDINEYoutube owns it. ${s.wins} wins, ${s.kills} kills, and the kind of ceiling that makes other players nervous when they see the name in the lobby.${s2Note}`,
+            p31:`${s.appearances} games logged. Ironlover keeps coming back. The record grows every session they are in.`,
+            p32:`One lobby. KhingPilot is in the archive.`,
+            p33:`One lobby. iVimXGF is in the archive.`,
+            p34:`${s.wins} wins and ${s.kills} kills from ${s.appearances} games. TMIyc does not play many sessions but shows up ready when they do.`,
+            p35:`${s.appearances} lobbies and still going. Demejii55 keeps turning up. The first win is the one that changes everything.`,
+            p36:`${s.appearances} games logged. 0netwoo is building it slowly.`,
+            p37:`First lobby in the books. FKxVanBR is part of the record now.`,
+          };
+          return bios[pid]||`${s.wins}W and ${s.kills}K across ${s.appearances} lobbies.`;
+        };
+        const bio=getBio(p.id);
+        const lvlData=getPlayerLevel(p.id);
         // Sparkline
         const pSess=[...sessions].filter(s=>s.attendees?.includes(p.id))
           .sort((a,b)=>new Date(b.date)-new Date(a.date)||parseInt(b.id.slice(1))-parseInt(a.id.slice(1)));
@@ -5296,46 +5903,65 @@ export default function GameNight(){
             <div style={{
               background:`linear-gradient(135deg,${p.color}0e,rgba(0,0,0,.5))`,
               border:`1px solid ${p.color}33`,borderLeft:`4px solid ${p.color}`,
-              borderRadius:"0 8px 8px 0",padding:"20px 20px",marginBottom:12,
-              display:"flex",alignItems:"center",gap:18,flexWrap:"wrap",
+              borderRadius:"0 8px 8px 0",padding:"16px 16px",marginBottom:12,
               position:"relative",overflow:"hidden"}}>
               <div style={{position:"absolute",right:-8,top:-8,fontFamily:"Barlow Condensed",
                 fontWeight:900,fontSize:"7rem",color:p.color,opacity:.05,lineHeight:1,
                 pointerEvents:"none"}}>{p.username[0]}</div>
-              {streak>=3&&(
-                <div className="bc7" style={{position:"absolute",top:12,right:14,
-                  fontSize:".7rem",background:"rgba(255,107,53,.18)",borderRadius:4,
-                  padding:"3px 11px",border:"1px solid rgba(255,107,53,.4)",
-                  color:"#FF6B35",letterSpacing:".1em"}}>
-                  🔥 {streak}-GAME STREAK
-                </div>
-              )}
-              <Av p={p} size={72} glow intel/>
-              <div style={{flex:1,minWidth:0,position:"relative",zIndex:1}}>
-                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".35em",
-                  color:`${p.color}66`,marginBottom:4}}>
-                  COMBAT FILE · {rank.title}
-                </div>
-                <div className="bc9" style={{color:p.color,
-                  fontSize:"clamp(1.4rem,5vw,2rem)",letterSpacing:".06em",
-                  textShadow:`0 0 20px ${p.color}44`,lineHeight:1,
-                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  {p.host?"👑 ":""}{dn(p.username).toUpperCase()}
-                </div>
-                <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
-                  marginTop:5,letterSpacing:".08em"}}>
-                  LAST SEEN {lastSeenLabel} · {daysActive} SESSION DAYS
+              <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"nowrap",
+                position:"relative",zIndex:1}}>
+                <Av p={p} size={60} glow intel/>
+                <div style={{flex:1,minWidth:0}}>
+                  {/* Rank + optional streak badge — inline, never overlaps */}
+                  <div style={{display:"flex",alignItems:"center",gap:8,
+                    flexWrap:"wrap",marginBottom:4}}>
+                    <div className="bc7" style={{fontSize:".58rem",letterSpacing:".3em",
+                      color:`${p.color}66`,whiteSpace:"nowrap"}}>
+                      COMBAT FILE · {rank.title}
+                    </div>
+                    {streak>=3&&(
+                      <div className="bc7" style={{
+                        fontSize:".6rem",background:"rgba(255,107,53,.18)",borderRadius:3,
+                        padding:"2px 8px",border:"1px solid rgba(255,107,53,.4)",
+                        color:"#FF6B35",letterSpacing:".08em",whiteSpace:"nowrap"}}>
+                        🔥 {streak}-GAME STREAK
+                      </div>
+                    )}
+                  </div>
+                  <div className="bc9" style={{color:p.color,
+                    fontSize:"clamp(1.2rem,5vw,1.9rem)",letterSpacing:".06em",
+                    textShadow:`0 0 20px ${p.color}44`,lineHeight:1,
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {p.host?"👑 ":""}{dn(p.username).toUpperCase()}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+                    <div className="bc7" style={{fontSize:".65rem",color:"var(--text3)",
+                      letterSpacing:".06em",whiteSpace:"nowrap"}}>
+                      LAST SEEN {lastSeenLabel} · {daysActive}D
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:5}}>
+                      <div className="bc9" style={{fontSize:".78rem",
+                        color:p.color,letterSpacing:".1em",whiteSpace:"nowrap"}}>
+                        LVL {lvlData.lvl}
+                      </div>
+                      <div style={{width:44,height:3,background:"rgba(255,255,255,.12)",
+                        borderRadius:2,overflow:"hidden",flexShrink:0}}>
+                        <div style={{height:"100%",background:p.color,
+                          width:`${lvlData.progress}%`,borderRadius:2,
+                          boxShadow:`0 0 6px ${p.color}88`,transition:"width .5s ease"}}/>
+                      </div>
+                      <div className="bc7" style={{fontSize:".58rem",color:"var(--text3)",
+                        whiteSpace:"nowrap"}}>
+                        {lvlData.xp}XP
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Bio */}
-            <div style={{padding:"12px 16px",marginBottom:12,
-              background:"rgba(255,255,255,.02)",
-              borderLeft:`3px solid ${p.color}33`,borderRadius:"0 6px 6px 0"}}>
-              <div className="bc7" style={{fontSize:".84rem",lineHeight:1.8,
-                color:"var(--text3)",letterSpacing:".04em"}}>{bio}</div>
-            </div>
+            {/* Bio — proper typed animation via TypedBio component */}
+            <TypedBio text={bio} color={p.color}/>
 
             {/* Stat grid */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(88px,1fr))",
@@ -5625,58 +6251,70 @@ export default function GameNight(){
                   ))}
                 </div>
 
-                {/* Kill King by Day */}
+                {/* Kill King by Day — full session day breakdown */}
                 <div style={{padding:"18px 18px",marginBottom:20,
                   background:"rgba(255,255,255,.02)",
                   border:"1px solid rgba(255,77,143,.15)",
-                  borderLeft:"3px solid rgba(255,77,143,.4)",
+                  borderLeft:"3px solid rgba(255,77,143,.5)",
                   borderRadius:"0 8px 8px 0"}}>
                   <div className="bc9" style={{fontSize:".88rem",color:"#FF4D8F",
-                    letterSpacing:".06em",marginBottom:4}}>💀 KILL KING BY DAY</div>
+                    letterSpacing:".06em",marginBottom:4}}>💀 KILL KING BY SESSION DAY</div>
                   <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
-                    marginBottom:14,letterSpacing:".06em"}}>
-                    Highest single-lobby kill count per session day
+                    marginBottom:16,letterSpacing:".06em"}}>
+                    Highest kills in a single lobby per session night
                   </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:3}}>
                     {(()=>{
-                      const byDay={};
-                      sessions.forEach(s=>{
-                        Object.entries(s.kills||{}).forEach(([pid,k])=>{
-                          if(!byDay[s.date]||k>byDay[s.date].k)
-                            byDay[s.date]={pid,k,sid:s.id,date:s.date};
+                      const allDays=[...new Set(sessions.map(s=>s.date))].sort().reverse();
+                      return allDays.map((date,i)=>{
+                        const daySess=sessions.filter(s=>s.date===date);
+                        // Kill King — highest kills in ONE single lobby
+                        let kkMax=0,kkPid=null,kkSid="";
+                        daySess.forEach(s=>{
+                          Object.entries(s.kills||{}).forEach(([pid,k])=>{
+                            if(k>kkMax){kkMax=k;kkPid=pid;kkSid=s.id;}
+                          });
                         });
-                      });
-                      return Object.values(byDay)
-                        .sort((a,b)=>b.date.localeCompare(a.date))
-                        .slice(0,10)
-                        .map((entry,i)=>{
-                          const p=players.find(x=>x.id===entry.pid);
-                          if(!p)return null;
-                          const dd=new Date(entry.date+"T12:00:00Z");
-                          const dateLabel=dd.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
-                          return(
-                            <div key={i} onClick={()=>goProfile(p.id)} style={{
-                              display:"flex",alignItems:"center",gap:10,
-                              padding:"9px 12px",cursor:"pointer",
-                              background:"rgba(0,0,0,.25)",
-                              borderLeft:`2px solid ${p.color}33`,
-                              borderRadius:"0 4px 4px 0",
-                              animation:`fadeUp .3s ease ${i*.04}s both`}}>
-                              <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
-                                width:72,flexShrink:0}}>{dateLabel}</div>
-                              <Av p={p} size={28} intel/>
-                              <div className="bc9" style={{flex:1,minWidth:0,fontSize:".85rem",
-                                color:p.color,overflow:"hidden",textOverflow:"ellipsis",
-                                whiteSpace:"nowrap",letterSpacing:".04em"}}>
-                                {p.host?"👑 ":""}{dn(p.username)}
-                              </div>
-                              <div className="bc9" style={{fontSize:"1.1rem",color:"#FF4D8F",
-                                flexShrink:0,textShadow:"0 0 10px rgba(255,77,143,.5)"}}>
-                                {entry.k}K
+                        const kkP=kkPid?players.find(x=>x.id===kkPid):null;
+                        const dd=new Date(date+"T12:00:00Z");
+                        const dayLabel=dd.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+                        const specialTag=date==="2026-04-01"?"🃏 ":date==="2026-04-03"?"🌅 ":date==="2026-04-04"?"🥚 ":"";
+                        const isLatest=i===0;
+                        return(
+                          <div key={date} style={{
+                            display:"flex",alignItems:"center",gap:10,
+                            padding:"9px 12px",
+                            background:isLatest?"rgba(255,255,255,.04)":"rgba(0,0,0,.18)",
+                            borderLeft:`2px solid ${isLatest?"rgba(255,77,143,.55)":kkP?kkP.color+"22":"rgba(255,255,255,.05)"}`,
+                            borderRadius:"0 4px 4px 0"}}>
+                            {/* Date */}
+                            <div style={{minWidth:78,flexShrink:0}}>
+                              <div className="bc7" style={{fontSize:".68rem",
+                                color:isLatest?"#FF4D8F":"var(--text3)",
+                                letterSpacing:".06em"}}>{specialTag}{dayLabel}</div>
+                              <div className="bc7" style={{fontSize:".56rem",
+                                color:"var(--text3)",opacity:.55,marginTop:1}}>
+                                {daySess.length} lobbies
                               </div>
                             </div>
-                          );
-                        });
+                            {/* Kill King */}
+                            {kkP&&<Av p={kkP} size={26} intel/>}
+                            <div style={{flex:1,minWidth:0}}>
+                              <div className="bc9" style={{fontSize:".84rem",lineHeight:1.2,
+                                color:kkP?.color||"var(--text3)",
+                                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                                cursor:kkP?"pointer":"default"}}
+                                onClick={()=>kkP&&goProfile(kkP.id)}>
+                                {kkP?dn(kkP.username):"No kills recorded"}
+                              </div>
+                              {kkMax>0&&<div className="bc7" style={{
+                                fontSize:".62rem",color:"#FF4D8F",lineHeight:1,marginTop:2}}>
+                                {kkMax}K · {kkSid}
+                              </div>}
+                            </div>
+                          </div>
+                        );
+                      });
                     })()}
                   </div>
                 </div>
@@ -6148,6 +6786,24 @@ export default function GameNight(){
             const s2=SEASONS.find(x=>x.id==="s2");
             const s2Sessions=sessions.filter(s=>s.date>=s2.start&&s.date<=s2.end);
             const today=todayStr();
+            // Hoist all data before any early return so esbuild stays in JS mode
+            const s2Stats=allStats(s2Sessions).filter(p=>p.appearances>0);
+            const byWins=[...s2Stats].sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
+            const byKills=[...s2Stats].sort((a,b)=>b.kills-a.kills);
+            const byApp=[...s2Stats].sort((a,b)=>b.appearances-a.appearances);
+            const totalKills=s2Sessions.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
+            const uniqueWins=[...new Set(s2Sessions.filter(s=>s.winner).map(s=>s.winner))].length;
+            const days=[...new Set(s2Sessions.map(s=>s.date))].length;
+            const podium=byWins.slice(0,3);
+            let topGame={pid:"",k:0,sid:"",date:""};
+            s2Sessions.forEach(s=>{
+              if(!s.kills)return;
+              const entries=Object.keys(s.kills);
+              for(let ei=0;ei<entries.length;ei++){
+                const pid=entries[ei];const k=s.kills[pid];
+                if(k>topGame.k){topGame.k=k;topGame.pid=pid;topGame.sid=s.id;topGame.date=s.date;}
+              }
+            });
 
             // Pre-season state
             if(today<s2.start) return(
@@ -6181,81 +6837,8 @@ export default function GameNight(){
                     background:"rgba(0,229,255,.12)",border:"1.5px solid rgba(0,229,255,.35)",
                     borderRadius:12,padding:"9px 22px",color:"#00E5FF",fontWeight:800,
                     fontSize:".84rem",cursor:"pointer"}}>
-                    Review Season 1 →
+                    Review Season 1
                   </button>
-                </div>
-
-                {/* S2 Prediction Poll */}
-                <div style={{
-                  background:"linear-gradient(135deg,rgba(199,125,255,.1),rgba(0,229,255,.06))",
-                  border:"2px solid rgba(199,125,255,.35)",borderRadius:20,padding:"26px 24px"}}>
-                  <div style={{marginBottom:16}}>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:"#C77DFF",marginBottom:4}}>
-                      🔮 Who wins Season 2?
-                    </div>
-                    <p style={{color:"var(--text3)",fontSize:".8rem",fontWeight:700}}>
-                      Lock in your prediction before April 1st. We track it all season.
-                    </p>
-                  </div>
-                  {(()=>{
-                    const candidates=allStats().sort((a,b)=>b.wins-a.wins||b.kills-a.kills).slice(0,8);
-                    if(s2Prediction){
-                      const pick=players.find(p=>p.id===s2Prediction);
-                      return(
-                        <div>
-                          <div style={{display:"flex",alignItems:"center",gap:12,
-                            background:"rgba(199,125,255,.12)",border:"1.5px solid rgba(199,125,255,.4)",
-                            borderRadius:12,padding:"12px 16px",marginBottom:12}}>
-                            <span style={{fontSize:"1.4rem"}}>🔒</span>
-                            <div>
-                              <div style={{fontSize:".68rem",color:"var(--text3)",fontWeight:800,
-                                letterSpacing:1.5,textTransform:"uppercase",marginBottom:3}}>Your Pick</div>
-                              {pick&&<div style={{fontFamily:"Fredoka One",color:pick.color,fontSize:"1.1rem"}}>
-                                {pick.host?"👑 ":""}{pick.username}
-                              </div>}
-                            </div>
-                          </div>
-                          <p style={{color:"var(--text3)",fontSize:".76rem",fontWeight:700}}>
-                            Prediction locked. Come back on April 1st to see how you called it. 🍿
-                          </p>
-                        </div>
-                      );
-                    }
-                    return(
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
-                        {candidates.map(p=>{
-                          const player=players.find(x=>x.id===p.id);if(!player)return null;
-                          return(
-                            <button key={p.id} onClick={async()=>{
-                              setS2Prediction(p.id);
-                              try{await store.set("gn-s2-prediction",p.id);}catch{}
-                              showToast(`🔮 Prediction locked — ${player.username} for S2!`);
-                            }} style={{
-                              display:"flex",alignItems:"center",gap:10,
-                              background:`${player.color}0d`,border:`1.5px solid ${player.color}33`,
-                              borderRadius:11,padding:"10px 14px",cursor:"pointer",textAlign:"left",
-                              transition:"background .15s,border .15s"}}>
-                              <div style={{width:34,height:34,borderRadius:"50%",flexShrink:0,
-                                background:`linear-gradient(135deg,${player.color},${player.color}88)`,
-                                display:"flex",alignItems:"center",justifyContent:"center",
-                                fontFamily:"Fredoka One",fontSize:".85rem",color:"#fff"}}>
-                                {player.username[0]}
-                              </div>
-                              <div style={{minWidth:0}}>
-                                <div style={{fontFamily:"Fredoka One",color:player.color,fontSize:".88rem",
-                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                  {player.host?"👑 ":""}{dn(player.username)}
-                                </div>
-                                <div style={{fontSize:".64rem",color:"var(--text3)",fontWeight:700}}>
-                                  {p.wins}W · {p.winRate}% WR
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
                 </div>
               </div>
             );
@@ -6270,26 +6853,14 @@ export default function GameNight(){
                   No lobbies logged yet
                 </div>
                 <p style={{color:"var(--text3)",fontSize:".85rem",fontWeight:600}}>
-                  Season 2 sessions will appear here after they're added.
+                  Season 2 sessions will appear here after they are added.
                 </p>
               </div>
             );
 
-            // Season 2 is live with data
-            const s2Stats=allStats(s2Sessions).filter(p=>p.appearances>0);
-            const byWins=[...s2Stats].sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
-            const byKills=[...s2Stats].sort((a,b)=>b.kills-a.kills);
-            const byApp=[...s2Stats].sort((a,b)=>b.appearances-a.appearances);
-            const totalKills=s2Sessions.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
-            const uniqueWins=[...new Set(s2Sessions.filter(s=>s.winner).map(s=>s.winner))].length;
-            const days=[...new Set(s2Sessions.map(s=>s.date))].length;
-            const podium=byWins.slice(0,3);
-            // Kill king single game
-            let topGame={pid:"",k:0,sid:"",date:""};
-            s2Sessions.forEach(s=>{Object.entries(s.kills||{}).forEach(([pid,k])=>{if(k>topGame.k)topGame={pid,k,sid:s.id,date:s.date};});});
-
             return(
               <div>
+                <VotePanel players={players} allStats={allStats} s2Prediction={s2Prediction} setS2Prediction={setS2Prediction} store={store} showToast={showToast} dn={dn} Av={Av}/>
                 {/* ── Prediction tracker — how's your pick doing? ── */}
                 {s2Prediction&&(()=>{
                   const pick=players.find(p=>p.id===s2Prediction);
