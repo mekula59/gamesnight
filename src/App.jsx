@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ACCENT_COLORS,
   ADMIN_PASSWORD,
@@ -10,6 +10,7 @@ import {
   RANK_FAQ,
   SEASONS,
   SITE_TITLE,
+  STORAGE_VERSION,
   TWITCH_URL,
 } from "./game/config";
 import {
@@ -87,18 +88,6 @@ const CSS = `
   @keyframes easterScan{0%{transform:translateY(-100%)}100%{transform:translateY(800%)}}
   @keyframes hudBlink{0%,100%{opacity:1}48%{opacity:1}50%{opacity:.15}52%{opacity:1}}
   @keyframes typeIn{from{max-width:0;opacity:1}to{max-width:100%;opacity:1}}
-  @keyframes briefingReveal{
-    0%{opacity:0;transform:translateX(-8px);}
-    100%{opacity:1;transform:translateX(0);}
-  }
-  @keyframes briefingType{
-    from{width:0;}
-    to{width:100%;}
-  }
-  @keyframes briefingCursor{
-    0%,100%{opacity:1;}
-    50%{opacity:0;}
-  }
   @keyframes cursorPulse{0%,100%{border-color:var(--tw-color,#00E5FF)}49%{border-color:var(--tw-color,#00E5FF)}51%,99%{border-color:transparent}}
   .typewriter-wrap{overflow:hidden;}
   .typewriter-text{
@@ -291,6 +280,41 @@ const CSS = `
   }
 
   /* ── Nav & Mobile Menu ── */
+  .zone-rail{
+    position:sticky;top:58px;z-index:98;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:8px 16px 9px;
+    background:linear-gradient(90deg,var(--zonec,rgba(255,107,53,.16)),rgba(14,8,32,.94) 34%,rgba(14,8,32,.94));
+    border-bottom:1px solid rgba(255,255,255,.06);
+    backdrop-filter:blur(18px);
+    box-shadow:inset 0 -1px 0 rgba(255,255,255,.04);
+    animation:zoneRailRise .34s ease both;
+  }
+  .zone-rail.live{animation:zoneRailRise .34s ease both,zoneRailSweep .7s ease;}
+  .zone-rail-chip{
+    display:inline-flex;align-items:center;gap:10px;min-width:0;
+  }
+  .zone-rail-icon{
+    width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 0 16px var(--zonec,rgba(255,107,53,.2));
+    flex-shrink:0;
+  }
+  .zone-rail-copy{min-width:0;}
+  .zone-rail-label{
+    display:block;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:.76rem;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--zonec,#FF6B35);
+    white-space:nowrap;
+  }
+  .zone-rail-brief{
+    display:block;font-size:.72rem;color:var(--text2);line-height:1.45;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .zone-rail-status{
+    font-family:"Barlow Condensed",sans-serif;font-weight:800;font-size:.68rem;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--text3);
+    white-space:nowrap;
+  }
   .mob-menu{
     position:sticky;top:60px;z-index:99;
     background:rgba(14,8,32,.98);
@@ -345,6 +369,9 @@ const CSS = `
   @keyframes lvlOut{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
   @keyframes lvlLine{0%{width:0}100%{width:100%}}
   @keyframes lvlFlicker{0%,100%{opacity:1}30%{opacity:.7}32%{opacity:1}60%{opacity:.85}62%{opacity:1}}
+  @keyframes zoneRailRise{0%{opacity:0;transform:translateY(-8px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes zoneRailSweep{0%{box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 0 0 transparent}55%{box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 8px 26px rgba(0,0,0,.18)}100%{box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 0 0 transparent}}
+  @keyframes navIncoming{0%{transform:translateY(-1px);opacity:.8}40%{transform:translateY(0)}100%{opacity:1}}
 
   /* ── HUD / ARENA ── */
   @keyframes hudIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
@@ -372,16 +399,18 @@ const CSS = `
   }
   .arena-row{
     animation:arenaRow .3s ease both;
-    transition:background .12s,transform .1s,box-shadow .15s;
+    transition:background .16s,transform .14s,box-shadow .16s,border-color .16s;
     position:relative;
   }
   .arena-row:hover{
-    background:rgba(255,255,255,.05)!important;
-    transform:translateX(3px);
+    background:rgba(255,255,255,.06)!important;
+    transform:translateX(4px);
+    box-shadow:inset 3px 0 0 rgba(255,255,255,.08);
   }
   .arena-row-1{
     background:linear-gradient(90deg,rgba(255,215,0,.07),transparent)!important;
     border-left:3px solid #FFD700!important;
+    box-shadow:inset 0 0 0 1px rgba(255,215,0,.08),0 0 22px rgba(255,215,0,.08);
   }
   .arena-row-1:hover{background:linear-gradient(90deg,rgba(255,215,0,.12),transparent)!important;}
   .rank-num{
@@ -421,8 +450,26 @@ const CSS = `
   .pulse-a{animation:pulseA 1.4s ease-in-out infinite;display:inline-block;}
   .fire{display:inline-block;}
   .live-glo{animation:popIn .4s ease both;}
-  .nav-btn{background:none;border:none;cursor:pointer;font-family:inherit;transition:color .15s;}
-  .nav-btn:hover{color:#FF6B35!important;}
+  .nav-btn{
+    background:none;border:none;cursor:pointer;font-family:inherit;transition:color .16s,background .16s,transform .16s,box-shadow .16s;
+    position:relative;isolation:isolate;
+  }
+  .nav-btn::before{
+    content:"";position:absolute;left:10px;right:10px;bottom:0;height:2px;border-radius:999px;
+    background:var(--navc,transparent);opacity:0;transform:scaleX(.45);
+    transition:opacity .18s ease,transform .18s ease,box-shadow .18s ease;
+  }
+  .nav-btn:hover{color:#FF6B35!important;background:rgba(255,255,255,.04);}
+  .nav-btn.active{
+    color:var(--navc,#FF6B35)!important;
+    background:linear-gradient(180deg,var(--navc,rgba(255,107,53,.14)) 0%,rgba(255,255,255,0) 100%);
+    text-shadow:0 0 12px rgba(255,255,255,.12);
+  }
+  .nav-btn.active::before{
+    opacity:1;transform:scaleX(1);
+    box-shadow:0 0 12px rgba(255,255,255,.18);
+  }
+  .nav-btn.incoming{animation:navIncoming .5s ease both;}
   .nav-desktop::-webkit-scrollbar{display:none;}
   .nav-desktop{scrollbar-width:none;}
 
@@ -595,13 +642,6 @@ function LeaderSlideshow({slides}){
 
   useEffect(()=>{
     if(!slides.length)return;
-    // Reset to first slide when slide list changes
-    setIdx(0);
-    setAnimDir("in");
-  },[slides.length]);
-
-  useEffect(()=>{
-    if(!slides.length)return;
     let timeout=null;
     const iv=setInterval(()=>{
       setAnimDir("out");
@@ -617,13 +657,14 @@ function LeaderSlideshow({slides}){
   },[slides.length]);
 
   const goTo=(i)=>{
-    if(i===idx)return;
+    if(i===activeIdx)return;
     setAnimDir("out");
     setTimeout(()=>{setIdx(i);setAnimDir("in");},280);
   };
 
   if(!slides.length)return null;
-  const s=slides[idx]||slides[0];
+  const activeIdx=slides[idx]?idx:0;
+  const s=slides[activeIdx]||slides[0];
   if(!s||!s.player)return null;
 
   const slideStyle={
@@ -633,7 +674,7 @@ function LeaderSlideshow({slides}){
   };
 
   return(
-    <div style={{marginBottom:20}}>
+    <div style={{marginBottom:0}}>
       <div style={{
         background:`linear-gradient(135deg,${s.player.color}0e,rgba(0,0,0,.55))`,
         border:`1px solid ${s.player.color}33`,
@@ -675,14 +716,39 @@ function LeaderSlideshow({slides}){
           position:"relative",zIndex:2}}>
           {slides.map((_,i)=>(
             <div key={i} onClick={()=>goTo(i)} style={{
-              width:i===idx?18:6,height:6,borderRadius:3,cursor:"pointer",
-              background:i===idx?s.player.color:"rgba(255,255,255,.18)",
+              width:i===activeIdx?18:6,height:6,borderRadius:3,cursor:"pointer",
+              background:i===activeIdx?s.player.color:"rgba(255,255,255,.18)",
               transition:"all .3s ease",
-              boxShadow:i===idx?`0 0 8px ${s.player.color}77`:"none"}}/>
+              boxShadow:i===activeIdx?`0 0 8px ${s.player.color}77`:"none"}}/>
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+function HomeStage({tag,title,sub,accent,children,marginBottom=22}){
+  return(
+    <section style={{marginBottom}}>
+      <div style={{marginBottom:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",
+          gap:10,flexWrap:"wrap",marginBottom:8}}>
+          <div>
+            <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
+              color:`${accent}bb`,marginBottom:4}}>
+              ▸ {tag}
+            </div>
+            {title&&<div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",
+              letterSpacing:".04em",lineHeight:1.5,maxWidth:780}}>{title}</div>}
+          </div>
+          {sub&&<div className="bc7" style={{fontSize:".6rem",letterSpacing:".16em",
+            color:"var(--text3)",textTransform:"uppercase"}}>{sub}</div>}
+        </div>
+        <div style={{height:1,
+          background:`linear-gradient(90deg,${accent}66,rgba(255,255,255,.05),transparent)`}}/>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -803,7 +869,7 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
                 border:isVoted?`1.5px solid ${player.color}66`:`1px solid ${player.color}1a`,
                 borderRadius:6,padding:"8px 10px",cursor:s2Prediction?"default":"pointer",
                 textAlign:"left",transition:"all .12s",outline:"none",
-                opacity:s2Prediction&&!isVoted?.5:1}}>
+                opacity:s2Prediction&&!isVoted?0.5:1}}>
               <Av p={player} size={26}/>
               <div style={{minWidth:0}}>
                 <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
@@ -812,7 +878,7 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
                 </div>
                 <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
                   fontSize:".58rem",color:"var(--text3)"}}>
-                  {vcount>0?`${vcount} vote${vcount===1?"":"s"}`:"no votes yet"}
+                  {vcount>0?`${vcount} vote${vcount===1?"":"s"}`:"board still quiet"}
                 </div>
               </div>
             </button>
@@ -863,6 +929,76 @@ function TypedBio({text,color}){
   );
 }
 
+function BriefingFeed({stories}){
+  const [visibleCount,setVisibleCount]=useState(0);
+  const storySignature=stories.map((story)=>`${story.icon}|${story.color}|${story.text}`).join("||");
+
+  useEffect(()=>{
+    setVisibleCount(0);
+    if(!stories.length)return undefined;
+    const timers=[
+      setTimeout(()=>setVisibleCount(1),140),
+      ...stories.slice(1).map((_,index)=>setTimeout(()=>{
+        setVisibleCount((count)=>Math.min(stories.length,count+1));
+      },520+(index*240))),
+    ];
+    return()=>timers.forEach(clearTimeout);
+  },[stories.length,storySignature]);
+
+  if(!stories.length){
+    return null;
+  }
+
+  return(
+    <div style={{
+      background:"rgba(0,0,0,.45)",
+      border:"1px solid rgba(255,255,255,.08)",
+      borderTop:"2px solid rgba(0,255,148,.3)",
+      borderRadius:"0 6px 6px 0",
+      borderLeft:"3px solid rgba(0,255,148,.35)",
+      padding:"14px 16px",
+      fontFamily:"'Share Tech Mono',monospace",
+      overflow:"hidden",
+    }}>
+      {stories.map((story,index)=>{
+        const isVisible=index<visibleCount;
+        const isFresh=isVisible&&index===visibleCount-1;
+        return(
+          <div key={`${story.icon}-${index}-${story.text.slice(0,18)}`} style={{
+            display:"grid",
+            gridTemplateColumns:"18px minmax(0,1fr)",
+            gap:10,
+            alignItems:"flex-start",
+            padding:"8px 0",
+            borderBottom:index<stories.length-1?"1px solid rgba(255,255,255,.04)":"none",
+            opacity:isVisible?1:0,
+            transform:isVisible?"translateY(0)":"translateY(10px)",
+            transition:"opacity .28s ease, transform .28s ease",
+          }}>
+            <span style={{fontSize:".8rem",marginTop:1,filter:isFresh?`drop-shadow(0 0 8px ${story.color})`:"none"}}>
+              {story.icon}
+            </span>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:".78rem",lineHeight:1.68,color:"rgba(200,186,255,.88)",
+                letterSpacing:".02em",wordBreak:"break-word"}}>
+                {story.text}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
+                <div style={{height:2,flex:1,maxWidth:isVisible?"100%":"0%",
+                  background:`linear-gradient(90deg,${story.color},transparent)`,
+                  transition:"max-width .32s ease"}}/>
+                <span style={{width:6,height:6,borderRadius:"50%",flexShrink:0,
+                  background:story.color,boxShadow:isFresh?`0 0 10px ${story.color}`:"none",
+                  opacity:isVisible?0.95:0.2,transition:"opacity .28s ease, box-shadow .28s ease"}}/>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function GameNight(){
   const [view,       setView]      = useState("home");
   const [players,    setPlayers]   = useState([]);
@@ -891,10 +1027,16 @@ export default function GameNight(){
   const [editingSess,setEditingSess] = useState(null);
   const [lobbyFilter,setLobbyFilter] = useState("");
   const [lobbyDate,  setLobbyDate]   = useState("");
+  const [lobbySearch,setLobbySearch] = useState("");
+  const [lobbyLimit, setLobbyLimit]  = useState(8);
   const [pollVote,   setPollVote]     = useState(null);
   const [pollClosed, setPollClosed]   = useState(false);
   const [prevView,   setPrevView]     = useState("home");
+  const [queuedView, setQueuedView]   = useState(null);
+  const [zonePulse,  setZonePulse]    = useState(0);
   const [showCeremony,setShowCeremony]= useState(false);
+  const [ceremonyPending,setCeremonyPending]= useState(false);
+  const [ceremonySnoozed,setCeremonySnoozed]= useState(false);
   const [s2Prediction,setS2Prediction]= useState(null); // pid voted for S2 winner
   const [s2CdClock,  setS2CdClock]   = useState({d:0,h:0,m:0,s:0});
 
@@ -910,6 +1052,8 @@ export default function GameNight(){
 
   // ── Dual storage: window.storage (artifact) + localStorage (Netlify) ──
   const store=createStorageAdapter();
+  const CEREMONY_SNOOZE_KEY="gn-s2-ceremony-snoozed";
+  const zoneTimersRef=useRef({swap:null,clear:null});
 
   // ── load ──
   useEffect(()=>{
@@ -923,7 +1067,10 @@ export default function GameNight(){
       setSessions(data.sessions);
       setPollVote(data.pollVote);
       setS2Prediction(data.s2Prediction);
-      setShowCeremony(data.showCeremony);
+      setCeremonyPending(data.showCeremony);
+      if(typeof window!=="undefined"){
+        setCeremonySnoozed(window.sessionStorage?.getItem(CEREMONY_SNOOZE_KEY)==="1");
+      }
       setLoaded(true);
     };
 
@@ -960,12 +1107,15 @@ export default function GameNight(){
 
   // ── Game boot sequence ──
   useEffect(()=>{
-    // Phase 0 → 1 after 600ms (logo visible, start bar)
-    const t1=setTimeout(()=>setBootPhase(1),600);
-    // Phase 1 → 2 after 1800ms (bar fills, fade out)
-    const t2=setTimeout(()=>setBootPhase(2),1800);
-    return()=>{clearTimeout(t1);clearTimeout(t2);};
+    const t1=setTimeout(()=>setBootPhase(1),420);
+    return()=>clearTimeout(t1);
   },[]);
+
+  useEffect(()=>{
+    if(!loaded||bootPhase!==1)return;
+    const t2=setTimeout(()=>setBootPhase(2),620);
+    return()=>clearTimeout(t2);
+  },[loaded,bootPhase]);
 
   // ── April Fools: confetti burst + fake alert ──
   useEffect(()=>{
@@ -995,6 +1145,56 @@ export default function GameNight(){
     window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);
   },[]);
 
+  useEffect(()=>{
+    if(typeof window==="undefined")return;
+    const onKeyDown=e=>{
+      if(e.key==="Escape"&&showCeremony){
+        setShowCeremony(false);
+        setCeremonySnoozed(true);
+        window.sessionStorage?.setItem(CEREMONY_SNOOZE_KEY,"1");
+      }
+    };
+    window.addEventListener("keydown",onKeyDown);
+    return()=>window.removeEventListener("keydown",onKeyDown);
+  },[showCeremony]);
+
+  useEffect(()=>{
+    if(!loaded||!ceremonyPending||showCeremony||ceremonySnoozed)return;
+    if(view!=="home")return;
+    if(typeof window!=="undefined"&&window.scrollY>120)return;
+    const id=setTimeout(()=>setShowCeremony(true),900);
+    return()=>clearTimeout(id);
+  },[loaded,ceremonyPending,showCeremony,ceremonySnoozed,view]);
+
+  useEffect(()=>{
+    setLobbyLimit(8);
+    setExpandedSid(null);
+  },[lobbyFilter,lobbyDate,lobbySearch]);
+
+  const markCeremonySeen=async()=>{
+    setShowCeremony(false);
+    setCeremonyPending(false);
+    setCeremonySnoozed(false);
+    if(typeof window!=="undefined"){
+      window.sessionStorage?.removeItem(CEREMONY_SNOOZE_KEY);
+    }
+    try{await store.set("gn-s2-ceremony-seen","1");}catch{}
+  };
+  const snoozeCeremony=()=>{
+    setShowCeremony(false);
+    setCeremonySnoozed(true);
+    if(typeof window!=="undefined"){
+      window.sessionStorage?.setItem(CEREMONY_SNOOZE_KEY,"1");
+    }
+  };
+  const openCeremony=()=>{
+    setCeremonySnoozed(false);
+    if(typeof window!=="undefined"){
+      window.sessionStorage?.removeItem(CEREMONY_SNOOZE_KEY);
+    }
+    setShowCeremony(true);
+  };
+
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),3000);};
   const LEVEL_MAP={
     home:     {label:"HOME BASE",     icon:"⚡",color:"#FF6B35"},
@@ -1010,22 +1210,79 @@ export default function GameNight(){
     profile:  {label:"COMBAT FILE",   icon:"👤",color:"#FF6B35"},
     admin:    {label:"COMMAND",       icon:"⚙️",color:"#FF5252"},
   };
+  const ZONE_BRIEFS={
+    home:"Live season pulse, storylines, and mission hooks",
+    leaderboard:"Pressure table, rankings, and title chases",
+    lobbies:"Full session archive and match history",
+    hof:"Legacy titles and permanent records",
+    rivals:"Head to head grudges and duel pressure",
+    records:"Peak numbers, streaks, and landmark runs",
+    charts:"Performance trends and data intel",
+    season1:"Closed archive of the first campaign",
+    season2:"Current campaign state and live race",
+    faq:"Rules, schedule, and room brief",
+    profile:"Player dossier, milestones, and form",
+    admin:"Session control and data entry",
+  };
+  const SORT_LABELS={
+    wins:"Wins",
+    kills:"Kills",
+    kd:"Kills per lobby",
+    winrate:"Win rate",
+    appearances:"Lobbies",
+    carry:"Carry score",
+    consistency:"Consistency",
+  };
+  const scrollToTop=(behavior="smooth")=>{
+    if(typeof window!=="undefined"){
+      window.scrollTo({top:0,behavior});
+    }
+  };
+  const clearZoneTimers=()=>{
+    if(zoneTimersRef.current.swap){
+      clearTimeout(zoneTimersRef.current.swap);
+      zoneTimersRef.current.swap=null;
+    }
+    if(zoneTimersRef.current.clear){
+      clearTimeout(zoneTimersRef.current.clear);
+      zoneTimersRef.current.clear=null;
+    }
+  };
   const go=v=>{
-    setPrevView(view);
+    const fromView=queuedView||view;
+    setPrevView(fromView);
     setMobileOpen(false);
     const lv=LEVEL_MAP[v];
-    if(lv&&v!==view){
-      setLvlCard({...lv,phase:"in"});
-      setTimeout(()=>{
+    if(lv&&v!==fromView){
+      clearZoneTimers();
+      setQueuedView(v);
+      setZonePulse((count)=>count+1);
+      setLvlCard({
+        ...lv,
+        phase:"in",
+        brief:ZONE_BRIEFS[v]||"Zone link stable",
+        fromLabel:(LEVEL_MAP[fromView]||LEVEL_MAP.home).label,
+      });
+      zoneTimersRef.current.swap=setTimeout(()=>{
         setView(v);
-        if(typeof window!=="undefined")window.scrollTo({top:0,behavior:"instant"});
+        scrollToTop("auto");
         setLvlCard(c=>c?{...c,phase:"out"}:null);
-        setTimeout(()=>setLvlCard(null),500);
-      },700);
+        zoneTimersRef.current.clear=setTimeout(()=>{
+          setLvlCard(null);
+          setQueuedView(null);
+        },500);
+      },560);
     } else {
+      clearZoneTimers();
+      setQueuedView(null);
       setView(v);
-      if(typeof window!=="undefined")window.scrollTo({top:0,behavior:"smooth"});
+      scrollToTop("smooth");
     }
+  };
+  const goProfile=pid=>{
+    if(!pid)return;
+    setProfileId(pid);
+    go("profile");
   };
 
   // ── stats engine ──
@@ -1056,155 +1313,525 @@ export default function GameNight(){
   const getLastSeen=pid=>selectGetLastSeen(pid,sessions);
   const getDaysActive=pid=>selectGetDaysActive(pid,sessions);
 
-  // ── Storylines engine — 8 lines, human, passionate, varied, no em dashes ──
+  useEffect(()=>()=>clearZoneTimers(),[]);
+
+  const joinHumanList=(items)=>{
+    const list=items.filter(Boolean);
+    if(!list.length)return"";
+    if(list.length===1)return list[0];
+    if(list.length===2)return`${list[0]} and ${list[1]}`;
+    return`${list.slice(0,-1).join(", ")}, and ${list[list.length-1]}`;
+  };
+
+  const buildLatestFallout=(date)=>{
+    if(!date)return null;
+    const latestSessions=[...sessions]
+      .filter((session)=>session.date===date)
+      .sort((left,right)=>(parseSessionIdNumber(left.id)||0)-(parseSessionIdNumber(right.id)||0));
+    if(!latestSessions.length)return null;
+
+    const zeroStats={wins:0,kills:0,appearances:0};
+    const latestTotals=allStats(latestSessions).filter((player)=>player.appearances>0);
+    const priorSessions=sessions.filter((session)=>session.date<date);
+    const beforeTotals=allStats(priorSessions).filter((player)=>player.appearances>0);
+    const afterTotals=allStats().filter((player)=>player.appearances>0);
+    const playerByUsername=(username)=>players.find((player)=>player.username===username)||null;
+    const findTotals=(rows,pid)=>rows.find((row)=>row.id===pid)||zeroStats;
+    const byWins=(left,right)=>right.wins-left.wins||right.kills-left.kills;
+    const dayWinnerMap={};
+    latestSessions.forEach((session)=>{
+      if(session.winner){
+        dayWinnerMap[session.winner]=(dayWinnerMap[session.winner]||0)+1;
+      }
+    });
+    const dayWinners=Object.entries(dayWinnerMap)
+      .map(([pid,wins])=>({
+        pid,
+        wins,
+        player:getPlayer(pid),
+        kills:findTotals(latestTotals,pid).kills,
+      }))
+      .sort((left,right)=>right.wins-left.wins||right.kills-left.kills);
+    const topWinCount=dayWinners[0]?.wins||0;
+    const topWinners=topWinCount>0
+      ?dayWinners.filter((entry)=>entry.wins===topWinCount)
+      :[];
+    const topKiller=[...latestTotals].sort((left,right)=>right.kills-left.kills||right.wins-left.wins)[0]||null;
+    const topKillerPlayer=topKiller?getPlayer(topKiller.id):null;
+    const zeroKillWinSession=latestSessions.find((session)=>
+      session.winner&&(session.kills?.[session.winner]||0)===0,
+    )||null;
+    const zeroKillWinner=zeroKillWinSession?getPlayer(zeroKillWinSession.winner):null;
+
+    const mekulaPlayer=playerByUsername("MekulaGG");
+    let reboundWin=null;
+    if(mekulaPlayer){
+      const reboundIndex=latestSessions.findIndex((session)=>
+        session.winner===mekulaPlayer.id&&(session.kills?.[mekulaPlayer.id]||0)>=4,
+      );
+      if(reboundIndex>=0){
+        const reboundSession=latestSessions[reboundIndex];
+        const priorDaySessions=latestSessions
+          .slice(0,reboundIndex)
+          .filter((session)=>session.attendees?.includes(mekulaPlayer.id));
+        reboundWin={
+          player:mekulaPlayer,
+          session:reboundSession,
+          kills:reboundSession.kills?.[mekulaPlayer.id]||0,
+          priorDayLobbies:priorDaySessions.length,
+          priorDayWins:priorDaySessions.filter((session)=>session.winner===mekulaPlayer.id).length,
+        };
+      }
+    }
+
+    const legendCrossers=[...afterTotals]
+      .filter((player)=>{
+        const before=findTotals(beforeTotals,player.id);
+        return before.wins<10&&player.wins>=10;
+      })
+      .sort(byWins)
+      .map((player)=>({player:getPlayer(player.id),wins:player.wins}));
+
+    const killCrossers=[...afterTotals]
+      .filter((player)=>{
+        const before=findTotals(beforeTotals,player.id);
+        return before.kills<100&&player.kills>=100;
+      })
+      .sort((left,right)=>right.kills-left.kills||right.wins-left.wins)
+      .map((player)=>({player:getPlayer(player.id),kills:player.kills}));
+
+    const beforeRanks=[...beforeTotals].sort(byWins);
+    const afterRanks=[...afterTotals].sort(byWins);
+    const getRankFor=(rows,pid)=>rows.findIndex((row)=>row.id===pid)+1;
+    const topFiveShift=[...afterRanks]
+      .map((player)=>({
+        player:getPlayer(player.id),
+        wins:player.wins,
+        beforeRank:getRankFor(beforeRanks,player.id),
+        afterRank:getRankFor(afterRanks,player.id),
+      }))
+      .find((entry)=>entry.afterRank>0&&entry.afterRank<=5&&entry.beforeRank>entry.afterRank)||null;
+
+    const buildRivalPressure=(leftName,rightName)=>{
+      const leftPlayer=playerByUsername(leftName);
+      const rightPlayer=playerByUsername(rightName);
+      if(!leftPlayer||!rightPlayer)return null;
+      const pair=(rows)=>rows.find((entry)=>
+        [entry.p1,entry.p2].includes(leftPlayer.id)&&[entry.p1,entry.p2].includes(rightPlayer.id),
+      );
+      const beforePair=pair(selectGetRivals(priorSessions));
+      const afterPair=pair(selectGetRivals(sessions));
+      if(!afterPair)return null;
+      const leftWins=afterPair.p1===leftPlayer.id?afterPair.p1wins:afterPair.p2wins;
+      const rightWins=afterPair.p1===rightPlayer.id?afterPair.p1wins:afterPair.p2wins;
+      const leftBefore=beforePair?(beforePair.p1===leftPlayer.id?beforePair.p1wins:beforePair.p2wins):0;
+      const rightBefore=beforePair?(beforePair.p1===rightPlayer.id?beforePair.p1wins:beforePair.p2wins):0;
+      const leader=leftWins>=rightWins?leftPlayer:rightPlayer;
+      const trailer=leader.id===leftPlayer.id?rightPlayer:leftPlayer;
+      return{
+        leftPlayer,
+        rightPlayer,
+        leader,
+        trailer,
+        total:afterPair.total,
+        totalDelta:afterPair.total-(beforePair?.total||0),
+        leaderWins:Math.max(leftWins,rightWins),
+        trailerWins:Math.min(leftWins,rightWins),
+        leaderDelta:leader.id===leftPlayer.id?leftWins-leftBefore:rightWins-rightBefore,
+      };
+    };
+
+    return{
+      latestSessions,
+      topWinCount,
+      topWinners,
+      topKiller:topKiller&&topKillerPlayer
+        ?{...topKiller,player:topKillerPlayer}
+        :null,
+      zeroKillWin:zeroKillWinSession&&zeroKillWinner
+        ?{session:zeroKillWinSession,player:zeroKillWinner}
+        :null,
+      reboundWin,
+      legendCrossers,
+      killCrossers,
+      topFiveShift,
+      mekulaTeriqPressure:buildRivalPressure("MekulaGG","Teriqstp"),
+      teriqHackqamPressure:buildRivalPressure("Teriqstp","Hackqam"),
+    };
+  };
+
+  // ── Storylines engine: 8 lines, human, passionate, varied, no em dashes ──
   const getStorylines=()=>{
     if(!sessions.length||!players.length)return[];
+    const latestDate=getLatestSessionDate();
+    if(!latestDate)return[];
+    const latestFallout=buildLatestFallout(latestDate);
     const allSt=allStats();
     const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
     const s2St=allStats(s2Sess).filter(p=>p.appearances>0);
-    const latestDate=getLatestSessionDate();
     const latestSess=sessions.filter(s=>s.date===latestDate);
     const seed=parseInt(latestDate.replace(/-/g,"").slice(-3),10)||0;
     const candidates=[];
+    const addCandidate=(icon,color,w,options)=>{
+      const lines=Array.isArray(options)?options:[options];
+      if(!lines.length)return;
+      const index=(seed+candidates.length*3+w)%lines.length;
+      candidates.push({icon,text:lines[index],color,w});
+    };
+    const getDroughtBeforeDate=(playerId,date)=>{
+      const priorSessions=[...sessions]
+        .filter((session)=>session.date<date&&session.attendees?.includes(playerId))
+        .sort(compareSessionsDesc);
+      if(!priorSessions.length)return 0;
+      const lastWinIndex=priorSessions.findIndex((session)=>session.winner===playerId);
+      return lastWinIndex===-1?priorSessions.length:lastWinIndex;
+    };
 
-    if(s2St.length>=2){
-      const [first,second]=s2St.sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
-      const fp=getPlayer(first.id);
-      const sp=getPlayer(second.id);
-      const gap=first.wins-second.wins;
-      if(fp&&sp){
-        if(gap===0)
-          candidates.push({icon:"👑",text:`${dn(fp.username)} and ${dn(sp.username)} are sitting on the same win count in Season 2. Dead level. The next person to win a lobby takes the lead outright.`,color:"#FFD700",w:6});
-        else if(gap===1)
-          candidates.push({icon:"👑",text:`${dn(fp.username)} leads Season 2 by a single win. ${dn(sp.username)} is right there and this season is nowhere near over.`,color:"#FFD700",w:6});
-        else if(gap<=3)
-          candidates.push({icon:"👑",text:`${dn(fp.username)} is ${gap} wins clear in Season 2 with ${first.wins} on the board. ${dn(sp.username)} needs a strong session to get back in the race.`,color:"#FFD700",w:5});
-        else
-          candidates.push({icon:"👑",text:`${dn(fp.username)} has opened up a ${gap}-win lead in Season 2. That kind of gap does not build by accident.`,color:"#FFD700",w:4});
+    if(latestFallout?.topWinners.length>=2&&latestFallout.topKiller?.player){
+      const splitLeaders=joinHumanList(
+        latestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")),
+      );
+      const damageLead=dn(latestFallout.topKiller.player.username);
+      addCandidate("⚡","#FFD700",10,[
+        `${splitLeaders} split the last session day at ${latestFallout.topWinCount} wins each, but ${damageLead} still carried the heavier ${latestFallout.topKiller.kills}-kill line.`,
+        `The day ended level on wins between ${splitLeaders}. ${damageLead} made sure the damage board still had a clear owner with ${latestFallout.topKiller.kills} kills.`,
+      ]);
+    }
+
+    if(latestFallout?.reboundWin){
+      const reboundSessionNo=parseSessionIdNumber(latestFallout.reboundWin.session.id)||latestFallout.reboundWin.session.id;
+      addCandidate("🔁","#00E5FF",9,[
+        `${dn(latestFallout.reboundWin.player.username)} drifted through ${latestFallout.reboundWin.priorDayLobbies} lobbies without a win, then snapped Lobby ${reboundSessionNo} shut with ${latestFallout.reboundWin.kills} kills.`,
+        `${dn(latestFallout.reboundWin.player.username)} stayed quiet for most of the last session day, then hit back in Lobby ${reboundSessionNo} with a ${latestFallout.reboundWin.kills}-kill win.`,
+      ]);
+    }
+
+    if(latestFallout?.zeroKillWin){
+      const zeroKillSessionNo=parseSessionIdNumber(latestFallout.zeroKillWin.session.id)||latestFallout.zeroKillWin.session.id;
+      addCandidate("🫥","#C77DFF",8,[
+        `${dn(latestFallout.zeroKillWin.player.username)} stole Lobby ${zeroKillSessionNo} without landing a kill. That is pure survival nerve.`,
+        `Lobby ${zeroKillSessionNo} went to ${dn(latestFallout.zeroKillWin.player.username)} with zero kills on the sheet. Some wins come from damage. That one came from nerve.`,
+      ]);
+    }
+
+    if(
+      latestFallout&&(
+        latestFallout.legendCrossers.length||
+        latestFallout.killCrossers.length||
+        latestFallout.topFiveShift
+      )
+    ){
+      const legendNames=joinHumanList(
+        latestFallout.legendCrossers.map((entry)=>dn(entry.player?.username||"")),
+      );
+      const legendLine=legendNames
+        ?latestFallout.legendCrossers.length>1
+          ?`${legendNames} both hit Legend`
+          :`${legendNames} hit Legend`
+        :"";
+      const killLine=latestFallout.killCrossers[0]
+        ?`${dn(latestFallout.killCrossers[0].player.username)} broke through ${latestFallout.killCrossers[0].kills} kills`
+        :"";
+      const rankLine=latestFallout.topFiveShift
+        ?`${dn(latestFallout.topFiveShift.player?.username||"")} climbed into ${latestFallout.topFiveShift.afterRank}th all-time wins`
+        :"";
+      addCandidate("🏁","#FFAB40",8,[
+        [
+          legendLine,
+          killLine,
+          rankLine,
+        ].filter(Boolean).join(", ")+". April 8 moved real furniture.",
+        [
+          rankLine,
+          killLine,
+          legendNames
+            ?latestFallout.legendCrossers.length>1
+              ?`${legendNames} both reached Legend`
+              :`${legendNames} reached Legend`
+            :"",
+        ].filter(Boolean).join(", ")+". That day shifted more than the top row.",
+      ]);
+    }
+
+    if(latestFallout?.mekulaTeriqPressure&&latestFallout.mekulaTeriqPressure.totalDelta>0){
+      const rivalry=latestFallout.mekulaTeriqPressure;
+      addCandidate("⚔️","#FF4D8F",7,[
+        `${dn(rivalry.leader.username)} pushed the duel board against ${dn(rivalry.trailer.username)} to ${rivalry.leaderWins}-${rivalry.trailerWins} across ${rivalry.total} top-two meetings.`,
+        `${dn(rivalry.leader.username)} added ${rivalry.leaderDelta} more top-two wins over ${dn(rivalry.trailer.username)}. That rivalry is now sitting at ${rivalry.leaderWins}-${rivalry.trailerWins}.`,
+      ]);
+    }
+
+    const seasonWins=[...s2St].sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
+    const seasonLeader=seasonWins[0];
+    const seasonChaser=seasonWins[1];
+    if(seasonLeader&&seasonChaser){
+      const leaderPlayer=getPlayer(seasonLeader.id);
+      const chasePlayer=getPlayer(seasonChaser.id);
+      const gap=seasonLeader.wins-seasonChaser.wins;
+      if(leaderPlayer&&chasePlayer){
+        if(gap===0){
+          addCandidate("👑","#FFD700",6,[
+            `${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are tied on Season 2 wins. One clean finish changes the whole room.`,
+            `${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level at the top of Season 2. The next crown breaks the calm.`,
+          ]);
+        }else if(gap===1){
+          addCandidate("👑","#FFD700",6,[
+            `${dn(leaderPlayer.username)} has one win of daylight over ${dn(chasePlayer.username)} in Season 2. That is barely breathing room.`,
+            `${dn(leaderPlayer.username)} leads Season 2 by a single lobby. ${dn(chasePlayer.username)} is close enough to turn the table tonight.`,
+          ]);
+        }else{
+          addCandidate("👑","#FFD700",5,[
+            `${dn(leaderPlayer.username)} is ${gap} wins clear in Season 2 with ${seasonLeader.wins} on the board. ${dn(chasePlayer.username)} still has them in sight.`,
+            `${dn(leaderPlayer.username)} has built a ${gap}-win edge in Season 2. ${dn(chasePlayer.username)} needs a heavy session to drag that back.`,
+          ]);
+        }
       }
     }
 
-    const byKills=[...allSt].sort((a,b)=>b.kills-a.kills);
-    const [k1,k2]=byKills;
-    const kp1=k1?getPlayer(k1.id):null;
-    const kp2=k2?getPlayer(k2.id):null;
-    if(kp1&&k1.kills>0){
-      const gap=k2?k1.kills-k2.kills:k1.kills;
-      if(gap<15&&kp2)
-        candidates.push({icon:"💀",text:`${dn(kp1.username)} still leads the all-time kill chart but ${dn(kp2.username)} is only ${gap} behind. That is one good session away from a new kill leader.`,color:"#FF4D8F",w:5});
-      else if(gap<50&&kp2)
-        candidates.push({icon:"💀",text:`${dn(kp1.username)} sits on ${k1.kills} all-time kills. ${dn(kp2.username)} is the closest challenger at ${k2.kills}. The gap is real but killable.`,color:"#FF4D8F",w:4});
-      else
-        candidates.push({icon:"💀",text:`${dn(kp1.username)} has ${k1.kills} all-time kills. Nobody else is close. Session after session, the damage adds up.`,color:"#FF4D8F",w:3});
+    const allTimeKills=[...allSt].sort((a,b)=>b.kills-a.kills);
+    const killLeader=allTimeKills[0];
+    const killChaser=allTimeKills[1];
+    if(killLeader){
+      const killLeaderPlayer=getPlayer(killLeader.id);
+      const killChaserPlayer=killChaser?getPlayer(killChaser.id):null;
+      const killGap=killChaser?killLeader.kills-killChaser.kills:killLeader.kills;
+      if(killLeaderPlayer&&killLeader.kills>0){
+        if(killChaserPlayer&&killGap<=12){
+          addCandidate("💀","#FF4D8F",5,[
+            `${dn(killLeaderPlayer.username)} still holds the all-time kill lead, but ${dn(killChaserPlayer.username)} is only ${killGap} behind. One wild night can flip that.`,
+            `${dn(killLeaderPlayer.username)} is still first in all-time kills. ${dn(killChaserPlayer.username)} is ${killGap} off the pace and close enough to make it tense.`,
+          ]);
+        }else{
+          addCandidate("💀","#FF4D8F",4,[
+            `${dn(killLeaderPlayer.username)} is sitting on ${killLeader.kills} all-time kills. The room still runs through that damage.`,
+            `${dn(killLeaderPlayer.username)} keeps stacking the all-time kill lead. ${killLeader.kills} total is not luck, it is pressure every session.`,
+          ]);
+        }
+      }
     }
 
-    if(latestSess.length>0){
-      const lastWinMap={};
-      latestSess.forEach(s=>{if(s.winner)lastWinMap[s.winner]=(lastWinMap[s.winner]||0)+1;});
-      const topLast=Object.entries(lastWinMap).sort((a,b)=>b[1]-a[1])[0];
-      if(topLast){
-        const tp=getPlayer(topLast[0]);
-        if(tp&&topLast[1]>=3)
-          candidates.push({icon:"🔥",text:`${dn(tp.username)} won ${topLast[1]} lobbies last session. Not a fluke, not luck. That was a controlled performance.`,color:"#FF6B35",w:6});
-        else if(tp&&topLast[1]>=2)
-          candidates.push({icon:"🔥",text:`${dn(tp.username)} took ${topLast[1]} wins in the last session. Starting to build something.`,color:"#FF6B35",w:4});
+    const latestWinMap={};
+    latestSess.forEach((session)=>{
+      if(session.winner){
+        latestWinMap[session.winner]=(latestWinMap[session.winner]||0)+1;
       }
+    });
+    const latestWinners=Object.entries(latestWinMap).sort((a,b)=>b[1]-a[1]);
+    const latestRun=latestWinners[0];
+    if(latestRun){
+      const runPlayer=getPlayer(latestRun[0]);
+      const runDrought=getDroughtBeforeDate(latestRun[0],latestDate);
+      if(runPlayer){
+        if(runDrought>=6){
+          addCandidate("🔁","#00E5FF",6,[
+            `${dn(runPlayer.username)} broke a ${runDrought}-lobby drought and came straight back onto the winners list last session. That is how a comeback starts.`,
+            `${dn(runPlayer.username)} had gone ${runDrought} lobbies without a win. Then last session landed and the whole story changed.`,
+          ]);
+        }else if(latestRun[1]>=3){
+          addCandidate("🔥","#FF6B35",6,[
+            `${dn(runPlayer.username)} owned the last session with ${latestRun[1]} lobby wins. That was not noise. That was control.`,
+            `${dn(runPlayer.username)} walked out of the last session with ${latestRun[1]} wins. Everyone in the room felt that.`,
+          ]);
+        }else if(latestRun[1]>=2){
+          addCandidate("🔥","#FF6B35",4,[
+            `${dn(runPlayer.username)} took ${latestRun[1]} wins in the last session and left with real momentum.`,
+            `${dn(runPlayer.username)} came away from the last session with ${latestRun[1]} wins. Quiet sessions do not look like that.`,
+          ]);
+        }
+      }
+    }
 
-      let topKid="",topKv=0,topKsid="";
-      latestSess.forEach(s=>Object.entries(s.kills||{}).forEach(([pid,k])=>{if(k>topKv){topKv=k;topKid=pid;topKsid=s.id;}}));
-      const tkp=topKid?getPlayer(topKid):null;
-      if(tkp&&topKv>=4)
-        candidates.push({icon:"☄️",text:`${dn(tkp.username)} dropped ${topKv} kills in a single lobby last session (${topKsid}). That is the kind of game that gets talked about.`,color:"#FF6B35",w:5});
+    let topSpike={pid:"",kills:0,sid:""};
+    latestSess.forEach((session)=>{
+      Object.entries(session.kills||{}).forEach(([pid,kills])=>{
+        if(kills>topSpike.kills){
+          topSpike={pid,kills,sid:session.id};
+        }
+      });
+    });
+    if(topSpike.pid&&topSpike.kills>=4){
+      const spikePlayer=getPlayer(topSpike.pid);
+      const topSpikeLobby=parseSessionIdNumber(topSpike.sid)||topSpike.sid;
+      if(spikePlayer){
+        addCandidate("☄️","#FF6B35",5,[
+          `${dn(spikePlayer.username)} dropped ${topSpike.kills} kills in Lobby ${topSpikeLobby} last session. That lobby turned into target practice.`,
+          `${dn(spikePlayer.username)} hit ${topSpike.kills} kills in Lobby ${topSpikeLobby}. That is the kind of spike people remember on the way out.`,
+        ]);
+      }
     }
 
     let worstDrought={pid:"",gap:0};
-    players.forEach(p=>{
-      const pSess=[...sessions].filter(s=>s.attendees?.includes(p.id)).sort(compareSessionsDesc);
-      if(!pSess.length||pSess[0].winner===p.id)return;
-      const lastWin=pSess.findIndex(s=>s.winner===p.id);
-      const gap=lastWin===-1?pSess.length:lastWin;
-      if(gap>=5&&gap>worstDrought.gap)worstDrought={pid:p.id,gap};
+    players.forEach((player)=>{
+      const playerSessions=[...sessions]
+        .filter((session)=>session.attendees?.includes(player.id))
+        .sort(compareSessionsDesc);
+      if(!playerSessions.length||playerSessions[0].winner===player.id)return;
+      const lastWinIndex=playerSessions.findIndex((session)=>session.winner===player.id);
+      const gap=lastWinIndex===-1?playerSessions.length:lastWinIndex;
+      if(gap>=5&&gap>worstDrought.gap){
+        worstDrought={pid:player.id,gap};
+      }
     });
-    if(worstDrought.gap>0){
-      const dp=getPlayer(worstDrought.pid);
-      const dSt=dp?getStats(dp.id):null;
-      if(dp&&dSt){
-        if(dSt.wins===0)
-          candidates.push({icon:"🤝",text:`${dn(dp.username)} has played ${dSt.appearances} lobbies and has not won one yet. But they keep coming back, which already puts them ahead of most.`,color:"#FFAB40",w:2});
-        else if(worstDrought.gap>=12)
-          candidates.push({icon:"🌵",text:`${dn(dp.username)} is ${worstDrought.gap} games deep into a rough stretch. They have ${dSt.wins} wins in this lobby. The drought ends when they decide it does.`,color:"#FFAB40",w:4});
-        else
-          candidates.push({icon:"🌵",text:`${dn(dp.username)} has not won in ${worstDrought.gap} games. Someone with that many career wins knows how to turn it around.`,color:"#FFAB40",w:3});
+    if(worstDrought.pid){
+      const droughtPlayer=getPlayer(worstDrought.pid);
+      const droughtStats=droughtPlayer?getStats(droughtPlayer.id):null;
+      if(droughtPlayer&&droughtStats){
+        if(droughtStats.wins===0){
+          addCandidate("🤝","#FFAB40",3,[
+            `${dn(droughtPlayer.username)} is still chasing that first win, but ${droughtStats.appearances} lobbies deep they are already one of the room's regulars.`,
+            `${dn(droughtPlayer.username)} still has no win on the sheet, but ${droughtStats.appearances} lobbies in means they have earned everyone's attention anyway.`,
+          ]);
+        }else{
+          addCandidate("🌵","#FFAB40",4,[
+            `${dn(droughtPlayer.username)} has gone ${worstDrought.gap} lobbies without a win. Someone with ${droughtStats.wins} career wins will not stay quiet forever.`,
+            `${dn(droughtPlayer.username)} is ${worstDrought.gap} games into a dry run. The next bounce-back session is going to feel loud.`,
+          ]);
+        }
       }
     }
 
-    const streamers=getLiveStreaks();
-    if(streamers.length>0){
-      const top=streamers[0];
-      if(top.streak>=4)
-        candidates.push({icon:"🔥",text:`${dn(top.username)} is on fire. ${top.streak} wins in a row to close the last session. Walk into the next lobby expecting them to keep going.`,color:"#FF6B35",w:5});
-      else if(top.streak>=2)
-        candidates.push({icon:"🔥",text:`${dn(top.username)} closed the last session winning ${top.streak} straight. There is momentum there and the lobby knows it.`,color:"#FF6B35",w:4});
+    const liveStreaks=getLiveStreaks();
+    if(liveStreaks.length>0){
+      const hottest=liveStreaks[0];
+      if(hottest.streak>=2){
+        addCandidate("🔥","#FF6B35",5,[
+          `${dn(hottest.username)} closed the last session on ${hottest.streak} straight wins. The room is waiting to see if that heat carries.`,
+          `${dn(hottest.username)} ended the last session with ${hottest.streak} wins in a row. Nobody queues into that casually.`,
+        ]);
+      }
+    }
+
+    const attendanceLeaders=[...allSt].sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins);
+    const attendanceLeader=attendanceLeaders[0];
+    const attendanceChaser=attendanceLeaders[1];
+    if(attendanceLeader){
+      const attendancePlayer=getPlayer(attendanceLeader.id);
+      const attendanceGap=attendanceChaser?attendanceLeader.appearances-attendanceChaser.appearances:attendanceLeader.appearances;
+      if(attendancePlayer){
+        addCandidate("📅","#00E5FF",3,[
+          `${dn(attendancePlayer.username)} has logged ${attendanceLeader.appearances} lobbies. That is not a hot streak, that is pure attendance muscle.`,
+          attendanceGap>2
+            ?`${dn(attendancePlayer.username)} keeps setting the attendance pace with ${attendanceLeader.appearances} lobbies played. That gap is real.`
+            :`${dn(attendancePlayer.username)} is only ${attendanceGap} lobby ahead in the attendance race. Even the loyalty table is under pressure.`,
+        ]);
+      }
+    }
+
+    const consistencyLeaders=[...allSt]
+      .filter((player)=>player.appearances>=8)
+      .map((player)=>({...player,consistency:getConsistency(player.id)}))
+      .sort((a,b)=>b.consistency-a.consistency||b.winRate-a.winRate);
+    const consistencyLeader=consistencyLeaders[0];
+    if(consistencyLeader&&consistencyLeader.consistency>=55){
+      const consistencyPlayer=getPlayer(consistencyLeader.id);
+      if(consistencyPlayer){
+        addCandidate("🧱","#00FF94",3,[
+          `${dn(consistencyPlayer.username)} is landing solid finishes in ${consistencyLeader.consistency}% of their lobbies. They do not give the room many easy games.`,
+          `${dn(consistencyPlayer.username)} keeps turning up with one of the steadiest profiles in the room. ${consistencyLeader.consistency}% consistency is hard to fake.`,
+        ]);
+      }
+    }
+
+    const upsetCandidate=latestWinners
+      .map(([pid,wins])=>({
+        pid,
+        wins,
+        rank:Math.max(seasonWins.findIndex((player)=>player.id===pid),allSt.findIndex((player)=>player.id===pid)),
+      }))
+      .filter((entry)=>entry.rank>=4)
+      .sort((a,b)=>b.wins-a.wins||b.rank-a.rank)[0];
+    if(upsetCandidate){
+      const upsetPlayer=getPlayer(upsetCandidate.pid);
+      if(upsetPlayer){
+        addCandidate("⚠️","#C77DFF",4,[
+          `${dn(upsetPlayer.username)} was not supposed to own the last session, then took ${upsetCandidate.wins} wins and made the room adjust.`,
+          `${dn(upsetPlayer.username)} came out of the pack last session and turned it noisy with ${upsetCandidate.wins} wins. That is how upsets start sticking.`,
+        ]);
+      }
     }
 
     const killMilestones=[50,100,150,200,300,400,500];
     let bestChase={pid:"",gap:999,milestone:0};
-    players.forEach(p=>{
-      const st=getStats(p.id);
-      for(const m of killMilestones){
-        const gap=m-st.kills;
-        if(gap>0&&gap<=8&&gap<bestChase.gap)bestChase={pid:p.id,gap,milestone:m};
+    players.forEach((player)=>{
+      const stats=getStats(player.id);
+      for(const milestone of killMilestones){
+        const gap=milestone-stats.kills;
+        if(gap>0&&gap<=8&&gap<bestChase.gap){
+          bestChase={pid:player.id,gap,milestone};
+        }
       }
     });
     if(bestChase.pid){
-      const cp=getPlayer(bestChase.pid);
-      if(cp)candidates.push({icon:"💥",text:`${dn(cp.username)} is ${bestChase.gap} kill${bestChase.gap===1?"":"s"} away from ${bestChase.milestone} total. That could happen in one lobby tonight.`,color:"#00E5FF",w:4});
+      const chasePlayer=getPlayer(bestChase.pid);
+      if(chasePlayer){
+        addCandidate("💥","#00E5FF",4,[
+          `${dn(chasePlayer.username)} is ${bestChase.gap} kill${bestChase.gap===1?"":"s"} away from ${bestChase.milestone} total. That can disappear in one busy session.`,
+          `${dn(chasePlayer.username)} is close to a ${bestChase.milestone}-kill landmark. ${bestChase.gap} more and it is theirs.`,
+        ]);
+      }
     }
 
-    for(const [m,rank,icon] of [[100,"100 wins","👑"],[50,"50 wins","🏆"],[25,"25 wins","⭐"],[10,"Legend","⚡"]]){
+    for(const [milestone,label,icon] of [[100,"100 wins","👑"],[50,"50 wins","🏆"],[25,"25 wins","⭐"],[10,"Legend","⚡"]]){
       let closest={pid:"",gap:999};
-      players.forEach(p=>{
-        const st=getStats(p.id);
-        const gap=m-st.wins;
-        if(gap>0&&gap<=3&&gap<closest.gap)closest={pid:p.id,gap};
+      players.forEach((player)=>{
+        const stats=getStats(player.id);
+        const gap=milestone-stats.wins;
+        if(gap>0&&gap<=3&&gap<closest.gap){
+          closest={pid:player.id,gap};
+        }
       });
       if(closest.pid){
-        const wp=getPlayer(closest.pid);
-        if(wp){
-          candidates.push({icon,text:`${dn(wp.username)} is ${closest.gap} win${closest.gap===1?"":"s"} away from ${rank}. That is within reach tonight.`,color:"#C77DFF",w:4});
+        const winChaser=getPlayer(closest.pid);
+        if(winChaser){
+          addCandidate(icon,"#C77DFF",4,[
+            `${dn(winChaser.username)} is ${closest.gap} win${closest.gap===1?"":"s"} off ${label}. That badge is one session away from becoming real.`,
+            `${dn(winChaser.username)} only needs ${closest.gap} more win${closest.gap===1?"":"s"} for ${label}. That is live pressure, not distant theory.`,
+          ]);
           break;
         }
       }
     }
 
-    const rivalData=getRivals().filter(r=>r.total>=6);
+    const rivalData=getRivals().filter((rival)=>rival.total>=6);
     if(rivalData.length>0){
-      const r=rivalData[seed%rivalData.length];
-      const rp1=getPlayer(r.p1),rp2=getPlayer(r.p2);
-      if(rp1&&rp2){
-        const leader=r.p1wins>r.p2wins?rp1:r.p2wins>r.p1wins?rp2:null;
-        const trailer=leader?.id===rp1.id?rp2:rp1;
-        const lW=Math.max(r.p1wins,r.p2wins),tW=Math.min(r.p1wins,r.p2wins);
-        if(leader&&trailer&&lW!==tW)
-          candidates.push({icon:"⚔️",text:`When ${dn(leader.username)} and ${dn(trailer.username)} land 1st and 2nd in the same lobby, ${dn(leader.username)} has come out on top ${lW} times versus ${tW}. ${dn(trailer.username)} is not done trying.`,color:"#FF4D8F",w:3});
-        else if(rp1&&rp2)
-          candidates.push({icon:"⚔️",text:`${dn(rp1.username)} versus ${dn(rp2.username)}. Exactly ${r.total} times they have finished 1st and 2nd in the same lobby. Still level. Still running it back.`,color:"#FF4D8F",w:3});
+      const rivalry=rivalData[seed%rivalData.length];
+      const leftPlayer=getPlayer(rivalry.p1);
+      const rightPlayer=getPlayer(rivalry.p2);
+      if(leftPlayer&&rightPlayer){
+        const leftLead=rivalry.p1wins-rivalry.p2wins;
+        if(leftLead===0){
+          addCandidate("⚔️","#FF4D8F",3,[
+            `${dn(leftPlayer.username)} and ${dn(rightPlayer.username)} are dead level in their 1st versus 2nd duels. Nobody owns that matchup yet.`,
+            `${dn(leftPlayer.username)} against ${dn(rightPlayer.username)} is still unresolved. ${rivalry.total} big duels in and neither side has control.`,
+          ]);
+        }else{
+          const leader=leftLead>0?leftPlayer:rightPlayer;
+          const trailer=leftLead>0?rightPlayer:leftPlayer;
+          const leaderWins=Math.max(rivalry.p1wins,rivalry.p2wins);
+          const trailerWins=Math.min(rivalry.p1wins,rivalry.p2wins);
+          addCandidate("⚔️","#FF4D8F",3,[
+            `${dn(leader.username)} has the edge over ${dn(trailer.username)} when those two finish on top together. Right now it is ${leaderWins}-${trailerWins}.`,
+            `${dn(leader.username)} keeps getting the better of ${dn(trailer.username)} in their biggest duels. The board says ${leaderWins}-${trailerWins}.`,
+          ]);
+        }
       }
     }
 
-    const highEff=[...allSt].filter(p=>p.appearances>=10&&p.winRate>=25).sort((a,b)=>b.winRate-a.winRate)[0];
-    const hep=highEff?getPlayer(highEff.id):null;
-    if(hep)candidates.push({icon:"📊",text:`${dn(hep.username)} wins ${highEff.winRate}% of the lobbies they enter. Out of ${highEff.appearances} games, ${highEff.wins} wins. That rate puts them in a different bracket.`,color:"#00FF94",w:2});
-
-    const rising=s2St.filter(p=>p.appearances>=3&&p.wins>=2)
-      .sort((a,b)=>b.wins-a.wins)
-      .find(p=>allSt.find(x=>x.id===p.id&&x.wins<=8));
+    const rising=[...s2St]
+      .filter((player)=>player.appearances>=3&&player.wins>=2)
+      .sort((a,b)=>b.wins-a.wins||b.winRate-a.winRate)
+      .find((player)=>(allSt.find((entry)=>entry.id===player.id)?.wins||0)<=8);
     if(rising){
-      const rp=getPlayer(rising.id);
-      if(rp)candidates.push({icon:"🎯",text:`${dn(rp.username)} is one of the stories of Season 2 so far with ${rising.wins}W already. Getting better every session and people are starting to notice.`,color:"#00E5FF",w:3});
+      const risingPlayer=getPlayer(rising.id);
+      if(risingPlayer){
+        addCandidate("🎯","#00E5FF",3,[
+          `${dn(risingPlayer.username)} has become one of the live Season 2 stories with ${rising.wins} wins already. The room is paying attention now.`,
+          `${dn(risingPlayer.username)} is climbing fast in Season 2. ${rising.wins} wins on the sheet and the confidence is starting to show.`,
+        ]);
+      }
     }
 
-    candidates.sort((a,b)=>b.w-a.w||(a.text.charCodeAt(2)+seed)%7-(b.text.charCodeAt(2)+seed)%7);
+    candidates.sort((a,b)=>b.w-a.w||((seed+a.text.length)%9)-((seed+b.text.length)%9));
     return candidates.slice(0,8).map(({icon,text,color})=>({icon,text,color}));
   };
 
@@ -1270,7 +1897,7 @@ export default function GameNight(){
       color:0xFF6B35,
       fields:[
         {name:"🏆 Winner",value:winner?.username||"?",inline:true},
-        {name:"💀 Top Fragger",value:tkP&&tkK>0?`${tkP.username} (${tkK}K)`:"—",inline:true},
+        {name:"💀 Top Fragger",value:tkP&&tkK>0?`${tkP.username} (${tkK}K)`:"No leader yet",inline:true},
         {name:"📅 Date",value:sess.date,inline:true},
         {name:"🏅 Top 3",value:placements,inline:false},
       ],
@@ -1341,6 +1968,113 @@ export default function GameNight(){
 
   // ── April Fools display name — scrambles on Apr 1 ──
   const dn=(username)=>foolsDay?scrambleName(username):username;
+  const formatLobbyDate=(date,opts={weekday:"short",day:"numeric",month:"short",year:"numeric"})=>
+    new Date(date+"T12:00:00Z").toLocaleDateString("en-GB",opts);
+  const getLobbyDateMarker=(date)=>{
+    if(date==="2026-04-04")return{icon:"🥚",label:"Easter"};
+    if(date==="2026-04-03")return{icon:"💪",label:"Good Friday"};
+    if(date==="2026-04-01")return{icon:"🃏",label:"April Fools"};
+    return null;
+  };
+  const getLobbyTotalKills=(session)=>
+    Object.values(session?.kills||{}).reduce((sum,value)=>sum+value,0);
+  const getLobbyTopDamage=(session)=>{
+    const attendeeIds=session?.attendees||[];
+    if(!attendeeIds.length)return{player:null,pid:"",kills:0};
+    const pid=attendeeIds.reduce((best,current)=>
+      (session.kills?.[current]||0)>(session.kills?.[best]||0)?current:best,attendeeIds[0]);
+    return{player:getPlayer(pid),pid,kills:session.kills?.[pid]||0};
+  };
+  const hasCustomLobbyNote=(session)=>{
+    const defaultNote=`Lobby ${session.id?.replace("s","")}`;
+    return !!(session?.notes&&session.notes.trim()&&session.notes.trim()!==defaultNote);
+  };
+  const getLobbyBeatTags=(session)=>{
+    const attendeeCount=session.attendees?.length||0;
+    const winner=getPlayer(session.winner);
+    const second=session.placements?.[1]?getPlayer(session.placements[1]):null;
+    const totalKills=getLobbyTotalKills(session);
+    const {player:tkP,kills:tkK}=getLobbyTopDamage(session);
+    const winnerKills=winner?(session.kills?.[winner.id]||0):0;
+    const secondKills=second?(session.kills?.[second.id]||0):0;
+    const tags=[];
+    const pushTag=(label,color,background,border)=>tags.push({label,color,background,border});
+
+    if(winner&&tkP&&winner.id===tkP.id&&tkK>=5){
+      pushTag("Clean takeover","#FFD700","rgba(255,215,0,.12)","rgba(255,215,0,.32)");
+    }else if(winner&&tkP&&winner.id!==tkP.id&&tkK>=4){
+      pushTag("Split crown","#FF4D8F","rgba(255,77,143,.12)","rgba(255,77,143,.32)");
+    }else if(totalKills>=Math.max(10,attendeeCount*2)){
+      pushTag("Firefight","#FF6B35","rgba(255,107,53,.12)","rgba(255,107,53,.3)");
+    }else if(totalKills<=Math.max(2,attendeeCount)){
+      pushTag("Slow burn","#C77DFF","rgba(199,125,255,.12)","rgba(199,125,255,.28)");
+    }
+
+    if(attendeeCount>=6){
+      pushTag("Packed room","#00E5FF","rgba(0,229,255,.12)","rgba(0,229,255,.28)");
+    }else if(attendeeCount>0&&attendeeCount<=3){
+      pushTag("Small squad","#7B8CDE","rgba(123,140,222,.14)","rgba(123,140,222,.28)");
+    }
+
+    if(winner&&second&&Math.abs(winnerKills-secondKills)<=1&&winner.id!==second.id){
+      pushTag("No breathing room","#00FF94","rgba(0,255,148,.12)","rgba(0,255,148,.26)");
+    }
+
+    if(!tags.length){
+      pushTag("Filed result","var(--text2)","rgba(255,255,255,.06)","rgba(255,255,255,.12)");
+    }
+    return tags.slice(0,2);
+  };
+  const getLobbyReport=(session)=>{
+    const attendeeIds=session.attendees||[];
+    const placements=(session.placements&&session.placements.length?session.placements:attendeeIds)
+      .map((pid)=>getPlayer(pid))
+      .filter(Boolean);
+    const winner=getPlayer(session.winner);
+    const second=placements[1];
+    const third=placements[2];
+    const attendeeCount=attendeeIds.length;
+    const totalKills=getLobbyTotalKills(session);
+    const {player:tkP,kills:tkK}=getLobbyTopDamage(session);
+    const quietRoom=totalKills<=Math.max(2,attendeeCount);
+    const packedRoom=attendeeCount>=6;
+    const firefight=totalKills>=Math.max(10,attendeeCount*2);
+
+    if(winner&&tkP&&winner.id===tkP.id&&tkK>=5){
+      return `${dn(winner.username)} turned ${session.id} into target practice, ripped ${tkK} kills, and shut every comeback door before it could open.`;
+    }
+    if(winner&&tkP&&winner.id!==tkP.id&&tkK>=4){
+      return `${dn(winner.username)} walked out with the crown, but ${dn(tkP.username)} kept the room bleeding with ${tkK} kills. The result landed hard either way.`;
+    }
+    if(winner&&second&&third&&firefight){
+      return `${dn(winner.username)} survived a loud ${session.id}, keeping ${dn(second.username)} and ${dn(third.username)} behind them while the room tore through ${totalKills} kills.`;
+    }
+    if(winner&&second&&packedRoom){
+      return `${dn(winner.username)} found daylight in a packed ${attendeeCount}-player room, held off ${dn(second.username)}, and kept the file pointed their way.`;
+    }
+    if(winner&&second&&quietRoom){
+      return `${dn(winner.username)} won a tight, low-noise ${session.id} over ${dn(second.username)}. Nobody got loose, so every finish mattered.`;
+    }
+    if(winner&&second&&third){
+      return `${dn(winner.username)} kept ${dn(second.username)} and ${dn(third.username)} reaching in ${session.id} and stamped another result into the archive.`;
+    }
+    if(winner){
+      return `${dn(winner.username)} closed ${session.id} and left another room on file before the night could swing back.`;
+    }
+    if(tkP&&tkK>0){
+      return `${dn(tkP.username)} gave ${session.id} its sharpest moment with ${tkK} kills and forced the archive to remember the room their way.`;
+    }
+    if(attendeeCount){
+      return `${attendeeCount} players filed into ${session.id}, the room broke on ${totalKills} kills, and the report still carries the smoke.`;
+    }
+    return "This room is on file, but the battle report is still waiting on detail.";
+  };
+  const getLobbySearchHaystack=(session)=>{
+    const winnerName=getPlayer(session.winner)?.username||"";
+    const attendeeNames=(session.attendees||[]).map((pid)=>getPlayer(pid)?.username||"").join(" ");
+    const note=hasCustomLobbyNote(session)?session.notes.trim():"";
+    return `${session.id} ${session.date} ${winnerName} ${attendeeNames} ${note} ${getLobbyReport(session)}`.toLowerCase();
+  };
 
   // ── avatar ──
   // ── Intel hover card ──
@@ -1426,7 +2160,11 @@ export default function GameNight(){
           letterSpacing:".15em",color:"rgba(0,229,255,.6)",
           marginBottom:10,animation:"bootBlink 1.8s ease-in-out infinite",
           textTransform:"uppercase"}}>
-          {bootPhase===0?"Initialising arena…":bootPhase===1?"Loading player data…":"Ready."}
+          {bootPhase===0
+            ?"Opening command uplink"
+            :!loaded
+              ?"Syncing lobbies and combat files"
+              :"Arena link stable"}
         </div>
         <div style={{height:3,background:"rgba(255,255,255,.08)",borderRadius:2,overflow:"hidden"}}>
           {bootPhase>=1&&<div style={{
@@ -1436,11 +2174,40 @@ export default function GameNight(){
             boxShadow:"0 0 12px rgba(255,215,0,.6)"
           }}/>}
         </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:12}}>
+          {[
+            {label:"UPLINK",done:true,color:"#FFD700"},
+            {label:"RECORDS",done:bootPhase>=1,color:"#00E5FF"},
+            {label:"LIVE OPS",done:loaded,color:"#00FF94"},
+          ].map((step)=>(
+            <div key={step.label} style={{
+              padding:"7px 8px",
+              borderRadius:8,
+              border:`1px solid ${step.done?`${step.color}55`:"rgba(255,255,255,.08)"}`,
+              background:step.done?`${step.color}12`:"rgba(255,255,255,.03)",
+              color:step.done?step.color:"rgba(255,255,255,.28)",
+              fontFamily:"Barlow Condensed",
+              fontWeight:800,
+              fontSize:".62rem",
+              letterSpacing:".16em",
+              textAlign:"center",
+              textTransform:"uppercase",
+            }}>
+              {step.done?"READY":"LINK"} · {step.label}
+            </div>
+          ))}
+        </div>
+        <div style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".68rem",
+          letterSpacing:".08em",lineHeight:1.6,color:"rgba(200,186,255,.56)",marginTop:12}}>
+          {loaded
+            ?"Standings, stories, and zone controls are online."
+            :"Pulling live standings, session history, and player dossiers into the room."}
+        </div>
         <div style={{display:"flex",justifyContent:"space-between",marginTop:8,
           fontFamily:"Barlow Condensed",fontSize:".65rem",
           letterSpacing:".1em",color:"rgba(255,255,255,.2)"}}>
           <span>S2 · ACTIVE</span>
-          <span>v72</span>
+          <span>{STORAGE_VERSION.replace("gn-","").toUpperCase()}</span>
           <span>mekulasgn.netlify.app</span>
         </div>
       </div>
@@ -1456,6 +2223,13 @@ export default function GameNight(){
         return p1?.username.toLowerCase().includes(rivalSearch.toLowerCase())||p2?.username.toLowerCase().includes(rivalSearch.toLowerCase());
       })
     :rivals;
+  const activeNavView=queuedView||view;
+  const activeZone=LEVEL_MAP[activeNavView]||LEVEL_MAP.home;
+  const currentZone=LEVEL_MAP[view]||LEVEL_MAP.home;
+  const zoneLinking=Boolean(queuedView&&queuedView!==view);
+  const zoneRailStatus=zoneLinking
+    ? `Linking from ${currentZone.label}`
+    : "Zone link stable";
 
   // ════════════════════════════════════════════════════
   return(<>
@@ -1468,9 +2242,9 @@ export default function GameNight(){
     }}/>
     {/* Ambient zone glow — shifts colour per zone */}
     <div className="zone-glow-orb" style={{
-      background:`radial-gradient(ellipse,${(LEVEL_MAP[view]||LEVEL_MAP.home).color}0d 0%,transparent 70%)`,
+      background:`radial-gradient(ellipse,${(lvlCard?.color||activeZone.color)}12 0%,transparent 70%)`,
     }}/>
-    {showScroll&&<button className="scroll-top" onClick={()=>(typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"}))}>↑</button>}
+    {showScroll&&<button className="scroll-top" onClick={()=>scrollToTop("smooth")}>↑</button>}
 
     {/* TOAST */}
     {toast&&(
@@ -1484,11 +2258,38 @@ export default function GameNight(){
     )}
 
     {/* ── Season 2 Transition Ceremony — fires once on April 1+ ── */}
+    {ceremonyPending&&!showCeremony&&["home","season1","season2"].includes(view)&&(
+      <div style={{position:"fixed",left:18,bottom:18,zIndex:9500,maxWidth:320}}>
+        <div style={{...card({
+          padding:"14px 14px 12px",
+          border:"1.5px solid rgba(255,215,0,.32)",
+          background:"linear-gradient(135deg,rgba(255,215,0,.12),rgba(255,107,53,.08),rgba(22,13,46,.96))",
+          boxShadow:"0 18px 40px rgba(0,0,0,.35)",
+        })}}>
+          <div className="bc7" style={{fontSize:".58rem",letterSpacing:".18em",color:"#FFD700",textTransform:"uppercase",marginBottom:7}}>
+            Transition broadcast ready
+          </div>
+          <div style={{fontFamily:"Fredoka One",fontSize:"1rem",lineHeight:1.15,color:"#fff",marginBottom:6}}>
+            Season 1 closed. The handoff is waiting when you want the moment.
+          </div>
+          <div className="bc7" style={{fontSize:".72rem",lineHeight:1.55,color:"var(--text3)",marginBottom:12}}>
+            It will not interrupt the archive. Open it when you are settled at the top of the board.
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button onClick={openCeremony} style={{...primaryBtn({padding:"9px 14px",fontSize:".82rem"})}}>
+              Open ceremony
+            </button>
+            <button onClick={markCeremonySeen} style={{
+              padding:"9px 14px",borderRadius:10,border:"1.5px solid rgba(255,255,255,.14)",
+              background:"rgba(255,255,255,.06)",color:"var(--text2)",cursor:"pointer",fontWeight:700,fontSize:".8rem"}}>
+              Archive alert
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {showCeremony&&(
-      <div onClick={async()=>{
-        setShowCeremony(false);
-        try{await store.set("gn-s2-ceremony-seen","1");}catch{}
-      }} style={{
+      <div onClick={snoozeCeremony} style={{
         position:"fixed",inset:0,zIndex:10000,
         background:"rgba(0,0,0,.97)",
         display:"flex",flexDirection:"column",
@@ -1510,7 +2311,7 @@ export default function GameNight(){
           ))}
         </div>
         {/* Content */}
-        <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:520}}>
+        <div onClick={e=>e.stopPropagation()} style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:560}}>
           <div style={{
             fontFamily:"Fredoka One",
             fontSize:".72rem",color:"#FFD700",
@@ -1543,8 +2344,21 @@ export default function GameNight(){
             filter:"drop-shadow(0 0 40px rgba(0,229,255,.5))"}}>
             🚀 Season 2 begins.
           </div>
-          <div style={{fontSize:".8rem",color:"rgba(255,255,255,.25)",fontWeight:700,letterSpacing:2}}>
-            Tap anywhere to continue
+          <div className="bc7" style={{fontSize:".78rem",color:"rgba(255,255,255,.38)",fontWeight:700,letterSpacing:".08em",lineHeight:1.6,marginBottom:18}}>
+            Stay for the handoff, or close it for now and keep browsing. This moment only needs your attention when you want to give it.
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+            <button onClick={markCeremonySeen} style={{...primaryBtn({padding:"11px 18px",fontSize:".86rem"})}}>
+              Enter Season 2
+            </button>
+            <button onClick={snoozeCeremony} style={{
+              padding:"11px 18px",borderRadius:11,border:"1.5px solid rgba(255,255,255,.16)",
+              background:"rgba(255,255,255,.06)",color:"var(--text2)",cursor:"pointer",fontWeight:700,fontSize:".84rem"}}>
+              Close for now
+            </button>
+          </div>
+          <div className="bc7" style={{fontSize:".68rem",color:"rgba(255,255,255,.24)",fontWeight:700,letterSpacing:".12em",marginTop:14,textTransform:"uppercase"}}>
+            Esc also closes it for now
           </div>
         </div>
       </div>
@@ -1578,7 +2392,7 @@ export default function GameNight(){
           color:foolsDay?"#FF4D8F":"#00FF94",fontWeight:800,fontSize:".8rem",letterSpacing:2}}>
           {foolsDay
             ? "🃏 GAMES NIGHT LIVE · APRIL FOOLS EDITION · Nobody knows what's real anymore · 🃏 TUNE IN IF YOU DARE ·"
-            : `🔴 GAMES NIGHT LIVE \u00a0·\u00a0 ${FEATURED_GAME} \u00a0·\u00a0 Hosted by ${HOSTED_BY} \u00a0·\u00a0 5–7 PM UTC \u00a0·\u00a0 📺 TUNE IN ON TWITCH \u00a0·\u00a0`
+            : `🔴 GAMES NIGHT LIVE \u00a0·\u00a0 ${FEATURED_GAME} \u00a0·\u00a0 Hosted by ${HOSTED_BY} \u00a0·\u00a0 5-7 PM UTC \u00a0·\u00a0 📺 TUNE IN ON TWITCH \u00a0·\u00a0`
           }
         </div>
       </div>
@@ -1599,13 +2413,14 @@ export default function GameNight(){
       <div style={{width:1,height:22,background:"rgba(255,255,255,.1)",marginRight:4,flexShrink:0}}/>
       <div className="nav-desktop" style={{flex:1,display:"flex",gap:2,overflowX:"auto",scrollbarWidth:"none"}}>
         {navItems.map(item=>(
-          <button key={item.id} className="nav-btn" onClick={()=>go(item.id)} style={{
+          <button key={item.id} className={`nav-btn${activeNavView===item.id?" active":""}${queuedView===item.id?" incoming":""}`} onClick={()=>go(item.id)} aria-current={activeNavView===item.id?"page":undefined} style={{
+            "--navc":(LEVEL_MAP[item.id]||LEVEL_MAP.home).color,
             padding:"5px 10px",borderRadius:0,fontWeight:700,fontSize:".66rem",
             fontFamily:"Barlow Condensed",letterSpacing:".16em",
-            color:view===item.id?(LEVEL_MAP[item.id]||LEVEL_MAP.home).color:"rgba(255,255,255,.3)",
-            background:"none",border:"none",
-            borderBottom:view===item.id?`2px solid ${(LEVEL_MAP[item.id]||LEVEL_MAP.home).color}`:"2px solid transparent",
-            cursor:"pointer",height:58,transition:"color .13s",whiteSpace:"nowrap"}}>
+            color:activeNavView===item.id?(LEVEL_MAP[item.id]||LEVEL_MAP.home).color:"rgba(255,255,255,.3)",
+            background:activeNavView===item.id?`${(LEVEL_MAP[item.id]||LEVEL_MAP.home).color}10`:"none",border:"none",
+            cursor:"pointer",height:58,transition:"color .13s",whiteSpace:"nowrap",
+            boxShadow:activeNavView===item.id?`inset 0 0 0 1px ${(LEVEL_MAP[item.id]||LEVEL_MAP.home).color}12`:"none"}}>
             {item.l}
           </button>
         ))}
@@ -1645,19 +2460,31 @@ export default function GameNight(){
         {mobileOpen?"✕":"☰"}
       </button>
     </nav>
+    <div key={zonePulse} className={`zone-rail${zoneLinking?" live":""}`} style={{"--zonec":activeZone.color}}>
+      <div className="zone-rail-chip">
+        <span className="zone-rail-icon">{activeZone.icon}</span>
+        <div className="zone-rail-copy">
+          <span className="zone-rail-label">{activeZone.label}</span>
+          <span className="zone-rail-brief">{ZONE_BRIEFS[activeNavView]||"Zone link stable"}</span>
+        </div>
+      </div>
+      <span className="zone-rail-status hide-mob">
+        {zoneRailStatus}
+      </span>
+    </div>
     {/* Bottom zone accent line */}
     <div style={{position:"fixed",bottom:0,left:0,right:0,height:2,zIndex:50,pointerEvents:"none",
-      background:`linear-gradient(90deg,transparent,${(LEVEL_MAP[view]||LEVEL_MAP.home).color}66,transparent)`,
+      background:`linear-gradient(90deg,transparent,${activeZone.color}66,transparent)`,
       transition:"background .7s ease"}}/>
 
     {/* MOBILE MENU */}
     {mobileOpen&&(
       <div className="mob-menu">
         {navItems.map(item=>(
-          <button key={item.id} className={`mob-item${view===item.id?" active":""}`}
+          <button key={item.id} className={`mob-item${activeNavView===item.id?" active":""}`}
             onClick={()=>go(item.id)}>{item.l}</button>
         ))}
-        {adminMode&&<button className={`mob-item${view==="admin"?" active":""}`} onClick={()=>go("admin")}>⚙️ Admin</button>}
+        {adminMode&&<button className={`mob-item${activeNavView==="admin"?" active":""}`} onClick={()=>go("admin")}>⚙️ Admin</button>}
         {!adminMode&&<button className="mob-item" onClick={()=>{setMobileOpen(false);setShowLogin(true);}}>🔒 Admin Login</button>}
         <a href={DISCORD_URL} target="_blank" rel="noreferrer" className="mob-item"
           style={{textDecoration:"none",color:"#a0aaff",borderColor:"rgba(88,101,242,.4)"}}>💬 Discord</a>
@@ -1709,6 +2536,7 @@ export default function GameNight(){
             const secondP=byS2W[1]?players.find(p=>p.id===byS2W[1].id):null;
             const gapW=byS2W[1]?(byS2W[0].wins-byS2W[1].wins):0;
             const missions=getWeeklyMissions();
+            const clearedMissionCount=missions.filter((mission)=>mission.progress>=mission.target).length;
 
             // ── Slideshow data — 4 slides (hoisted before return so esbuild stays in JS mode) ──
             const s2StatsSorted=allStats(seasonSess).filter(p=>p.appearances>0);
@@ -1744,16 +2572,124 @@ export default function GameNight(){
               slide4P&&slide4St&&{label:`${currentSeason.name.toUpperCase()} MOST APPEARANCES`,player:slide4P,stat:`${slide4St.appearances} lobbies · ${slide4St.wins}W`,sub:"Most committed player this season",icon:"📅"},
               slide5P&&slide5St&&{label:"BEST WIN STREAK THIS SEASON",player:slide5P,stat:`${s2BestStreakV} consecutive wins`,sub:`${slide5St.wins}W from ${slide5St.appearances} lobbies in ${currentSeason.name}`,icon:"🔥"},
             ].filter(Boolean);
+            const latestFallout=buildLatestFallout(latestDate);
+            const stories=getStorylines();
+            const leaderStageTitle=leaderP
+              ? `${dn(leaderP.username)} is setting the pace in ${currentSeason.name}`
+              : `${currentSeason.name} is still looking for a front-runner`;
+            const leaderStageSub=leaderSlides.length
+              ? `${leaderSlides.length} LIVE CARDS ROTATING`
+              : "RACE STILL FORMING";
+            const falloutDateLabel=latestDate
+              ?new Date(latestDate+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"long"})
+              :"";
+            const splitLeaders=latestFallout?.topWinners.length
+              ?joinHumanList(latestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")))
+              :"";
+            const briefingTitle=latestFallout?.topWinners.length>=2&&latestFallout.topKiller?.player
+              ? `${falloutDateLabel} changed the pressure map. ${splitLeaders} split the wins at ${latestFallout.topWinCount} each, but ${dn(latestFallout.topKiller.player.username)} still hauled out the heavier ${latestFallout.topKiller.kills}-kill line.`
+              :stories.length
+              ? "Live reads on the streaks, grudges, droughts, and pressure spikes shaping the room"
+              : "Fresh reads will lock in here as soon as the room has more data";
+            const recap=getDayRecap(latestDate);
+            const mvp=getDailyMVP();
+            let dateLabel="";
+            let recapTag="AFTER-ACTION REPORT";
+            let recapTitle="No session report is locked in yet";
+            let recapFieldNotes=[];
+            let mvpCards=[];
+            if(recap&&recap.lobbies){
+              const dd=new Date(latestDate+"T12:00:00Z");
+              dateLabel=dd.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+              const specialTag=latestDate==="2026-04-03"?"🌅 Good Friday · "
+                :latestDate==="2026-04-01"?"🃏 April Fools · "
+                :latestDate==="2026-04-04"?"🥚 Easter Saturday · ":"";
+              recapTag=`${specialTag}AFTER-ACTION REPORT`;
+              recapTitle=latestFallout?.topWinners.length>=2&&latestFallout.topKiller?.player
+                ? `${splitLeaders} split ${falloutDateLabel} at ${latestFallout.topWinCount} wins each. ${dn(latestFallout.topKiller.player.username)} still walked out with ${latestFallout.topKiller.kills} kills on the day.`
+                :`${recap.totalKills} confirmed kills across ${recap.lobbies} lobbies on the last session day`;
+              const reboundSessionNo=latestFallout?.reboundWin
+                ?parseSessionIdNumber(latestFallout.reboundWin.session.id)||latestFallout.reboundWin.session.id
+                :null;
+              const zeroKillSessionNo=latestFallout?.zeroKillWin
+                ?parseSessionIdNumber(latestFallout.zeroKillWin.session.id)||latestFallout.zeroKillWin.session.id
+                :null;
+              const legendNames=latestFallout?.legendCrossers.length
+                ?joinHumanList(latestFallout.legendCrossers.map((entry)=>dn(entry.player?.username||"")))
+                :"";
+              const legendFieldNote=legendNames
+                ?latestFallout.legendCrossers.length>1
+                  ?`${legendNames} both reached Legend`
+                  :`${legendNames} reached Legend`
+                :"";
+              if(latestFallout?.reboundWin){
+                recapFieldNotes.push(
+                  `${dn(latestFallout.reboundWin.player.username)} went ${latestFallout.reboundWin.priorDayLobbies} lobbies without a win, then closed Lobby ${reboundSessionNo} with ${latestFallout.reboundWin.kills} kills.`,
+                );
+              }
+              if(latestFallout?.zeroKillWin||legendFieldNote){
+                const parts=[];
+                if(latestFallout?.zeroKillWin){
+                  parts.push(`${dn(latestFallout.zeroKillWin.player.username)} stole Lobby ${zeroKillSessionNo} without landing a kill`);
+                }
+                if(legendFieldNote){
+                  parts.push(legendFieldNote);
+                }
+                recapFieldNotes.push(parts.join(", ")+".");
+              }
+              if(latestFallout?.killCrossers[0]||latestFallout?.topFiveShift){
+                const parts=[];
+                if(latestFallout?.killCrossers[0]){
+                  parts.push(`${dn(latestFallout.killCrossers[0].player.username)} crossed ${latestFallout.killCrossers[0].kills} total kills`);
+                }
+                if(latestFallout?.topFiveShift){
+                  parts.push(`${dn(latestFallout.topFiveShift.player?.username||"?")} climbed into ${latestFallout.topFiveShift.afterRank}th all-time wins`);
+                }
+                recapFieldNotes.push(parts.join(", ")+".");
+              }
+              if(latestFallout?.mekulaTeriqPressure||latestFallout?.teriqHackqamPressure){
+                const rivalryLines=[];
+                if(latestFallout?.mekulaTeriqPressure){
+                  rivalryLines.push(
+                    `${dn(latestFallout.mekulaTeriqPressure.leader.username)} leads ${dn(latestFallout.mekulaTeriqPressure.trailer.username)} ${latestFallout.mekulaTeriqPressure.leaderWins}-${latestFallout.mekulaTeriqPressure.trailerWins} across ${latestFallout.mekulaTeriqPressure.total} top-two clashes`,
+                  );
+                }
+                if(latestFallout?.teriqHackqamPressure){
+                  rivalryLines.push(
+                    `${dn(latestFallout.teriqHackqamPressure.leader.username)} still has the edge over ${dn(latestFallout.teriqHackqamPressure.trailer.username)} at ${latestFallout.teriqHackqamPressure.leaderWins}-${latestFallout.teriqHackqamPressure.trailerWins} from ${latestFallout.teriqHackqamPressure.total}`,
+                  );
+                }
+                if(rivalryLines.length){
+                  recapFieldNotes.push(rivalryLines.join(", and ")+".");
+                }
+              }
+              const tw=mvp&&mvp.topWinner?players.find(p=>p.id===mvp.topWinner.id):null;
+              const tk=mvp&&mvp.topKiller?players.find(p=>p.id===mvp.topKiller.id):null;
+              const ta=mvp&&mvp.topAppear?players.find(p=>p.id===mvp.topAppear.id):null;
+              const kk=mvp&&mvp.killKing?players.find(p=>p.id===mvp.killKing.id):null;
+              const killKingLobby=mvp?.killKing?.killKingSid
+                ?`Lobby ${parseSessionIdNumber(mvp.killKing.killKingSid)||mvp.killKing.killKingSid}`
+                :"";
+              mvpCards=[
+                {icon:"🏆",label:"MOST WINS",       player:tw,stat:mvp?.topWinner?.wins+"W",       sub:"lobbies won",     c:"#FFD700"},
+                {icon:"💀",label:"MOST KILLS",       player:tk,stat:mvp?.topKiller?.kills+"K",      sub:"total kills",     c:"#FF4D8F"},
+                {icon:"☄️",label:"BEST SINGLE GAME", player:kk,stat:mvp?.killKing?.killKingK+"K",   sub:killKingLobby, c:"#FF6B35"},
+                {icon:"📅",label:"MOST APPEARANCES", player:ta,stat:mvp?.topAppear?.appearances+"G",sub:"lobbies played",  c:"#00E5FF"},
+              ].filter(c=>c.player);
+            }
+            const missionTitle=clearedMissionCount===missions.length
+              ? "Every live objective is cleared and the board is waiting for the Monday reset"
+              : `${clearedMissionCount} of ${missions.length} live objectives are already cleared`;
             return(<>
               {/* Status row */}
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                 marginBottom:14,flexWrap:"wrap",gap:8}}>
                 <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
                   color:`rgba(255,107,53,.7)`}}>
-                  {currentSeason.name.toUpperCase()} · {currentSeason.label.toUpperCase()} · ACTIVE
+                  {currentSeason.name.toUpperCase()} · {currentSeason.label.toUpperCase()} · CAMPAIGN LIVE
                 </span>
                 <span className="bc7" style={{fontSize:".62rem",letterSpacing:".2em",color:"var(--text3)"}}>
-                  {seasonSess.length} SESSIONS · {sessions.length} ALL TIME
+                  {seasonSess.length} LOBBIES THIS CAMPAIGN · {sessions.length} ON RECORD
                 </span>
               </div>
 
@@ -1809,7 +2745,7 @@ export default function GameNight(){
                         {foolsDay?"🃏 GAMES":"GAMES"}<br/>NIGHT
                       </h1>
                       <div className="bc7" style={{fontSize:".72rem",letterSpacing:".26em",color:"var(--text3)"}}>
-                        {FEATURED_GAME} · MON–SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
+                        {FEATURED_GAME} · MON-SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
                       </div>
                     </>
                   );
@@ -1874,108 +2810,33 @@ export default function GameNight(){
                 ))}
               </div>
 
-              {/* Leader slideshow */}
-              <LeaderSlideshow slides={leaderSlides}/>
+              <HomeStage
+                tag="FIELD COMMAND"
+                title={leaderStageTitle}
+                sub={leaderStageSub}
+                accent="#FFD700">
+                <LeaderSlideshow slides={leaderSlides}/>
+              </HomeStage>
 
-              {/* Intelligence Briefing — terminal typewriter */}
-              {(()=>{
-                const stories=getStorylines();
-                return(
-                  <div style={{marginBottom:22}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
-                        color:"var(--text3)"}}>▸ INTELLIGENCE BRIEFING</div>
-                      <div style={{width:6,height:6,borderRadius:"50%",background:"#00FF94",
-                        flexShrink:0,boxShadow:"0 0 8px #00FF94",
-                        animation:"hudBlink 1.4s ease-in-out infinite"}}/>
-                    </div>
-                    <div style={{
-                      background:"rgba(0,0,0,.45)",
-                      border:"1px solid rgba(255,255,255,.08)",
-                      borderTop:"2px solid rgba(0,255,148,.3)",
-                      borderRadius:"0 6px 6px 0",
-                      borderLeft:"3px solid rgba(0,255,148,.35)",
-                      padding:"14px 16px",
-                      fontFamily:"'Share Tech Mono',monospace",
-                      overflow:"hidden"}}>
-                      {stories.map((s,i)=>(
-                        <div key={i} style={{
-                          display:"flex",gap:10,alignItems:"flex-start",
-                          marginBottom:i<stories.length-1?10:0,
-                          opacity:0,
-                          animation:`briefingReveal .3s ease both`,
-                          animationDelay:`${0.4+i*0.55}s`}}>
-                          <span style={{fontSize:".8rem",flexShrink:0,marginTop:1,
-                            opacity:0,
-                            animation:`briefingReveal .2s ease both`,
-                            animationDelay:`${0.4+i*0.55}s`}}>{s.icon}</span>
-                          <div style={{flex:1,minWidth:0,position:"relative",overflow:"hidden"}}>
-                            <div style={{
-                              fontSize:".78rem",lineHeight:1.65,
-                              color:"rgba(200,186,255,.85)",
-                              letterSpacing:".02em",
-                              display:"inline-block",
-                              whiteSpace:"pre-wrap",wordBreak:"break-word",
-                              width:0,overflow:"hidden",
-                              animation:`briefingType ${Math.max(0.8,s.text.length*0.018)}s steps(${Math.min(s.text.length,150)},end) both`,
-                              animationDelay:`${0.55+i*0.55}s`,
-                              borderRight:`1.5px solid ${s.color}`,
-                              animationFillMode:"forwards",maxWidth:"100%",
-                            }}>
-                              {s.text}
-                            </div>
-                            <div style={{
-                              position:"absolute",bottom:0,right:0,
-                              width:8,height:"1.2em",
-                              background:s.color,opacity:.7,
-                              animation:`briefingCursor .65s step-end infinite`,
-                              animationDelay:`${0.55+i*0.55}s`,
-                            }}/>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              <HomeStage
+                tag="INTELLIGENCE BRIEFING"
+                title={briefingTitle}
+                sub={stories.length?`${stories.length} LIVE READS`:"SYNCING ROOM DATA"}
+                accent="#00FF94">
+                <BriefingFeed stories={stories}/>
+              </HomeStage>
 
-              {/* ── LAST SESSION · Recap + MVP merged ── */}
-              {(()=>{
-                const mvp=getDailyMVP();
-                const recap=getDayRecap(latestDate);
-                if(!recap||!recap.lobbies)return null;
-                const dd=new Date(latestDate+"T12:00:00Z");
-                const dateLabel=dd.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
-                const specialTag=latestDate==="2026-04-03"?"🌅 Good Friday · "
-                  :latestDate==="2026-04-01"?"🃏 April Fools · "
-                  :latestDate==="2026-04-04"?"🥚 Easter Saturday · ":"";
-                const tw=mvp&&mvp.topWinner?players.find(p=>p.id===mvp.topWinner.id):null;
-                const tk=mvp&&mvp.topKiller?players.find(p=>p.id===mvp.topKiller.id):null;
-                const ta=mvp&&mvp.topAppear?players.find(p=>p.id===mvp.topAppear.id):null;
-                const kk=mvp&&mvp.killKing?players.find(p=>p.id===mvp.killKing.id):null;
-                const mvpCards=[
-                  {icon:"🏆",label:"MOST WINS",       player:tw,stat:mvp?.topWinner?.wins+"W",       sub:"lobbies won",     c:"#FFD700"},
-                  {icon:"💀",label:"MOST KILLS",       player:tk,stat:mvp?.topKiller?.kills+"K",      sub:"total kills",     c:"#FF4D8F"},
-                  {icon:"☄️",label:"BEST SINGLE GAME", player:kk,stat:mvp?.killKing?.killKingK+"K",   sub:mvp?.killKing?.killKingSid||"", c:"#FF6B35"},
-                  {icon:"📅",label:"MOST APPEARANCES", player:ta,stat:mvp?.topAppear?.appearances+"G",sub:"lobbies played",  c:"#00E5FF"},
-                ].filter(c=>c.player);
-                return(
-                  <div style={{marginBottom:22,
+              {recap&&recap.lobbies&&(
+                <HomeStage
+                  tag={recapTag}
+                  title={recapTitle}
+                  sub={dateLabel.toUpperCase()}
+                  accent="#FFD700">
+                  <div style={{
                     background:"rgba(255,255,255,.02)",
                     border:"1px solid rgba(255,255,255,.07)",
                     borderLeft:"3px solid rgba(255,215,0,.4)",
                     borderRadius:"0 8px 8px 0",padding:"16px 18px"}}>
-                    {/* Header */}
-                    <div style={{display:"flex",justifyContent:"space-between",
-                      alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:6}}>
-                      <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
-                        color:"rgba(255,215,0,.7)"}}>
-                        ▸ {specialTag}LAST SESSION
-                      </div>
-                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".15em",
-                        color:"var(--text3)"}}>{dateLabel.toUpperCase()}</div>
-                    </div>
-                    {/* Stat strip */}
                     <div style={{display:"grid",
                       gridTemplateColumns:"repeat(4,1fr)",
                       gap:1,border:"1px solid rgba(255,255,255,.06)",
@@ -1995,7 +2856,20 @@ export default function GameNight(){
                         </div>
                       ))}
                     </div>
-                    {/* MVP cards */}
+                    {recapFieldNotes.length>0&&(
+                      <div style={{
+                        display:"grid",gap:6,marginBottom:14,
+                        padding:"12px 0 0",borderTop:"1px solid rgba(255,255,255,.06)"}}>
+                        <div className="bc7" style={{fontSize:".56rem",letterSpacing:".24em",
+                          color:"rgba(0,255,148,.6)"}}>FIELD NOTES</div>
+                        {recapFieldNotes.map((note,i)=>(
+                          <div key={i} className="bc7" style={{fontSize:".68rem",
+                            color:"var(--text2)",lineHeight:1.7,letterSpacing:".04em"}}>
+                            <span style={{color:"#00FF94",marginRight:8}}>▸</span>{note}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {mvpCards.length>0&&(
                       <div style={{display:"grid",
                         gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:5}}>
@@ -2027,7 +2901,6 @@ export default function GameNight(){
                         ))}
                       </div>
                     )}
-                    {/* All winners line */}
                     {recap.winnersList&&recap.winnersList.length>1&&(
                       <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
                         lineHeight:1.8,marginTop:12,paddingTop:12,
@@ -2040,91 +2913,95 @@ export default function GameNight(){
                               {dn(w.player?.username||"?")}{w.wins>1?` ×${w.wins}`:""}
                             </span>
                           </span>
-                        ))} won lobbies
+                        ))} claimed lobbies
                       </div>
                     )}
                   </div>
-                );
-              })()}
+                </HomeStage>
+              )}
 
-              {/* Weekly Mission Board */}
-              <div style={{marginBottom:22}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                  marginBottom:10,flexWrap:"wrap",gap:8}}>
-                  <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
-                    color:"rgba(199,125,255,.6)"}}>▸ WEEKLY MISSIONS</div>
-                  <div className="bc7" style={{fontSize:".6rem",letterSpacing:".2em",color:"var(--text3)"}}>
-                    AUTO-GENERATED · RESETS MONDAY
-                  </div>
-                </div>
-                <div className="mission-board">
-                  {missions.map((m,i)=>{
-                    const pct=m.target>0?Math.round((m.progress/m.target)*100):0;
-                    const done=m.progress>=m.target;
-                    return(
-                      <div key={i} className="mission-item" style={{"--m-color":m.color}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                          <span style={{fontSize:"1.1rem",flexShrink:0}}>{m.icon}</span>
-                          <div>
-                            <div className="bc9" style={{fontSize:".72rem",
-                              color:done?"#00FF94":m.color,letterSpacing:".1em"}}>
-                              {done?"✓ ":""}{m.label}
+              <HomeStage
+                tag="MISSION BOARD"
+                title={missionTitle}
+                sub={`${clearedMissionCount} OF ${missions.length} CLEARED · RESETS MONDAY`}
+                accent="#C77DFF"
+                marginBottom={4}>
+                <div style={{display:"grid",
+                  gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",
+                  gap:14,alignItems:"start"}}>
+                  <div className="mission-board">
+                    {missions.map((m,i)=>{
+                      const pct=m.target>0?Math.round((m.progress/m.target)*100):0;
+                      const done=m.progress>=m.target;
+                      return(
+                        <div key={i} className="mission-item" style={{"--m-color":m.color}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                            <span style={{fontSize:"1.1rem",flexShrink:0}}>{m.icon}</span>
+                            <div>
+                              <div className="bc9" style={{fontSize:".72rem",
+                                color:done?"#00FF94":m.color,letterSpacing:".1em"}}>
+                                {done?"✓ ":""}{m.label}
+                              </div>
+                              <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",
+                                letterSpacing:".04em",marginTop:2}}>{m.desc}</div>
                             </div>
-                            <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",
-                              letterSpacing:".04em",marginTop:2}}>{m.desc}</div>
+                          </div>
+                          <div className="mission-bar-track">
+                            <div className="mission-bar-fill" style={{
+                              width:`${pct}%`,
+                              background:done?`linear-gradient(90deg,#00FF94,${m.color})`:`linear-gradient(90deg,${m.color}88,${m.color})`,
+                              boxShadow:done?"0 0 8px rgba(0,255,148,.5)":`0 0 6px ${m.color}44`,
+                            }}/>
+                          </div>
+                          <div className="bc7" style={{fontSize:".6rem",
+                            color:done?"#00FF94":"var(--text3)",letterSpacing:".1em",marginTop:5}}>
+                            {done?"OBJECTIVE CLEARED":`${m.unit} · ${pct}%`}
                           </div>
                         </div>
-                        <div className="mission-bar-track">
-                          <div className="mission-bar-fill" style={{
-                            width:`${pct}%`,
-                            background:done?`linear-gradient(90deg,#00FF94,${m.color})`:`linear-gradient(90deg,${m.color}88,${m.color})`,
-                            boxShadow:done?"0 0 8px rgba(0,255,148,.5)":`0 0 6px ${m.color}44`,
-                          }}/>
-                        </div>
-                        <div className="bc7" style={{fontSize:".6rem",
-                          color:done?"#00FF94":"var(--text3)",letterSpacing:".1em",marginTop:5}}>
-                          {done?"MISSION COMPLETE":`${m.unit} · ${pct}%`}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      );
+                    })}
+                  </div>
 
-              {/* Next session countdown — big and bold */}
-              {!live&&(
-                <div style={{marginBottom:4}}>
-                  <div className="bc7" style={{fontSize:".6rem",letterSpacing:".35em",
-                    color:"rgba(0,229,255,.5)",marginBottom:12}}>
-                    ▸ NEXT SESSION IN
-                  </div>
-                  <div style={{display:"flex",gap:6,alignItems:"flex-end",flexWrap:"wrap"}}>
-                    {[
-                      {v:String(cd.d).padStart(2,"0"), l:"DAYS",    show:cd.d>0},
-                      {v:String(cd.d>0?cd.h:cd.h).padStart(2,"0"),l:"HOURS", show:true},
-                      {v:String(cd.m).padStart(2,"0"), l:"MINUTES", show:true},
-                      {v:String(cd.s).padStart(2,"0"), l:"SECONDS", show:true},
-                    ].filter(d=>d.show||d.l==="HOURS"||d.l==="MINUTES"||d.l==="SECONDS").map((d,i)=>(
-                      <div key={i} style={{textAlign:"center",minWidth:cd.d>0?60:70}}>
-                        <div className="bc9" style={{
-                          fontSize:cd.d>0?"clamp(2.4rem,8vw,4rem)":"clamp(2.8rem,10vw,5rem)",
-                          color:"#00E5FF",lineHeight:1,
-                          textShadow:"0 0 24px rgba(0,229,255,.5),0 0 48px rgba(0,229,255,.2)",
-                          letterSpacing:"-.01em"}}>
-                          {d.v}
-                        </div>
-                        <div className="bc7" style={{fontSize:".55rem",letterSpacing:".22em",
-                          color:"rgba(0,229,255,.45)",marginTop:5}}>{d.l}</div>
-                        {i<3&&cd.d>0===false&&<div style={{position:"absolute"}}/>}
+                  {!live&&(
+                    <div style={{
+                      minHeight:"100%",
+                      background:"linear-gradient(180deg,rgba(0,229,255,.08),rgba(0,0,0,.34))",
+                      border:"1px solid rgba(0,229,255,.16)",
+                      borderLeft:"3px solid rgba(0,229,255,.38)",
+                      borderRadius:"0 8px 8px 0",
+                      padding:"16px 18px"}}>
+                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".35em",
+                        color:"rgba(0,229,255,.5)",marginBottom:12}}>
+                        ▸ NEXT SESSION IN
                       </div>
-                    ))}
-                  </div>
-                  <div className="bc7" style={{fontSize:".68rem",color:"var(--text3)",
-                    marginTop:10,letterSpacing:".08em"}}>
-                    MON–SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
-                  </div>
+                      <div style={{display:"flex",gap:6,alignItems:"flex-end",flexWrap:"wrap"}}>
+                        {[
+                          {v:String(cd.d).padStart(2,"0"), l:"DAYS",    show:cd.d>0},
+                          {v:String(cd.h).padStart(2,"0"), l:"HOURS",   show:true},
+                          {v:String(cd.m).padStart(2,"0"), l:"MINUTES", show:true},
+                          {v:String(cd.s).padStart(2,"0"), l:"SECONDS", show:true},
+                        ].filter(d=>d.show||d.l==="HOURS"||d.l==="MINUTES"||d.l==="SECONDS").map((d,i)=>(
+                          <div key={i} style={{textAlign:"center",minWidth:cd.d>0?60:70}}>
+                            <div className="bc9" style={{
+                              fontSize:cd.d>0?"clamp(2.4rem,8vw,4rem)":"clamp(2.8rem,10vw,5rem)",
+                              color:"#00E5FF",lineHeight:1,
+                              textShadow:"0 0 24px rgba(0,229,255,.5),0 0 48px rgba(0,229,255,.2)",
+                              letterSpacing:"-.01em"}}>
+                              {d.v}
+                            </div>
+                            <div className="bc7" style={{fontSize:".55rem",letterSpacing:".22em",
+                              color:"rgba(0,229,255,.45)",marginTop:5}}>{d.l}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bc7" style={{fontSize:".68rem",color:"var(--text3)",
+                        marginTop:10,letterSpacing:".08em",lineHeight:1.7}}>
+                        Mon-Sat · 5PM UTC · Hosted by {HOSTED_BY}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </HomeStage>
             </>);
           })()}
         </div>
@@ -2147,7 +3024,7 @@ export default function GameNight(){
             </h2>
             <div style={{height:1,background:"linear-gradient(90deg,rgba(255,215,0,.44),transparent)",marginBottom:8}}/>
             <div className="bc7" style={{fontSize:".72rem",letterSpacing:".12em",color:"var(--text3)"}}>
-              Season archive · All-time elite · Permanent legacy
+              Old campaigns, current royalty, names the room keeps forever
             </div>
           </div>
 
@@ -2168,21 +3045,21 @@ export default function GameNight(){
                 padding:20,marginBottom:14,animation:"fadeUp .4s ease both"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
                   <div>
-                    <span style={{fontSize:".68rem",color:season.color,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>{ended?"🏁 Final Results":"📅 In Progress"}</span>
+                    <span style={{fontSize:".68rem",color:season.color,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>{ended?"🏁 Campaign Closed":"📅 Campaign Live"}</span>
                     <h3 style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.2rem",marginTop:2}}>{season.name}: {season.label}</h3>
-                    <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>{sSess.length} lobbies · {sStats.length} players</p>
+                    <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>{sSess.length} lobbies logged · {sStats.length} names on file</p>
                   </div>
                   {ended&&champ&&<div style={{textAlign:"center"}}>
-                    <div style={{fontSize:".66rem",color:"#FFD700",fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>👑 Champion</div>
+                    <div style={{fontSize:".66rem",color:"#FFD700",fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>👑 Crown Holder</div>
                     <div style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.1rem"}}>{champ.username}</div>
                     <div style={{fontSize:".72rem",color:"var(--text3)"}}>{champ.wins}W · {champ.winRate}%WR</div>
                   </div>}
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:8}}>
                   {[
-                    {icon:"🏆",label:"Most Wins",     p:champ,   val:champ?.wins+"W"},
-                    {icon:"💀",label:"Top Fragger",   p:topK,    val:topK?.kills+"K"},
-                    {icon:"📅",label:"Most Active",   p:mostActive,val:mostActive?.appearances+"G"},
+                    {icon:"🏆",label:"Wins Leader",    p:champ,    val:champ?.wins+"W"},
+                    {icon:"💀",label:"Lead Fragger",   p:topK,     val:topK?.kills+"K"},
+                    {icon:"📅",label:"Iron Presence", p:mostActive,val:mostActive?.appearances+"G"},
                   ].filter(a=>a.p).map((a,i)=>(
                     <div key={i} onClick={()=>a.p&&goProfile(a.p.id)} style={{
                       background:"rgba(0,0,0,.35)",borderRadius:10,padding:"10px 12px",cursor:"pointer"}}>
@@ -2273,8 +3150,8 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
               <span style={{fontSize:"1.4rem"}}>🏅</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.2rem"}}>Rank Titles Explained</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>What does each player title actually mean?</p>
+                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.2rem"}}>Callsigns Explained</h3>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Every title means something. This is what the room is saying.</p>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
@@ -2296,8 +3173,8 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
               <span style={{fontSize:"1.4rem"}}>🎖️</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.2rem"}}>How Badges Work</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Tap any badge to see how to earn it</p>
+                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.2rem"}}>Commendations</h3>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Tap any badge to see what kind of night earns it.</p>
               </div>
             </div>
             <div>
@@ -2333,7 +3210,7 @@ export default function GameNight(){
               </span>
               <span style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
                 letterSpacing:".2em",color:"rgba(255,255,255,.2)",textTransform:"uppercase"}}>
-                {sessions.length} SESSIONS LOGGED
+                {sessions.length} LOBBIES ON RECORD
               </span>
             </div>
             <div style={{textAlign:"center"}}>
@@ -2351,7 +3228,7 @@ export default function GameNight(){
               <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
                 fontSize:".8rem",letterSpacing:".3em",
                 color:"rgba(255,255,255,.2)",marginTop:6,textTransform:"uppercase"}}>
-                SEASON 2 · ACTIVE · RANKINGS LIVE
+                SEASON 2 · CAMPAIGN LIVE · TABLE OPEN
               </div>
             </div>
             {foolsDay&&(
@@ -2389,30 +3266,30 @@ export default function GameNight(){
             })}
             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               <span className="bc7" style={{fontSize:".6rem",letterSpacing:".2em",color:"var(--text3)"}}>SORT</span>
-              {[
-                {id:"wins",l:"WINS"},{id:"kills",l:"KILLS"},
-                {id:"winrate",l:"WIN%"},{id:"kd",l:"K/G"},
-              ].map(s=>(
-                <button key={s.id} onClick={()=>setSortBy(s.id)} style={{
-                  padding:"4px 10px",cursor:"pointer",outline:"none",
-                  background:sortBy===s.id?"rgba(255,255,255,.08)":"none",
-                  border:sortBy===s.id?"1px solid rgba(255,255,255,.2)":"1px solid transparent",
-                  borderRadius:3,fontFamily:"Barlow Condensed",fontWeight:700,
-                  fontSize:".62rem",letterSpacing:".1em",color:sortBy===s.id?"#fff":"var(--text3)"}}>
-                  {s.l}
-                </button>
-              ))}
+              <span className="bc7" style={{
+                fontSize:".62rem",
+                letterSpacing:".12em",
+                color:"rgba(255,255,255,.55)",
+                background:"rgba(255,255,255,.04)",
+                border:"1px solid rgba(255,255,255,.08)",
+                borderRadius:999,
+                padding:"5px 10px",
+              }}>
+                {SORT_LABELS[sortBy].toUpperCase()} · {filteredLB.length} IN VIEW{lbSearch.trim()?` · FILTER ${lbSearch.trim().toUpperCase()}`:""}
+              </span>
             </div>
           </div>
 
           {/* Search */}
           <div style={{position:"relative",marginBottom:16}}>
             <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
-            <input className="search-inp" placeholder="Search your gamertag…"
+            <input className="search-inp" placeholder="Search callsign or gamertag..."
               value={lbSearch} onChange={e=>{
-                setLbSearch(e.target.value);
-                if(!e.target.value.trim()){setSpotlight(null);return;}
-                const m=players.find(p=>p.username.toLowerCase()===e.target.value.trim().toLowerCase());
+                const nextValue=e.target.value;
+                const query=nextValue.trim().toLowerCase();
+                setLbSearch(nextValue);
+                if(!query){setSpotlight(null);return;}
+                const m=players.find(p=>p.username.toLowerCase().includes(query));
                 setSpotlight(m?m.id:null);
               }}/>
             {lbSearch&&<button onClick={()=>{setLbSearch("");setSpotlight(null);}} style={{
@@ -2420,6 +3297,89 @@ export default function GameNight(){
               background:"rgba(255,255,255,.12)",border:"none",borderRadius:50,
               width:22,height:22,cursor:"pointer",color:"#fff",fontSize:".72rem"}}>✕</button>}
           </div>
+
+          {sortedLB.length>0&&(()=>{
+            const boardLeader=sortedLB[0];
+            const boardChaser=sortedLB[1];
+            const leaderPlayer=players.find((player)=>player.id===boardLeader.id);
+            const chasePlayer=boardChaser?players.find((player)=>player.id===boardChaser.id):null;
+            if(!leaderPlayer)return null;
+            const scopeLabel=lbSeason==="s1"
+              ?"Season 1 archive"
+              :lbSeason==="s2"
+                ?"Season 2 live board"
+                :"All-time board";
+            const pressureText=(()=>{
+              if(!boardChaser||!chasePlayer){
+                return `${dn(leaderPlayer.username)} owns this board for now.`;
+              }
+              if(sortBy==="kills"){
+                const gap=boardLeader.kills-boardChaser.kills;
+                return gap===0
+                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level on kills right now.`
+                  :`${dn(leaderPlayer.username)} is ${gap} kill${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
+              }
+              if(sortBy==="kd"){
+                const gap=(parseFloat(boardLeader.kd)-parseFloat(boardChaser.kd)).toFixed(1);
+                return gap==="0.0"
+                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are locked on efficiency.`
+                  :`${dn(leaderPlayer.username)} is ${gap} K/G ahead of ${dn(chasePlayer.username)}.`;
+              }
+              if(sortBy==="winrate"){
+                const gap=boardLeader.winRate-boardChaser.winRate;
+                return gap===0
+                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are tied on win rate.`
+                  :`${dn(leaderPlayer.username)} is ${gap}% ahead of ${dn(chasePlayer.username)} on win rate.`;
+              }
+              if(sortBy==="appearances"){
+                const gap=boardLeader.appearances-boardChaser.appearances;
+                return gap===0
+                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level on attendance.`
+                  :`${dn(leaderPlayer.username)} has ${gap} more lobby${gap===1?"":"ies"} logged than ${dn(chasePlayer.username)}.`;
+              }
+              if(sortBy==="carry"){
+                const gap=boardLeader.carry-boardChaser.carry;
+                return gap===0
+                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are even on carry score.`
+                  :`${dn(leaderPlayer.username)} leads carry score by ${gap}.`;
+              }
+              if(sortBy==="consistency"){
+                const gap=boardLeader.consistency-boardChaser.consistency;
+                return gap===0
+                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level on consistency.`
+                  :`${dn(leaderPlayer.username)} is ${gap}% steadier than ${dn(chasePlayer.username)} right now.`;
+              }
+              const gap=boardLeader.wins-boardChaser.wins;
+              return gap===0
+                ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are tied on wins.`
+                :`${dn(leaderPlayer.username)} is ${gap} win${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
+            })();
+            return(
+              <div style={{
+                marginBottom:16,
+                background:`linear-gradient(135deg,${leaderPlayer.color}12,rgba(0,0,0,.4))`,
+                border:`1px solid ${leaderPlayer.color}33`,
+                borderLeft:`3px solid ${leaderPlayer.color}`,
+                borderRadius:"0 10px 10px 0",
+                padding:"14px 16px",
+              }}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:6}}>
+                  <span className="bc9" style={{fontSize:".64rem",letterSpacing:".24em",color:`${leaderPlayer.color}bb`}}>
+                    PRESSURE BOARD
+                  </span>
+                  <span className="bc7" style={{fontSize:".6rem",letterSpacing:".14em",color:"var(--text3)"}}>
+                    {scopeLabel.toUpperCase()} · SORTED BY {SORT_LABELS[sortBy].toUpperCase()}
+                  </span>
+                </div>
+                <div className="bc9" style={{fontSize:"clamp(1rem,3vw,1.2rem)",color:leaderPlayer.color,marginBottom:4}}>
+                  {leaderPlayer.host?"👑 ":""}{dn(leaderPlayer.username)} has the front spot.
+                </div>
+                <div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",lineHeight:1.6}}>
+                  {pressureText}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Spotlight card */}
           {spotlight&&(()=>{
@@ -2559,6 +3519,11 @@ export default function GameNight(){
                       <div style={{fontSize:".63rem",color:rank.color,fontWeight:700,letterSpacing:".02em"}}>
                         {rank.title}{streak>=2?` 🔥×${streak}`:""}
                       </div>
+                      {isFirst&&(
+                        <div className="bc7" style={{fontSize:".56rem",color:"#FFD700",letterSpacing:".2em",marginTop:4}}>
+                          CURRENT LEADER
+                        </div>
+                      )}
                       {/* Form dots */}
                       {(()=>{
                         const form=getFormGuide(player.id,5);
@@ -2630,11 +3595,12 @@ export default function GameNight(){
               const medals=["🥇","🥈","🥉"];
               const rank=getRank(player.id);
               const isHL=spotlight===player.id;
+              const isFirst=globalRank===0&&!foolsDay;
               const streak=getStreak(player.id);
               return(
-                <div key={player.id} onClick={()=>goProfile(player.id)} style={{...card({border:isHL?`2px solid ${player.color}`:`1.5px solid ${player.color}2a`}),
+                <div key={player.id} onClick={()=>goProfile(player.id)} style={{...card({border:isHL?`2px solid ${player.color}`:isFirst?"1.5px solid rgba(255,215,0,.55)":`1.5px solid ${player.color}2a`}),
                   padding:"12px 14px",display:"flex",alignItems:"center",gap:11,cursor:"pointer",
-                  background:isHL?`${player.color}10`:"var(--card)",
+                  background:isHL?`${player.color}10`:isFirst?"linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,255,255,.02))":"var(--card)",
                   animation:`slideR .3s ease ${i*.03}s both`}}>
                   <span style={{fontFamily:"Fredoka One",fontSize:globalRank<3?"1.25rem":"1rem",
                     color:globalRank<3?"#fff":"var(--text3)",minWidth:26,textAlign:"center"}}>
@@ -2648,6 +3614,7 @@ export default function GameNight(){
                     <div style={{fontSize:".65rem",color:rank.color,fontWeight:700}}>
                       {rank.title}{streak>=2?` 🔥×${streak}`:""}
                     </div>
+                    {isFirst&&<div className="bc7" style={{fontSize:".52rem",color:"#FFD700",letterSpacing:".18em",marginTop:3}}>CURRENT LEADER</div>}
                     {/* Form guide dots */}
                     {(()=>{
                       const form=getFormGuide(player.id,5);
@@ -2688,9 +3655,9 @@ export default function GameNight(){
             <div style={{textAlign:"center",padding:"48px 0"}}>
               <div style={{fontSize:"2.2rem",marginBottom:10}}>📊</div>
               <p style={{fontWeight:700,color:"var(--text2)"}}>
-                {lbPeriod==="today"?"No lobbies today yet!":`No lobbies this ${lbPeriod==="week"?"week":"time"}`}
+                {lbPeriod==="today"?"The room has not opened today yet.":`No lobby has landed this ${lbPeriod==="week"?"week":"run"}`}
               </p>
-              <p style={{fontSize:".82rem",color:"var(--text3)",marginTop:5}}>Check back after the next session!</p>
+              <p style={{fontSize:".82rem",color:"var(--text3)",marginTop:5}}>Check back after the next drop into the room.</p>
             </div>
           )}
         </div>
@@ -2773,7 +3740,7 @@ export default function GameNight(){
                           <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:700,marginBottom:6,letterSpacing:.5}}>{row.l}</div>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                             <span style={{fontFamily:"Fredoka One",color:aWin?row.c:tie?"var(--text2)":"var(--text3)",fontSize:"1.1rem"}}>{row.aV}</span>
-                            <span style={{color:"var(--text3)",fontSize:".7rem"}}>–</span>
+                            <span style={{color:"var(--text3)",fontSize:".7rem"}}>-</span>
                             <span style={{fontFamily:"Fredoka One",color:!aWin&&!tie?row.c:tie?"var(--text2)":"var(--text3)",fontSize:"1.1rem"}}>{row.bV}</span>
                           </div>
                         </div>
@@ -2783,7 +3750,7 @@ export default function GameNight(){
                   {h.shared>0&&(
                     <div style={{textAlign:"center",padding:"10px",background:`linear-gradient(135deg,${h.aWins>h.bWins?pA.color:pB.color}12,rgba(0,0,0,.2))`,borderRadius:10,fontSize:".82rem",fontWeight:700,color:"var(--text2)"}}>
                       {h.aWins===h.bWins?"🤝 Dead even in shared games":
-                        `${(h.aWins>h.bWins?pA:pB).username} dominates shared lobbies ${Math.max(h.aWins,h.bWins)}–${Math.min(h.aWins,h.bWins)}`}
+                        `${(h.aWins>h.bWins?pA:pB).username} dominates shared lobbies ${Math.max(h.aWins,h.bWins)}-${Math.min(h.aWins,h.bWins)}`}
                     </div>
                   )}
                 </div>
@@ -2827,7 +3794,7 @@ export default function GameNight(){
                     </div>
                     <div style={{textAlign:"center",marginTop:8}}>
                       <span style={{color:leader.color,fontWeight:800,fontSize:".84rem"}}>{leader.username}</span>
-                      <span style={{color:"var(--text3)",fontSize:".8rem"}}> leads {lWins}–{tWins}</span>
+                      <span style={{color:"var(--text3)",fontSize:".8rem"}}> leads {lWins}-{tWins}</span>
                       {r.p1wins===r.p2wins&&<span style={{color:"#FFD700",fontWeight:700,fontSize:".8rem"}}> · Dead even! 🤝</span>}
                     </div>
                   </div>
@@ -2865,7 +3832,7 @@ export default function GameNight(){
                           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:90}}>{p1.username}</span>
                         <div style={{display:"flex",gap:5,alignItems:"center"}}>
                           <span style={{fontFamily:"Fredoka One",color:p1.color,fontSize:"1.1rem"}}>{r.p1wins}</span>
-                          <span style={{color:"var(--text3)",fontSize:".72rem"}}>–</span>
+                          <span style={{color:"var(--text3)",fontSize:".72rem"}}>-</span>
                           <span style={{fontFamily:"Fredoka One",color:p2.color,fontSize:"1.1rem"}}>{r.p2wins}</span>
                         </div>
                         <span style={{fontFamily:"Fredoka One",color:p2.color,fontSize:".88rem",
@@ -2891,186 +3858,382 @@ export default function GameNight(){
       {/* ═══════════════ LOBBIES ═══════════════ */}
       {view==="lobbies"&&(
         <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
-          <div style={{textAlign:"center",marginBottom:28}}>
-            <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
-              background:"linear-gradient(135deg,#FF4D8F,#C77DFF)",
-              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
-              🎮 Lobby History
-            </h2>
-            <p style={{color:"var(--text2)",marginTop:8,fontSize:".86rem"}}>{sessions.length} lobbies on record</p>
-          </div>
-          {/* Filters */}
-          <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-            <div style={{position:"relative",flex:1,minWidth:160}}>
-              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:".9rem",pointerEvents:"none"}}>👤</span>
-              <select value={lobbyFilter} onChange={e=>setLobbyFilter(e.target.value)}
-                style={{width:"100%",padding:"9px 12px 9px 34px",borderRadius:10,border:"2px solid var(--border)",background:"#190f3d",color:"#fff",fontSize:".86rem",outline:"none"}}>
-                <option value="">All players</option>
-                {players.map(p=><option key={p.id} value={p.id}>{p.username}</option>)}
-              </select>
-            </div>
-            <input type="date" value={lobbyDate} onChange={e=>setLobbyDate(e.target.value)}
-              style={{padding:"9px 12px",borderRadius:10,border:"2px solid var(--border)",background:"#190f3d",color:"#fff",fontSize:".86rem",outline:"none",flexShrink:0}}/>
-            {(lobbyFilter||lobbyDate)&&(
-              <button onClick={()=>{setLobbyFilter("");setLobbyDate("");}} style={{
-                padding:"9px 14px",borderRadius:10,border:"1.5px solid var(--border)",
-                background:"rgba(255,255,255,.07)",color:"var(--text2)",cursor:"pointer",fontWeight:700,fontSize:".82rem",flexShrink:0}}>
-                Clear ✕
-              </button>
-            )}
-          </div>
           {(()=>{
-            let filtered=[...sessions].sort(compareSessionsDesc);
+            const archiveSessions=[...sessions].sort(compareSessionsDesc);
+            const latestLobby=archiveSessions[0]||null;
+            const latestWinner=latestLobby?getPlayer(latestLobby.winner):null;
+            const liveHeat=getLiveStreaks()[0]||null;
+            const heatPlayer=liveHeat?getPlayer(liveHeat.id):null;
+            const loudestLobby=archiveSessions.length
+              ?archiveSessions.reduce((best,session)=>
+                getLobbyTotalKills(session)>getLobbyTotalKills(best)?session:best)
+              :null;
+            const loudestKills=loudestLobby?getLobbyTotalKills(loudestLobby):0;
+            const searchTerm=lobbySearch.trim().toLowerCase();
+            let filtered=[...archiveSessions];
             if(lobbyFilter)filtered=filtered.filter(s=>s.attendees?.includes(lobbyFilter));
             if(lobbyDate)filtered=filtered.filter(s=>s.date===lobbyDate);
+            if(searchTerm)filtered=filtered.filter(s=>getLobbySearchHaystack(s).includes(searchTerm));
+            const visible=filtered.slice(0,lobbyLimit);
+            const archiveNights=new Set(filtered.map((s)=>s.date)).size;
+            const daySummary=filtered.reduce((acc,session)=>{
+              if(!acc[session.date]){
+                acc[session.date]={count:0,kills:0};
+              }
+              acc[session.date].count+=1;
+              acc[session.date].kills+=getLobbyTotalKills(session);
+              return acc;
+            },{});
+            const activeTrail=[
+              lobbyFilter?`Operative: ${dn(getPlayer(lobbyFilter)?.username||"Unknown")}`:"",
+              lobbyDate?`Date: ${formatLobbyDate(lobbyDate,{day:"numeric",month:"short",year:"numeric"})}`:"",
+              searchTerm?`Search: ${lobbySearch.trim()}`:"",
+            ].filter(Boolean);
             return(
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {(lobbyFilter||lobbyDate)&&<p style={{color:"var(--text3)",fontSize:".8rem",fontWeight:700,marginBottom:4}}>
-              {filtered.length} lobby{filtered.length!==1?"s":""} found
-            </p>}
-            {filtered.map((s,idx)=>{
+            <div style={{...card({
+              padding:"22px 20px",
+              marginBottom:4,
+              overflow:"hidden",
+              position:"relative",
+              background:"linear-gradient(135deg,rgba(255,77,143,.14),rgba(25,15,61,.96) 55%,rgba(0,229,255,.08))",
+            })}}>
+              <div style={{position:"absolute",inset:0,pointerEvents:"none",
+                background:"radial-gradient(circle at top right,rgba(255,77,143,.18),transparent 42%)"}}/>
+              <div className="bc7" style={{fontSize:".65rem",letterSpacing:".22em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:8}}>
+                Battle report archive
+              </div>
+              <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
+                background:"linear-gradient(135deg,#FF4D8F,#C77DFF)",
+                WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
+                🎮 War Room
+              </h2>
+              <p style={{color:"var(--text2)",marginTop:8,fontSize:".86rem",maxWidth:720,lineHeight:1.7}}>
+                Battle reports, pressure swings, and the rooms that changed the board. Newest drops stay on top, and every file should feel worth opening.
+              </p>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,marginTop:18}}>
+                <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:6}}>Latest close</div>
+                  <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:latestWinner?latestWinner.color:"#FFD700"}}>
+                    {latestWinner?dn(latestWinner.username):"Archive waiting"}
+                  </div>
+                  <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
+                    {latestLobby?`${latestLobby.id.toUpperCase()} filed on ${formatLobbyDate(latestLobby.date,{day:"numeric",month:"short"})}`:"No room has landed yet"}
+                  </div>
+                </div>
+                <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:6}}>Heat check</div>
+                  <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:heatPlayer?heatPlayer.color:"#FF6B35"}}>
+                    {heatPlayer?`${dn(heatPlayer.username)} ${liveHeat.streak}W run`:"Room wide open"}
+                  </div>
+                  <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
+                    {heatPlayer?"Current active streak. One more clean finish makes everybody feel it.":"No streak longer than one room is holding the lobby."}
+                  </div>
+                </div>
+                <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:6}}>Loudest file</div>
+                  <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:"#FFAB40"}}>
+                    {loudestLobby?`${loudestLobby.id.toUpperCase()} · ${loudestKills}K`:"Quiet archive"}
+                  </div>
+                  <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
+                    {loudestLobby?`${formatLobbyDate(loudestLobby.date,{day:"numeric",month:"short"})} still stands as the heaviest room on file.`:"The archive wakes up once the first room is logged."}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{...card({padding:18,marginBottom:2,border:"1.5px solid rgba(255,77,143,.18)"})}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
+                <div>
+                  <div className="bc7" style={{fontSize:".62rem",letterSpacing:".18em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:6}}>
+                    Archive sweep
+                  </div>
+                  <div className="bc7" style={{fontSize:".78rem",color:"var(--text2)",lineHeight:1.6,maxWidth:680}}>
+                    Pull one operative, lock a date, or sweep the archive for a room ID, winner, or field note. Reports stay filed newest first.
+                  </div>
+                </div>
+                <div className="bc7" style={{fontSize:".64rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase"}}>
+                  {archiveSessions.length} reports on file
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+                <div>
+                  <label style={{...lbl,marginBottom:6,fontSize:".64rem"}}>Pull operative</label>
+                  <div style={{position:"relative"}}>
+                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:".9rem",pointerEvents:"none"}}>👤</span>
+                    <select value={lobbyFilter} onChange={e=>setLobbyFilter(e.target.value)}
+                      style={{...inp({width:"100%",padding:"9px 12px 9px 34px",fontSize:".86rem"})}}>
+                      <option value="">Any operative</option>
+                      {players.map(p=><option key={p.id} value={p.id}>{p.username}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style={{...lbl,marginBottom:6,fontSize:".64rem"}}>Lock date</label>
+                  <input type="date" value={lobbyDate} onChange={e=>setLobbyDate(e.target.value)}
+                    style={{...inp({width:"100%",padding:"9px 12px",fontSize:".86rem"})}}/>
+                </div>
+                <div>
+                  <label style={{...lbl,marginBottom:6,fontSize:".64rem"}}>Search the file</label>
+                  <div style={{position:"relative"}}>
+                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:".9rem",pointerEvents:"none"}}>🔎</span>
+                    <input value={lobbySearch} onChange={e=>setLobbySearch(e.target.value)}
+                      placeholder="Room, closer, note"
+                      style={{...inp({width:"100%",padding:"9px 12px 9px 36px",fontSize:".86rem"})}}/>
+                  </div>
+                </div>
+              </div>
+              {activeTrail.length>0&&(
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:12}}>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {activeTrail.map((item)=>(
+                      <div key={item} className="bc7" style={{padding:"5px 10px",borderRadius:999,
+                        background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",
+                        fontSize:".62rem",letterSpacing:".08em",color:"var(--text3)",textTransform:"uppercase"}}>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={()=>{setLobbyFilter("");setLobbyDate("");setLobbySearch("");}} style={{
+                    padding:"8px 14px",borderRadius:10,border:"1.5px solid var(--border)",
+                    background:"rgba(255,255,255,.07)",color:"var(--text2)",cursor:"pointer",fontWeight:700,fontSize:".8rem"}}>
+                    Reset trail
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:2}}>
+              <p className="bc7" style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>
+                {filtered.length} report{filtered.length!==1?"s":""} across {archiveNights} archive night{archiveNights!==1?"s":""}
+              </p>
+              <p className="bc7" style={{color:"var(--text3)",fontSize:".74rem",letterSpacing:".08em",textTransform:"uppercase"}}>
+                Showing {visible.length} now · newest first
+              </p>
+            </div>
+
+            {visible.length===0&&(
+              <div style={{textAlign:"center",padding:"34px 18px",
+                background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                borderRadius:"0 10px 10px 0",borderLeft:"3px solid rgba(255,77,143,.35)"}}>
+                <div style={{fontSize:"2rem",marginBottom:10}}>🗂️</div>
+                <div className="bc9" style={{fontSize:"1rem",color:"#FF4D8F",marginBottom:6}}>
+                  No battle report fits this trail yet
+                </div>
+                <div className="bc7" style={{fontSize:".74rem",color:"var(--text3)",letterSpacing:".04em"}}>
+                  Ease a filter, widen the search, or wait for the next room to land.
+                </div>
+              </div>
+            )}
+
+            {visible.map((s,idx)=>{
               const winner=players.find(p=>p.id===s.winner);
-              const tkPid=s.attendees?.reduce((best,pid)=>
-                (s.kills?.[pid]||0)>(s.kills?.[best]||0)?pid:best,s.attendees?.[0]);
-              const tkP=players.find(p=>p.id===tkPid);
-              const tkK=s.kills?.[tkPid]||0;
-              const totalLobbyKills=Object.values(s.kills||{}).reduce((a,b)=>a+b,0);
+              const {player:tkP,kills:tkK}=getLobbyTopDamage(s);
+              const totalLobbyKills=getLobbyTotalKills(s);
+              const customNote=hasCustomLobbyNote(s)?s.notes.trim():"";
+              const beatTags=getLobbyBeatTags(s);
+              const primaryTag=beatTags[0];
+              const showNightBreak=idx===0||visible[idx-1].date!==s.date;
+              const marker=getLobbyDateMarker(s.date);
+              const nightSummary=daySummary[s.date];
               return(
-                <div key={s.id} style={{...card(),padding:20,position:"relative",cursor:"pointer",
-                  animation:`fadeUp .35s ease ${Math.min(idx,.5)*.06}s both`,
-                  border:`1.5px solid ${expandedSid===s.id?"rgba(255,107,53,.6)":"var(--border)"}`}}
-                  onClick={e=>{if(e.target.tagName==="BUTTON")return;setExpandedSid(v=>v===s.id?null:s.id);}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:12}}>
-                    <div>
-                      <div style={{fontFamily:"Fredoka One",color:"#FFAB40",fontSize:".88rem",marginBottom:3}}>
-                        📅 {new Date(s.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}{s.date==="2026-04-04"&&<span style={{marginLeft:6,fontSize:".8rem"}}>🥚 Easter</span>}{s.date==="2026-04-03"&&<span style={{marginLeft:6,fontSize:".8rem"}}>💪 Good Friday</span>}{s.date==="2026-04-01"&&<span style={{marginLeft:6,fontSize:".8rem"}}>🃏 April Fools</span>}
-                        <span style={{color:"var(--text3)",fontSize:".76rem",fontWeight:700,marginLeft:8}}>· {s.notes}</span>
+                <div key={s.id} style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {showNightBreak&&(
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginTop:idx===0?0:4}}>
+                      <div style={{height:1,flex:1,background:"linear-gradient(90deg,rgba(255,77,143,.3),transparent)"}}/>
+                      <div className="bc7" style={{padding:"6px 12px",borderRadius:999,
+                        background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",
+                        fontSize:".62rem",letterSpacing:".14em",color:"var(--text3)",textTransform:"uppercase",textAlign:"center"}}>
+                        {idx===0?"Latest night on file":"Night file"} · {formatLobbyDate(s.date,{weekday:"long",day:"numeric",month:"short"})} · {nightSummary.count} report{nightSummary.count!==1?"s":""} · {nightSummary.kills} kills
                       </div>
-                      {s.notes&&s.notes!==("Lobby "+s.id?.replace("s",""))&&<p style={{color:"var(--text2)",fontSize:".8rem",fontStyle:"italic"}}>"{s.notes}"</p>}
-                    </div>
-                    <div style={{display:"flex",gap:6,flexShrink:0}}>
-                      <div style={{fontSize:".62rem",color:"var(--text3)",fontWeight:700,
-                        background:"rgba(255,255,255,.06)",borderRadius:7,padding:"4px 8px"}}>
-                        💀 {totalLobbyKills} kills
-                      </div>
-                      <div style={{fontSize:".62rem",color:"var(--text3)",fontWeight:700,
-                        background:"rgba(255,255,255,.06)",borderRadius:7,padding:"4px 8px"}}>
-                        👥 {s.attendees?.length||0} players
-                      </div>
-                    </div>
-                  </div>
-                  {/* Placements */}
-                  {s.placements&&s.placements.length>0&&(
-                    <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
-                      {s.placements.slice(0,5).map((pid,pi)=>{
-                        const p=players.find(x=>x.id===pid);if(!p)return null;
-                        const k=s.kills?.[pid]||0;
-                        const medals=["🥇","🥈","🥉"];
-                        return(
-                          <div key={pid} style={{display:"flex",alignItems:"center",gap:5,
-                            background:`${p.color}14`,border:`1px solid ${p.color}44`,
-                            borderRadius:8,padding:"4px 9px"}}>
-                            <span style={{fontSize:".78rem"}}>{pi<3?medals[pi]:`${pi+1}.`}</span>
-                            <Av p={p} size={22}/>
-                            <span style={{fontFamily:"Fredoka One",color:p.color,fontSize:".8rem"}}>{p.username}</span>
-                            {k>0&&<span style={{color:"#FF4D8F",fontSize:".72rem",fontWeight:700}}>{k}k</span>}
-                          </div>
-                        );
-                      })}
-                      {s.placements.length>5&&(
-                        <div style={{display:"flex",alignItems:"center",padding:"4px 9px",
-                          background:"rgba(255,255,255,.06)",borderRadius:8,color:"var(--text3)",fontSize:".76rem",fontWeight:700}}>
-                          +{s.placements.length-5} more
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-                    {winner&&(
-                      <div style={{background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.25)",
-                        borderRadius:8,padding:"5px 11px",display:"flex",alignItems:"center",gap:7}}>
-                        <span style={{fontSize:".7rem",color:"var(--text3)"}}>🏆 Winner</span>
-                        <Av p={winner} size={22}/>
-                        <span style={{fontFamily:"Fredoka One",color:winner.color,fontSize:".86rem"}}>{winner.username}</span>
-                      </div>
-                    )}
-                    {tkP&&tkK>0&&(
-                      <div style={{background:"rgba(255,77,143,.08)",border:"1px solid rgba(255,77,143,.25)",
-                        borderRadius:8,padding:"5px 11px",display:"flex",alignItems:"center",gap:7}}>
-                        <span style={{fontSize:".7rem",color:"var(--text3)"}}>💀 Top Fragger</span>
-                        <Av p={tkP} size={22}/>
-                        <span style={{fontFamily:"Fredoka One",color:tkP.color,fontSize:".86rem"}}>{tkP.username} ({tkK}k)</span>
-                      </div>
-                    )}
-                  </div>
-                  {/* Expanded detail */}
-                  {expandedSid===s.id&&s.placements&&s.placements.length>0&&(
-                    <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,.1)",paddingTop:14}}
-                      onClick={e=>e.stopPropagation()}>
-                      <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Full Placement</div>
-                      <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                        {s.placements.map((pid,pi)=>{
-                          const p=players.find(x=>x.id===pid);if(!p)return null;
-                          const k=s.kills?.[pid]||0;
-                          const medals=["🥇","🥈","🥉"];
-                          const isWin=pi===0;
-                          return(
-                            <div key={pid} onClick={()=>goProfile(pid)} style={{
-                              display:"flex",alignItems:"center",gap:10,
-                              background:isWin?"rgba(255,215,0,.08)":`${p.color}08`,
-                              border:`1px solid ${isWin?"rgba(255,215,0,.3)":`${p.color}22`}`,
-                              borderRadius:9,padding:"7px 12px",cursor:"pointer"}}>
-                              <span style={{fontFamily:"Fredoka One",fontSize:pi<3?"1.1rem":".9rem",minWidth:26,textAlign:"center",color:pi<3?"#fff":"var(--text3)"}}>{pi<3?medals[pi]:`${pi+1}`}</span>
-                              <Av p={p} size={28}/>
-                              <span style={{fontFamily:"Fredoka One",color:p.color,fontSize:".88rem",flex:1}}>{p.username}</span>
-                              <span style={{fontFamily:"Fredoka One",color:k>0?"#FF4D8F":"var(--text3)",fontSize:".9rem"}}>{k>0?`${k}K`:"–"}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  <div style={{position:"absolute",top:12,right:adminMode?44:12,color:"var(--text3)",fontSize:".72rem",fontWeight:700}}>
-                    {expandedSid===s.id?"▲":"▼"}
-                  </div>
-                  {/* Clip link */}
-                  {s.clip&&(
-                    <div style={{marginTop:8}}>
-                      <a href={s.clip} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{
-                        display:"inline-flex",alignItems:"center",gap:6,
-                        padding:"4px 12px",borderRadius:8,textDecoration:"none",
-                        background:"rgba(145,71,255,.18)",border:"1px solid rgba(145,71,255,.4)",
-                        color:"#cc99ff",fontWeight:700,fontSize:".74rem"}}>
-                        🎬 Watch Clip
-                      </a>
-                    </div>
-                  )}
-                  {/* Share Card Button */}
-                  {expandedSid===s.id&&(
-                    <div style={{marginTop:10}}>
-                      <button onClick={e=>{e.stopPropagation();setShareCard({sid:s.id,visible:true});}}
-                        style={{display:"inline-flex",alignItems:"center",gap:6,
-                          padding:"5px 14px",borderRadius:8,cursor:"pointer",
-                          background:"rgba(0,229,255,.12)",border:"1px solid rgba(0,229,255,.4)",
-                          color:"#00E5FF",fontWeight:700,fontSize:".78rem"}}>
-                        📤 Share Result
-                      </button>
+                      <div style={{height:1,flex:1,background:"linear-gradient(90deg,transparent,rgba(199,125,255,.3))"}}/>
                     </div>
                   )}
 
-                  {adminMode&&(
-                    <div style={{position:"absolute",top:10,right:10,display:"flex",gap:5}}>
-                      <button onClick={e=>{e.stopPropagation();handleEditSession(s);}} style={{
-                        background:"rgba(255,215,0,.15)",border:"1px solid rgba(255,215,0,.5)",
-                        color:"#FFD700",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:".7rem"}}>✏️</button>
-                      <button onClick={e=>{e.stopPropagation();handleDelSession(s.id);}} style={{
-                        background:"rgba(231,76,60,.15)",border:"1px solid #E74C3C",
-                        color:"#E74C3C",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:".7rem"}}>✕</button>
+                  <div style={{...card({
+                    padding:20,
+                    position:"relative",
+                    cursor:"pointer",
+                    overflow:"hidden",
+                    animation:`fadeUp .35s ease ${Math.min(idx,.5)*.06}s both`,
+                    border:`1.5px solid ${expandedSid===s.id?"rgba(255,107,53,.6)":primaryTag?.border||"var(--border)"}`,
+                    boxShadow:expandedSid===s.id?"0 18px 42px rgba(255,107,53,.14)":"none",
+                  })}}
+                    onClick={e=>{if(e.target.tagName==="BUTTON")return;setExpandedSid(v=>v===s.id?null:s.id);}}>
+                    <div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:primaryTag?.color||"#FF4D8F",opacity:.85}}/>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,marginBottom:12,paddingLeft:8}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                          <div style={{fontFamily:"Fredoka One",color:"#FFAB40",fontSize:".88rem"}}>
+                            📅 {formatLobbyDate(s.date)}
+                          </div>
+                          {marker&&<span style={{fontSize:".78rem",color:"var(--text3)"}}>{marker.icon} {marker.label}</span>}
+                          <span style={{color:"var(--text3)",fontSize:".76rem",fontWeight:700}}>· {s.id.toUpperCase()}</span>
+                        </div>
+                        <p className="bc7" style={{color:"var(--text2)",fontSize:".76rem",
+                          lineHeight:1.7,letterSpacing:".04em",maxWidth:660}}>
+                          {getLobbyReport(s)}
+                        </p>
+                        <div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:10}}>
+                          {beatTags.map((tag)=>(
+                            <div key={tag.label} className="bc7" style={{display:"inline-flex",alignItems:"center",
+                              gap:6,padding:"5px 10px",borderRadius:999,background:tag.background,
+                              border:`1px solid ${tag.border}`,fontSize:".58rem",letterSpacing:".16em",
+                              color:tag.color,textTransform:"uppercase"}}>
+                              {tag.label}
+                            </div>
+                          ))}
+                          {customNote&&<div className="bc7" style={{display:"inline-flex",alignItems:"center",
+                            gap:6,padding:"5px 10px",borderRadius:999,background:"rgba(255,255,255,.06)",
+                            border:"1px solid rgba(255,255,255,.08)",fontSize:".58rem",letterSpacing:".16em",
+                            color:"var(--text3)",textTransform:"uppercase"}}>
+                            Field note · {customNote}
+                          </div>}
+                        </div>
+                      </div>
+                      <div style={{display:"grid",gap:6,minWidth:122,flexShrink:0,paddingLeft:8}}>
+                        <div style={{padding:"8px 10px",borderRadius:10,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                          <div className="bc7" style={{fontSize:".52rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:4}}>Room noise</div>
+                          <div style={{fontFamily:"Fredoka One",fontSize:".9rem",color:"#FF4D8F"}}>{totalLobbyKills} kills</div>
+                        </div>
+                        <div style={{padding:"8px 10px",borderRadius:10,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                          <div className="bc7" style={{fontSize:".52rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:4}}>Bodies in room</div>
+                          <div style={{fontFamily:"Fredoka One",fontSize:".9rem",color:"#00E5FF"}}>{s.attendees?.length||0} players</div>
+                        </div>
+                      </div>
                     </div>
-                  )}
+
+                    {s.placements&&s.placements.length>0&&(
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10,paddingLeft:8}}>
+                        {s.placements.slice(0,5).map((pid,pi)=>{
+                          const p=players.find(x=>x.id===pid);if(!p)return null;
+                          const k=s.kills?.[pid]||0;
+                          const medals=["🥇","🥈","🥉"];
+                          return(
+                            <div key={pid} style={{display:"flex",alignItems:"center",gap:5,
+                              background:`${p.color}14`,border:`1px solid ${p.color}44`,
+                              borderRadius:8,padding:"4px 9px"}}>
+                              <span style={{fontSize:".78rem"}}>{pi<3?medals[pi]:`${pi+1}.`}</span>
+                              <Av p={p} size={22}/>
+                              <span style={{fontFamily:"Fredoka One",color:p.color,fontSize:".8rem"}}>{p.username}</span>
+                              {k>0&&<span style={{color:"#FF4D8F",fontSize:".72rem",fontWeight:700}}>{k}k</span>}
+                            </div>
+                          );
+                        })}
+                        {s.placements.length>5&&(
+                          <div style={{display:"flex",alignItems:"center",padding:"4px 9px",
+                            background:"rgba(255,255,255,.06)",borderRadius:8,color:"var(--text3)",fontSize:".76rem",fontWeight:700}}>
+                            +{s.placements.length-5} more
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div style={{display:"flex",gap:7,flexWrap:"wrap",paddingLeft:8}}>
+                      {winner&&(
+                        <div style={{background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.25)",
+                          borderRadius:8,padding:"5px 11px",display:"flex",alignItems:"center",gap:7}}>
+                          <span style={{fontSize:".7rem",color:"var(--text3)"}}>🏆 Closed the room</span>
+                          <Av p={winner} size={22}/>
+                          <span style={{fontFamily:"Fredoka One",color:winner.color,fontSize:".86rem"}}>{winner.username}</span>
+                        </div>
+                      )}
+                      {tkP&&tkK>0&&(
+                        <div style={{background:"rgba(255,77,143,.08)",border:"1px solid rgba(255,77,143,.25)",
+                          borderRadius:8,padding:"5px 11px",display:"flex",alignItems:"center",gap:7}}>
+                          <span style={{fontSize:".7rem",color:"var(--text3)"}}>💀 Damage lead</span>
+                          <Av p={tkP} size={22}/>
+                          <span style={{fontFamily:"Fredoka One",color:tkP.color,fontSize:".86rem"}}>{tkP.username} ({tkK}k)</span>
+                        </div>
+                      )}
+                    </div>
+                    {expandedSid===s.id&&s.placements&&s.placements.length>0&&(
+                      <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,.1)",paddingTop:14,paddingLeft:8}}
+                        onClick={e=>e.stopPropagation()}>
+                        <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>How the room broke</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                          {s.placements.map((pid,pi)=>{
+                            const p=players.find(x=>x.id===pid);if(!p)return null;
+                            const k=s.kills?.[pid]||0;
+                            const medals=["🥇","🥈","🥉"];
+                            const isWin=pi===0;
+                            return(
+                              <div key={pid} onClick={()=>goProfile(pid)} style={{
+                                display:"flex",alignItems:"center",gap:10,
+                                background:isWin?"rgba(255,215,0,.08)":`${p.color}08`,
+                                border:`1px solid ${isWin?"rgba(255,215,0,.3)":`${p.color}22`}`,
+                                borderRadius:9,padding:"7px 12px",cursor:"pointer"}}>
+                                <span style={{fontFamily:"Fredoka One",fontSize:pi<3?"1.1rem":".9rem",minWidth:26,textAlign:"center",color:pi<3?"#fff":"var(--text3)"}}>{pi<3?medals[pi]:`${pi+1}`}</span>
+                                <Av p={p} size={28}/>
+                                <span style={{fontFamily:"Fredoka One",color:p.color,fontSize:".88rem",flex:1}}>{p.username}</span>
+                                <span style={{fontFamily:"Fredoka One",color:k>0?"#FF4D8F":"var(--text3)",fontSize:".9rem"}}>{`${k}K`}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div style={{position:"absolute",top:12,right:adminMode?44:12,color:"var(--text3)",fontSize:".72rem",fontWeight:700}}>
+                      {expandedSid===s.id?"▲":"▼"}
+                    </div>
+                    {s.clip&&(
+                      <div style={{marginTop:8,paddingLeft:8}}>
+                        <a href={s.clip} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{
+                          display:"inline-flex",alignItems:"center",gap:6,
+                          padding:"4px 12px",borderRadius:8,textDecoration:"none",
+                          background:"rgba(145,71,255,.18)",border:"1px solid rgba(145,71,255,.4)",
+                          color:"#cc99ff",fontWeight:700,fontSize:".74rem"}}>
+                          🎬 Watch clip
+                        </a>
+                      </div>
+                    )}
+                    {expandedSid===s.id&&(
+                      <div style={{marginTop:10,paddingLeft:8}}>
+                        <button onClick={e=>{e.stopPropagation();setShareCard({sid:s.id,visible:true});}}
+                          style={{display:"inline-flex",alignItems:"center",gap:6,
+                            padding:"5px 14px",borderRadius:8,cursor:"pointer",
+                            background:"rgba(0,229,255,.12)",border:"1px solid rgba(0,229,255,.4)",
+                            color:"#00E5FF",fontWeight:700,fontSize:".78rem"}}>
+                          📤 Share report
+                        </button>
+                      </div>
+                    )}
+
+                    {adminMode&&(
+                      <div style={{position:"absolute",top:10,right:10,display:"flex",gap:5}}>
+                        <button onClick={e=>{e.stopPropagation();handleEditSession(s);}} style={{
+                          background:"rgba(255,215,0,.15)",border:"1px solid rgba(255,215,0,.5)",
+                          color:"#FFD700",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:".7rem"}}>✏️</button>
+                        <button onClick={e=>{e.stopPropagation();handleDelSession(s.id);}} style={{
+                          background:"rgba(231,76,60,.15)",border:"1px solid #E74C3C",
+                          color:"#E74C3C",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:".7rem"}}>✕</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
+
+            {filtered.length>visible.length&&(
+              <div style={{...card({padding:18,textAlign:"center",border:"1px dashed rgba(255,255,255,.14)"})}}>
+                <div className="bc7" style={{fontSize:".74rem",letterSpacing:".08em",color:"var(--text3)",marginBottom:10}}>
+                  {filtered.length-visible.length} older report{filtered.length-visible.length!==1?"s":""} still waiting deeper in the archive
+                </div>
+                <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+                  <button onClick={()=>setLobbyLimit((count)=>count+8)} style={{
+                    ...primaryBtn({padding:"10px 18px",fontSize:".86rem"})
+                  }}>
+                    Load older reports
+                  </button>
+                  {lobbyLimit>8&&(
+                    <button onClick={()=>setLobbyLimit(8)} style={{
+                      padding:"10px 16px",borderRadius:10,border:"1.5px solid var(--border)",
+                      background:"rgba(255,255,255,.07)",color:"var(--text2)",cursor:"pointer",fontWeight:700,fontSize:".82rem"}}>
+                      Back to freshest file
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           )})()}
         </div>
@@ -3290,43 +4453,43 @@ export default function GameNight(){
           const s2Note=s2St.wins>0?` ${s2St.wins}W in Season 2 so far.`:"";
 
           const bios={
-            p01:`Mekula runs the whole thing and still leads the all-time kill chart. ${s.kills} kills. That number does not happen by accident. He is in every fight, every lobby, every night. The wins do not always come but the damage always does.${s2Note}${streakNote}`,
-            p02:`${s.wins} wins. That is the number. Teriqstp has been the most consistent player in this lobby from the start and Season 1 was not even close. They ran it wire to wire. Everyone who sits down across from them knows what they are getting into.${s2Note}`,
-            p03:`Sanctus. ${s.appearances} lobbies in, one win on the board. The big performances are there if you look back through the records. They just do not come every night.${droughtNote}`,
-            p04:`DjxHunter can take over a lobby completely when the mood is right. ${s.wins} wins, a 6-kill best game, Season 1 podium. The issue is consistency. Some nights it all clicks, other nights it just does not.${droughtNote}${streakNote}`,
-            p05:`Bohdanmain shows up, says nothing, and sometimes wins four lobbies in a row. ${s.wins} wins from ${s.appearances} games. The quiet ones are always the ones you forget to watch.${s2Note}`,
-            p06:`One of the early guys. 8 wins, ${s.appearances} lobbies, helped set the tone in the first weeks before a lot of the regulars found their way in. The record is there.`,
-            p07:`${s.wins} wins and ${s.kills} kills. Dhemo is probably the most well-rounded player in the lobby. Wins consistently, kills consistently, shows up consistently. Hard to find a weakness on paper.${droughtNote}`,
-            p08:`${s.wins} wins across ${s.appearances} lobbies and counting. Chugrud grinds every session without making a fuss about it. Not the flashiest player but they close out lobbies and that is what the record shows.${s2Note}`,
-            p09:`${s.appearances} lobbies played. Zero wins. SirHaazy99 has been in more games than players who have five wins. Pure loyalty to the lobby. The first one is going to feel different when it comes.`,
-            p10:`Dipped in for ${s.appearances} games and made an impression. Izzyboi is in the archive now.`,
-            p11:`Loudmouth has ${s.wins} wins from ${s.appearances} lobbies and has been part of some of the best sessions this league has had. The win rate looks modest but the nights when they go off, everyone remembers.${droughtNote}`,
-            p12:`${s.wins}W and ${s.kills}K from ${s.appearances} games. Michkyle comes and goes but when they are in the lobby they compete properly. The record would look different with more appearances.`,
-            p13:`${s.wins} wins from ${s.appearances} lobbies. TheLostOG has one of the better win rates among the new faces and is building something in Season 2.${s2Note} Less time in the lobby but they make it count.`,
-            p14:`${s.wins} wins, ${s.kills} kills, and a legitimate case for being the most dangerous player in Season 2 right now. Hackqam went from showing up occasionally to being one of the more dangerous players in the lobby over the last few weeks.${s2Note}`,
-            p15:`${s.wins} wins and Nellywaz is still finding another gear. The Season 2 run has been the best stretch of their time in the lobby so far.${s2Note}${streakNote} Quiet player who lets the results speak.`,
-            p16:`${s.wins} wins from ${s.appearances} games. Zakipro has one of the better win rates in the lobby relative to time spent, just does not log as many sessions as the regulars.${s2Note}`,
-            p17:`ZapGrupoBulletBR. ${s.appearances} games logged. Longest name in the lobby by a mile and still shows up.`,
-            p18:`${s.appearances} lobbies. CelesteHI5 has played more games than most people realise. Been here since the first few weeks. ${s.wins} wins, ${s.kills} kills, here every week.${s2Note}`,
-            p19:`6 games played and a win among them. xLilithx left a mark quickly and has a better win rate than a lot of players with five times the appearances.`,
-            p20:`${s.wins}W from ${s.appearances} lobbies. DeadlySoaringSeagull6 competes properly when they are in the room. Not a regular yet but the record is respectable.`,
-            p21:`${s.appearances} lobbies in, first win still to come. Beedee4PF keeps showing up. That counts for something in a lobby this competitive.`,
-            p22:`On the roster. Bxdguy's first lobby is the only thing standing between a blank record and a story.`,
-            p23:`One lobby. One kill. ReyzinhoPL has a record in this league now and that is permanent.`,
-            p24:`${s.wins} wins, best game of 4 kills, ${s.appearances} lobbies. Web3guy brings proper competition when they show up. The sessions where they are in the lobby are usually livelier.`,
-            p25:`12 wins from 33 lobbies and the best win rate among the regulars. FKxKingLurius is not a kills player. They manage lobbies and close them out. That is a specific kind of good.`,
-            p26:`Web3hustlre is on the books. First game writes the first line.`,
-            p27:`FKxPhanteon is registered. Everything else is still to happen.`,
-            p28:`Lazerine is on the roster. Waiting.`,
-            p29:`${s.wins} wins from ${s.appearances} lobbies at a 35% win rate. ElderRovingWorm81 walked into Season 2 and immediately started collecting wins. Efficient, dangerous, and clearly been practising.${s2Note}`,
-            p30:`7 kills in a single lobby. That is the all-time record and EZEDINEYoutube owns it. ${s.wins} wins, ${s.kills} kills, and the kind of ceiling that makes other players nervous when they see the name in the lobby.${s2Note}`,
-            p31:`${s.appearances} games logged. Ironlover keeps coming back. The record grows every session they are in.`,
-            p32:`One lobby. KhingPilot is in the archive.`,
-            p33:`One lobby. iVimXGF is in the archive.`,
-            p34:`${s.wins} wins and ${s.kills} kills from ${s.appearances} games. TMIyc does not play many sessions but shows up ready when they do.`,
-            p35:`${s.appearances} lobbies and still going. Demejii55 keeps turning up. The first win is the one that changes everything.`,
-            p36:`${s.appearances} games logged. 0netwoo is building it slowly.`,
-            p37:`First lobby in the books. FKxVanBR is part of the record now.`,
+            p01:`Mekula runs the room and still sits on top of the all-time kill board. ${s.kills} kills is not admin privilege, it is repeated work. Every night he is in the middle of the chaos, pressing fights and making the lobby move. The wins swing. The damage rarely does.${s2Note}${streakNote}`,
+            p02:`${s.wins} wins on the file. Teriqstp set the tone for what winning here looks like, especially in Season 1 where the race never really opened up. Calm, consistent, and hard to shake once they settle into a session.${s2Note}`,
+            p03:`Sanctus has ${s.appearances} lobbies on record and one win to prove the room can crack open when the timing is right. The ceiling is there. The trick is getting that version to stay for a full night.${droughtNote}`,
+            p04:`DjxHunter has the kind of game that can swallow a lobby whole when it clicks. ${s.wins} wins, a 6-kill ceiling, and a Season 1 podium run say the threat is real. The mystery is which version shows up on a given night.${droughtNote}${streakNote}`,
+            p05:`Bohdanmain is quiet until the scoreboard forces everybody to notice. ${s.wins} wins from ${s.appearances} games, plus that four-win streak that still hangs in the air. The calm ones are the ones that punish you for looking away.${s2Note}`,
+            p06:`One of the early names on the board. ${s.wins} wins from ${s.appearances} lobbies and part of the group that gave the room its first rhythm. The file is older than the spotlight, and it still carries weight.`,
+            p07:`${s.wins} wins and ${s.kills} kills make Dhemo one of the cleanest all-round files in the room. They win enough, frag enough, and show up enough that there is no easy angle against them on paper.${droughtNote}`,
+            p08:`${s.wins} wins across ${s.appearances} lobbies. Chugrud keeps stacking useful nights without asking for the spotlight. Not always the loudest player in the room, but the file keeps adding proof.${s2Note}`,
+            p09:`${s.appearances} lobbies, no win yet, and still SirHaazy99 keeps turning up. That matters more here than people admit. When the first one lands, the room is going to celebrate like it was overdue.`,
+            p10:`Izzyboi only stayed for ${s.appearances} games, but they left a footprint. Not every file gets thick before it earns a place in the archive.`,
+            p11:`Loudmouth has ${s.wins} wins from ${s.appearances} lobbies and a habit of being around when sessions get memorable. The win rate is one story. The nights they really catch fire are another.${droughtNote}`,
+            p12:`${s.wins}W and ${s.kills}K from ${s.appearances} games. Michkyle never feels like a free lobby. If the attendance ever settles, the file probably gets heavier in a hurry.`,
+            p13:`${s.wins} wins from ${s.appearances} lobbies. TheLostOG has not been here long, but the conversion rate already reads like somebody who understands timing and pressure.${s2Note} Less screen time, real impact.`,
+            p14:`${s.wins} wins and ${s.kills} kills. Hackqam has gone from occasional name on the roster to one of the sharper dangers in Season 2. More confident, more decisive, and clearly more comfortable in the room now.${s2Note}`,
+            p15:`${s.wins} wins and Nellywaz still feels mid-rise. Season 2 has been the strongest stretch of their run so far, and the file suggests there is still another level to unlock.${s2Note}${streakNote} Quiet presence, real threat.`,
+            p16:`${s.wins} wins from ${s.appearances} games. Zakipro does not log the same volume as the regulars, but the efficiency is hard to miss whenever they do show.${s2Note}`,
+            p17:`ZapGrupoBulletBR has ${s.appearances} games logged and the kind of tag nobody forgets after reading it once. Every appearance adds another line to a file that still feels early.`,
+            p18:`${s.appearances} lobbies and counting. CelesteHI5 has been around longer than people remember and the file shows it. ${s.wins} wins, ${s.kills} kills, steady appearances, quiet permanence.${s2Note}`,
+            p19:`Six games, one win, instant footprint. xLilithx did not need a long stay to prove they could bite, and the win rate still looks cleaner than plenty of longer files.`,
+            p20:`${s.wins}W from ${s.appearances} lobbies. DeadlySoaringSeagull6 does not clock in every night, but when they do the room has to take them seriously.`,
+            p21:`${s.appearances} lobbies in and the first win is still waiting. Beedee4PF keeps answering the call anyway. That kind of patience usually gets paid eventually.`,
+            p22:`Bxdguy is on the roster and waiting for the first real chapter. Right now the file is blank space and possibility.`,
+            p23:`One lobby. One kill. ReyzinhoPL touched the board once and made it count. That line stays in the archive whether the next one comes tomorrow or months from now.`,
+            p24:`${s.wins} wins, a 4-kill best game, ${s.appearances} lobbies. Web3guy tends to make sessions sharper when they are around. The room feels more competitive with that tag in it.`,
+            p25:`Twelve wins from 33 lobbies and one of the best win rates among the regulars. FKxKingLurius is less about chaos than control. They read rooms, manage tempo, and close when the opening appears.`,
+            p26:`Web3hustlre has a nameplate and an empty page waiting for ink. The first proper run writes the tone of the whole file.`,
+            p27:`FKxPhanteon is registered. The rest of the story still belongs to whatever happens the next time the lobby opens.`,
+            p28:`Lazerine is on the board and waiting for the room to meet them properly. Some files start quiet.`,
+            p29:`${s.wins} wins from ${s.appearances} lobbies at a 35% win rate. ElderRovingWorm81 walked into Season 2 like they had already studied the room. Efficient, dangerous, very little wasted motion.${s2Note}`,
+            p30:`Seven kills in a single lobby is still the all-time ceiling, and EZEDINEYoutube owns it. ${s.wins} wins, ${s.kills} kills, and the kind of upside that changes how people queue when they see the name.${s2Note}`,
+            p31:`${s.appearances} games logged. Ironlover keeps coming back and keeps thickening the record. Not every story jumps. Some grow by return visits.`,
+            p32:`KhingPilot touched one lobby and left a single entry in the archive. Short file, permanent mark.`,
+            p33:`iVimXGF has one lobby on record and that is enough to be part of the story now. The archive keeps even the brief visits.`,
+            p34:`${s.wins} wins and ${s.kills} kills from ${s.appearances} games. TMIyc does not play often, but the file says they do not waste appearances either.`,
+            p35:`${s.appearances} lobbies and still answering the call. Demejii55 is building the kind of file that only needs one breakthrough night to look very different.`,
+            p36:`${s.appearances} games logged. 0netwoo is laying the groundwork slowly. Quiet progress still counts as progress.`,
+            p37:`FKxVanBR has the first lobby on record. That is how every file starts. The question is what comes after the opener.`,
           };
           return bios[pid]||`${s.wins}W and ${s.kills}K across ${s.appearances} lobbies.`;
         };
@@ -3346,7 +4509,7 @@ export default function GameNight(){
         const yPos=v=>PAD_T+Math.round(CH-(v/axisMax)*CH);
         const pts=spark.map((v,i)=>`${xPos(i)},${yPos(v)}`).join(" ");
         const diffDays=lastSeen?Math.floor((new Date()-new Date(lastSeen+"T12:00:00Z"))/(1000*60*60*24)):null;
-        const lastSeenLabel=diffDays===0?"Today":diffDays===1?"Yesterday":diffDays!=null?`${diffDays}d ago`:"—";
+        const lastSeenLabel=diffDays===0?"Today":diffDays===1?"Yesterday":diffDays!=null?`${diffDays}d ago`:"Awaiting debut";
 
         return(
           <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
@@ -3368,7 +4531,7 @@ export default function GameNight(){
             {/* SELECT COMBATANT */}
             <div style={{marginBottom:18}}>
               <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
-                color:"var(--text3)",marginBottom:10}}>SELECT COMBATANT</div>
+                color:"var(--text3)",marginBottom:10}}>OPEN A FILE</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                 {players.map(pl=>(
                   <button key={pl.id} onClick={()=>{setProfileId(pl.id);}} style={{
@@ -3504,8 +4667,8 @@ export default function GameNight(){
                 </div>
                 <div className="bc7" style={{fontSize:".6rem",color:"var(--text3)",
                   marginTop:8,letterSpacing:".06em"}}>
-                  {form.filter(f=>f.win).length>=4?"Strong form":
-                   form.filter(f=>f.win).length>=2?"Decent form":"Rough patch"}
+                  {form.filter(f=>f.win).length>=4?"Running hot":
+                   form.filter(f=>f.win).length>=2?"Holding steady":"Looking for a spark"}
                 </div>
               </div>
               {/* Primary rival */}
@@ -3530,7 +4693,7 @@ export default function GameNight(){
                   </div>
                   <div className="bc7" style={{fontSize:".62rem",color:"rgba(255,255,255,.35)",
                     letterSpacing:".06em"}}>
-                    {rivalWins}–{rivalLoss} in {topRival?.total||0} meetings
+                    {rivalWins}-{rivalLoss} in {topRival?.total||0} meetings
                   </div>
                 </div>
               ):(
@@ -3539,7 +4702,7 @@ export default function GameNight(){
                   borderLeft:"3px solid rgba(255,255,255,.1)",display:"flex",
                   alignItems:"center",justifyContent:"center"}}>
                   <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
-                    textAlign:"center",letterSpacing:".08em"}}>NO RIVAL DATA YET</div>
+                    textAlign:"center",letterSpacing:".08em"}}>DUEL FILE STILL OPEN</div>
                 </div>
               )}
             </div>
@@ -3689,12 +4852,12 @@ export default function GameNight(){
             <div style={{height:1,background:"linear-gradient(90deg,rgba(199,125,255,.44),transparent)",
               marginBottom:8}}/>
             <div className="bc7" style={{fontSize:".72rem",letterSpacing:".12em",color:"var(--text3)"}}>
-              All-time records · Numbers that do not move
+              All-time records · stories the room keeps bringing back
             </div>
           </div>
           {(()=>{
             const rec=getRecords();
-            if(!rec)return <p style={{color:"var(--text3)",textAlign:"center"}}>No data yet.</p>;
+            if(!rec)return <p style={{color:"var(--text3)",textAlign:"center"}}>The Vault opens once the room has history worth keeping.</p>;
             const topWinP=players.find(p=>p.id===rec.topWinner[0]);
             const topKillP=players.find(p=>p.id===rec.topKiller[0]);
             const topGameP=players.find(p=>p.id===rec.topGame.pid);
@@ -3703,14 +4866,14 @@ export default function GameNight(){
             const firstWinP=players.find(p=>p.id===rec.first?.winner);
             const topDayKillP=players.find(p=>p.id===rec.topDayKill?.pid);
             const records=[
-              {icon:"🏆",color:"#FFD700",title:"Most Wins All Time",  player:topWinP,  stat:`${rec.topWinner[1]} wins`,    sub:"All-time win leader"},
-              {icon:"💀",color:"#FF4D8F",title:"Most Kills All Time",  player:topKillP, stat:`${rec.topKiller[1]} kills`,   sub:"All-time kill leader"},
-              {icon:"☄️",color:"#FF6B35",title:"Highest Single Game",  player:topGameP, stat:`${rec.topGame.k}K`,           sub:`${rec.topGame.sid} · ${rec.topGame.date}`},
-              {icon:"🔥",color:"#FF6B35",title:"Longest Win Streak",   player:streakP,  stat:`${rec.bestStreak.streak} in a row`, sub:"Best consecutive wins · one day"},
-              {icon:"🌋",color:"#FF4D8F",title:"Most Kills in a Day",  player:topDayKillP, stat:`${rec.topDayKill?.k||0}K`, sub:rec.topDayKill?.date||""},
-              {icon:"📆",color:"#00E5FF",title:"Most Lobbies in a Day",player:topDayP,  stat:`${rec.topDay.count} lobbies`, sub:rec.topDay.date},
-              {icon:"🎮",color:"#00FF94",title:"Total Sessions",       player:null,     stat:rec.totalSessions,             sub:`${[...new Set(sessions.map(s=>s.date))].length} session days`},
-              {icon:"⚡",color:"#C77DFF",title:"First Ever Win",       player:firstWinP,stat:rec.first?.date||"—",          sub:`In ${rec.first?.id||"—"}`},
+              {icon:"🏆",color:"#FFD700",title:"Most Wins All Time",  player:topWinP,  stat:`${rec.topWinner[1]} wins`,    sub:"Still the crown every closer is chasing"},
+              {icon:"💀",color:"#FF4D8F",title:"Most Kills All Time",  player:topKillP, stat:`${rec.topKiller[1]} kills`,   sub:"The room's all-time damage line still runs through this file"},
+              {icon:"☄️",color:"#FF6B35",title:"Highest Single Game",  player:topGameP, stat:`${rec.topGame.k}K`,           sub:`${rec.topGame.sid} · one burst the room still talks about from ${rec.topGame.date}`},
+              {icon:"🔥",color:"#FF6B35",title:"Longest Win Streak",   player:streakP,  stat:`${rec.bestStreak.streak} in a row`, sub:"The cleanest run anyone has held together in one sitting"},
+              {icon:"🌋",color:"#FF4D8F",title:"Most Kills in a Day",  player:topDayKillP, stat:`${rec.topDayKill?.k||0}K`, sub:rec.topDayKill?.date?`${rec.topDayKill.date} · the loudest session day on file`:"The room is still waiting for that kind of eruption"},
+              {icon:"📆",color:"#00E5FF",title:"Most Lobbies in a Day",player:topDayP,  stat:`${rec.topDay.count} lobbies`, sub:`${rec.topDay.date} · the heaviest one-day grind the archive has seen`},
+              {icon:"🎮",color:"#00FF94",title:"Total Sessions",       player:null,     stat:rec.totalSessions,             sub:`${[...new Set(sessions.map(s=>s.date))].length} session days since the room first went live`},
+              {icon:"⚡",color:"#C77DFF",title:"First Ever Win",       player:firstWinP,stat:rec.first?.date||"Archive unopened", sub:rec.first?.id?`In ${rec.first.id} · the crown that started the whole file`:"The opening crown is still waiting"},
             ];
             return(
               <div>
@@ -3757,7 +4920,7 @@ export default function GameNight(){
                     letterSpacing:".06em",marginBottom:4}}>💀 KILL KING BY SESSION DAY</div>
                   <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
                     marginBottom:16,letterSpacing:".06em"}}>
-                    Highest kills in a single lobby per session night
+                    The loudest kill spike from each session night
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:3}}>
                     {(()=>{
@@ -3801,7 +4964,7 @@ export default function GameNight(){
                                 overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                                 cursor:kkP?"pointer":"default"}}
                                 onClick={()=>kkP&&goProfile(kkP.id)}>
-                                {kkP?dn(kkP.username):"No kills recorded"}
+                                {kkP?dn(kkP.username):"Night stayed quiet"}
                               </div>
                               {kkMax>0&&<div className="bc7" style={{
                                 fontSize:".62rem",color:"#FF4D8F",lineHeight:1,marginTop:2}}>
@@ -4346,10 +5509,10 @@ export default function GameNight(){
                 borderRadius:20,padding:"40px 24px",textAlign:"center"}}>
                 <div style={{fontSize:"2.5rem",marginBottom:12}}>🎮</div>
                 <div style={{fontFamily:"Fredoka One",fontSize:"1.3rem",color:"#00E5FF",marginBottom:8}}>
-                  No lobbies logged yet
+                  Season 2 has not logged its opener yet
                 </div>
                 <p style={{color:"var(--text3)",fontSize:".85rem",fontWeight:600}}>
-                  Season 2 sessions will appear here after they are added.
+                  Once the first lobby is filed, the whole season board wakes up here.
                 </p>
               </div>
             );
@@ -4393,7 +5556,7 @@ export default function GameNight(){
                               {pick.host?"👑 ":""}{pick.username}
                             </div>
                             <div style={{fontSize:".7rem",color:"var(--text3)",fontWeight:700,marginTop:2}}>
-                              {pickStats?`${pickStats.wins}W · ${pickStats.appearances} lobbies played`:"No S2 games yet"}
+                              {pickStats?`${pickStats.wins}W · ${pickStats.appearances} lobbies played`:"Yet to drop into S2"}
                             </div>
                           </div>
                         </div>
@@ -4414,7 +5577,7 @@ export default function GameNight(){
                             </div>
                           ):(
                             <div style={{fontFamily:"Fredoka One",color:"var(--text3)",fontSize:".9rem"}}>
-                              Waiting on their first game…
+                              Waiting on their first drop into the season
                             </div>
                           )}
                         </div>
@@ -4501,9 +5664,9 @@ export default function GameNight(){
                 {/* S2 Award cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:14,marginBottom:28}}>
                   {[
-                    {icon:"👑",color:"#00E5FF",title:"S2 Champion",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"—",desc:"Most wins in Season 2"},
-                    {icon:"💀",color:"#FF4D8F",title:"S2 Reaper",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:"—",desc:"Most kills this season"},
-                    {icon:"🎮",color:"#00FF94",title:"Most Loyal",player:byApp[0],stat:byApp[0]?`${byApp[0].appearances} lobbies`:"—",desc:"Most appearances in S2"},
+                    {icon:"👑",color:"#00E5FF",title:"S2 Champion",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Race still open",desc:"Currently carrying the season crown"},
+                    {icon:"💀",color:"#FF4D8F",title:"S2 Reaper",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:"Board still open",desc:"Setting the damage line for the season"},
+                    {icon:"🎮",color:"#00FF94",title:"Most Loyal",player:byApp[0],stat:byApp[0]?`${byApp[0].appearances} lobbies`:"Attendance still forming",desc:"Keeps answering the call and thickening the season file"},
                     ...(topGame.pid?[{icon:"☄️",color:"#C77DFF",title:"Best Single Game",player:players.find(p=>p.id===topGame.pid),stat:`${topGame.k} kills in ${topGame.sid}`,desc:topGame.date}]:[]),
                   ].map((a,i)=>{
                     if(!a.player)return null;
@@ -4589,11 +5752,11 @@ export default function GameNight(){
       {view==="faq"&&(
         <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:36}}>
-            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Everything you need to know</p>
+            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Field notes before you drop in</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
               background:"linear-gradient(135deg,#FFD700,#C77DFF,#00E5FF)",
               WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
-              ❓ FAQ
+              ❓ BRIEFING FILE
             </h2>
           </div>
 
@@ -4602,8 +5765,8 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <span style={{fontSize:"1.6rem"}}>🏅</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>Rank Titles: What Do They Mean?</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Titles appear under every player name. Only one person can hold each top title at a time.</p>
+                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>Callsigns: What They Mean</h3>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>These titles sit under each player name. The top ones belong to one player at a time, until somebody takes them.</p>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
@@ -4624,8 +5787,8 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <span style={{fontSize:"1.6rem"}}>🎖️</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.3rem"}}>Badges: How to Earn Them</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Badges stack. You can hold multiple at once. Tap to expand.</p>
+                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.3rem"}}>Commendations: How to Earn Them</h3>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Badges stack, and the room remembers all of them. Tap to open a file note.</p>
               </div>
             </div>
             <div>
@@ -4655,23 +5818,23 @@ export default function GameNight(){
               <span style={{fontSize:"1.6rem"}}>📊</span>
               <div>
                 <h3 style={{fontFamily:"Fredoka One",color:"#00E5FF",fontSize:"1.3rem"}}>Stats Glossary</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>What every number on the leaderboard means</p>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>What the board is actually telling you</p>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
               {[
-                {icon:"🏆",term:"Wins",            color:"#FFD700",def:"Number of lobbies where you finished 1st place on the leaderboard."},
-                {icon:"💀",term:"Kills",            color:"#FF4D8F",def:"Total kills across every lobby you've appeared in."},
-                {icon:"⚡",term:"K/G (Kills/Game)", color:"#00E5FF",def:"Total kills ÷ total lobbies played. Shows how many kills you're averaging every game, win or lose."},
-                {icon:"🎯",term:"Win Rate %",       color:"#00FF94",def:"Wins ÷ Appearances × 100. How often you actually close one out when you show up."},
-                {icon:"📅",term:"Appearances",      color:"#FFAB40",def:"Total lobbies you've been present in, regardless of result. Showing up is the first step."},
-                {icon:"🌟",term:"Best Game",        color:"#C77DFF",def:"Your highest single-lobby kill count ever. One lobby where you went off."},
-                {icon:"🔥",term:"Win Streak",       color:"#FF6B35",def:"Consecutive wins within the same session day. Resets each new day, so a 5-streak in one night matters."},
-                {icon:"⚔️",term:"Duels (Rivals)",   color:"#FF4D8F",def:"Times you and another player finished 1st and 2nd in the same lobby. The Rivals page tracks who wins those matchups."},
-                {icon:"⚡",term:"Latest Day",       color:"#00E5FF",def:"Filters the leaderboard to the most recent session date. See who ran the table that night specifically."},
-                {icon:"🎖️",term:"Carry Score",     color:"#FF6B35",def:"Wins where you also had the most kills in the lobby. You won it AND you did the damage. The complete performance."},
-                {icon:"🧱",term:"Consistency",      color:"#00FF94",def:"% of lobbies where you finished in the top half. You don't have to win every game. You just have to not be mid. This rewards players who reliably perform."},
-                {icon:"🌵",term:"Drought",          color:"#FFAB40",def:"How many lobbies since your last win. Zero means your most recent game was a W. The higher this gets, the more the community is watching."},
+                {icon:"🏆",term:"Wins",            color:"#FFD700",def:"How many lobbies you finished first in. Simple. You wore the crown that round."},
+                {icon:"💀",term:"Kills",            color:"#FF4D8F",def:"Total eliminations across every lobby you have entered. Pressure leaves receipts."},
+                {icon:"⚡",term:"K/G (Kills/Game)", color:"#00E5FF",def:"Total kills divided by lobbies played. A quick read on how much damage you bring each time you show."},
+                {icon:"🎯",term:"Win Rate %",       color:"#00FF94",def:"Wins divided by appearances. How often you actually close the room once you are in it."},
+                {icon:"📅",term:"Appearances",      color:"#FFAB40",def:"Every lobby you showed up for. The file respects attendance before it respects legacy."},
+                {icon:"🌟",term:"Best Game",        color:"#C77DFF",def:"Your highest single-lobby kill count. The one night people bring up again later."},
+                {icon:"🔥",term:"Win Streak",       color:"#FF6B35",def:"Consecutive wins on the same session day. It resets with a new date, so hot nights stand on their own."},
+                {icon:"⚔️",term:"Duels (Rivals)",   color:"#FF4D8F",def:"Times you and another player finished first and second in the same lobby. The Rivals board tracks who blinked first."},
+                {icon:"⚡",term:"Latest Day",       color:"#00E5FF",def:"Filters the Arena to the most recent session only. Good for seeing who owned the room last time out."},
+                {icon:"🎖️",term:"Carry Score",     color:"#FF6B35",def:"Wins where you also led the lobby in kills. You closed it and did the lifting."},
+                {icon:"🧱",term:"Consistency",      color:"#00FF94",def:"Percent of lobbies where you finished in the top half. Not flashy, but the room notices reliable players."},
+                {icon:"🌵",term:"Drought",          color:"#FFAB40",def:"How many lobbies since your last win. Zero means your latest outing ended with the crown."},
               ].map((s,i)=>(
                 <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"13px 16px",border:`1px solid ${s.color}22`}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
@@ -4689,9 +5852,9 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
               <span style={{fontSize:"1.6rem"}}>⚡</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>How Levels Work</h3>
+                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>Levels: How They Climb</h3>
                 <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>
-                  Every player earns XP just by playing. Your level shows on the Arena table and your Combat File.
+                  XP builds every time you show up. Your level appears in the Arena and inside every Combat File.
                 </p>
               </div>
             </div>
@@ -4722,10 +5885,10 @@ export default function GameNight(){
             <div style={{background:"rgba(0,0,0,.3)",borderRadius:8,padding:"12px 16px",
               borderLeft:"3px solid rgba(199,125,255,.4)"}}>
               <div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",lineHeight:1.7}}>
-                Level is calculated from total XP using a square root curve — so the early levels come fast but higher levels take real commitment.
-                The mini progress bar in the Arena and your Combat File shows how close you are to the next level.
-                Earning badges is one of the fastest ways to jump levels since each badge is worth 10 XP.
-                The 500 Kills badge alone is worth 10 XP on top of the 250 XP you already earned from the kills themselves.
+                Level comes from total XP on a square-root curve, so the early jumps happen quickly and the higher ranks ask for real staying power.
+                The mini bar in the Arena and your Combat File shows how close you are to the next level.
+                Badges help a lot because each one adds 10 XP on top of whatever you already earned through wins, kills, and appearances.
+                Big milestones do double duty. The 500 Kills badge, for example, lands after the long grind and still gives an extra push.
               </div>
             </div>
           </div>
@@ -4735,18 +5898,18 @@ export default function GameNight(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <span style={{fontSize:"1.6rem"}}>💬</span>
               <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#FF6B35",fontSize:"1.3rem"}}>General Questions</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Everything about how Games Night works. Tap to expand.</p>
+                <h3 style={{fontFamily:"Fredoka One",color:"#FF6B35",fontSize:"1.3rem"}}>Room Questions</h3>
+                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Schedule, rules, and how to get your name on the board. Tap to expand.</p>
               </div>
             </div>
             {[
-              {q:"When do sessions run?",         a:"Mon–Sat, 5:00 PM – 7:00 PM UTC. Hosted by Mekula. Join the Discord to get pinged before each lobby starts."},
-              {q:"How do I get added to the roster?",a:"Join the Discord and ask Mekula to add you. Once you're in the roster, your stats track automatically from the next session."},
-              {q:"What is Bullet League?",        a:"Bullet League is the featured game for Games Night. A fast-paced multiplayer battle game. Players compete in friend lobbies every session."},
-              {q:"How are winners determined?",   a:"The player who places 1st on the in-game leaderboard at the end of each round wins that lobby. Kills shown next to names are that lobby's kill count."},
-              {q:"Why does my Win Rate show 0% even if I played?",a:"Win Rate only counts as meaningful once you've won at least once. Keep showing up. Your appearance count still grows."},
-              {q:"What is the Rivals page?",      a:"Rivals tracks 1st-vs-2nd place finishes. Any time two players finish at the top of the same lobby, that's a duel. Who wins those head-to-head moments most often?"},
-              {q:"How do I watch the stream?",   a:'Sessions are streamed on Twitch at twitch.tv/mekulavick. Click the Twitch button in the nav to go straight there.'},
+              {q:"When do sessions run?",         a:"Mon-Sat, 5:00 PM to 7:00 PM UTC. Mekula hosts. Discord is where the warning siren goes out before the room opens."},
+              {q:"How do I get added to the roster?",a:"Join the Discord and ask Mekula. Once your name is on the roster, your file starts tracking from the next session you play."},
+              {q:"What is Bullet League?",        a:"Bullet League is the featured battleground for Games Night. Fast rounds, fast swings, and not much room to hide."},
+              {q:"How are winners determined?",   a:"Whoever finishes first on the in-game leaderboard at the end of a round takes that lobby. The kill number beside each name is the confirmed damage for that round."},
+              {q:"Why does my Win Rate show 0% even if I played?",a:"Win Rate only really comes alive once you close a lobby. Until then the file is still tracking your appearances, kills, and pressure. The first win unlocks the rest."},
+              {q:"What is the Rivals page?",      a:"Rivals tracks the matchups that keep repeating. Every time two players finish first and second in the same lobby, the duel is logged and the rivalry grows."},
+              {q:"How do I watch the stream?",   a:"Most sessions go live on Twitch at twitch.tv/mekulavick. The Twitch button in the nav takes you straight to the broadcast."},
             ].map((item,i)=>(
               <div key={i} className="faq-item">
                 <div className="faq-q" onClick={()=>setFaqOpen(100+i===faqOpen?null:100+i)}>
@@ -4799,7 +5962,7 @@ export default function GameNight(){
                 {/* Session title */}
                 <div style={{textAlign:"center",marginBottom:18}}>
                   <div style={{fontFamily:"Fredoka One",fontSize:"clamp(1.1rem,4vw,1.5rem)",
-                    color:"#fff",marginBottom:4}}>Session Recap</div>
+                    color:"#fff",marginBottom:4}}>After-Action Report</div>
                   <div style={{fontSize:".76rem",color:"rgba(255,255,255,.4)",fontWeight:600}}>{dateLabel}</div>
                 </div>
                 {/* Stats banner */}
@@ -4819,7 +5982,7 @@ export default function GameNight(){
                 {/* Winners list */}
                 <div style={{marginBottom:recap.killKing?.k>0?14:0}}>
                   <div style={{fontSize:".62rem",color:"rgba(255,255,255,.3)",fontWeight:800,
-                    letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>🏆 Winners</div>
+                    letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>🏆 Lobby Winners</div>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {recap.winnersList.slice(0,6).map((w,i)=>{
                       if(!w.player)return null;
@@ -4853,7 +6016,7 @@ export default function GameNight(){
                     <div style={{flex:1}}>
                       <div style={{fontSize:".6rem",color:"rgba(255,255,255,.3)",fontWeight:800,
                         textTransform:"uppercase",letterSpacing:1}}>
-                        Kill King{recap.killKingsList?.length>1?" (Tied)":""}
+                        Top Fragger{recap.killKingsList?.length>1?" (Tied)":""}
                       </div>
                       <div style={{fontFamily:"Fredoka One",color:"#FF6B35",fontSize:".9rem"}}>
                         {recap.killKingsList?.length>1
@@ -4876,7 +6039,7 @@ export default function GameNight(){
                 display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
                 <p style={{width:"100%",textAlign:"center",fontSize:".78rem",
                   color:"var(--text3)",fontWeight:600,marginBottom:6}}>
-                  📱 Screenshot this card to share
+                  📱 Grab a screenshot and send it to the squad
                 </p>
                 <button onClick={()=>setShareCard(null)} style={{
                   padding:"8px 22px",borderRadius:10,cursor:"pointer",
@@ -4946,7 +6109,7 @@ export default function GameNight(){
                 {[
                   {l:"Players",v:players_count,c:"var(--cyan)"},
                   {l:"Total Kills",v:totalKills,c:"var(--pink)"},
-                  {l:"Kill King",v:tkKills+"K",c:"var(--orange)"},
+                  {l:"Top Fragger",v:tkKills+"K",c:"var(--orange)"},
                 ].map((st,i)=>(
                   <div key={i} style={{background:"rgba(0,0,0,.4)",borderRadius:10,
                     padding:"10px 8px",textAlign:"center"}}>
@@ -4964,7 +6127,7 @@ export default function GameNight(){
                 <span style={{fontSize:"1.1rem"}}>🔫</span>
                 <div>
                   <div style={{fontSize:".66rem",color:"var(--text3)",fontWeight:800,
-                    textTransform:"uppercase",letterSpacing:1}}>Lobby Kill King</div>
+                    textTransform:"uppercase",letterSpacing:1}}>Lobby Top Fragger</div>
                   <div style={{fontFamily:"Fredoka One",color:"var(--orange)",fontSize:".95rem"}}>
                     {tkPlayer.username} {tkKills}K
                   </div>
@@ -5030,6 +6193,12 @@ export default function GameNight(){
             animation:"lvlSub .4s ease .1s both"}}>
             NOW ENTERING
           </div>
+          <div style={{fontFamily:"Barlow Condensed",fontWeight:800,
+            fontSize:"clamp(.62rem,1.8vw,.8rem)",letterSpacing:".22em",
+            color:`${lvlCard.color}99`,marginBottom:10,textTransform:"uppercase",
+            animation:"lvlSub .35s ease both"}}>
+            {lvlCard.fromLabel} TO {lvlCard.label}
+          </div>
           <div style={{fontSize:"clamp(2rem,6vw,2.5rem)",marginBottom:10,
             animation:"lvlSub .4s ease .05s both"}}>{lvlCard.icon}</div>
           <div style={{
@@ -5041,6 +6210,12 @@ export default function GameNight(){
             animation:"lvlFlicker .8s ease both",
           }}>
             {lvlCard.label}
+          </div>
+          <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+            fontSize:"clamp(.76rem,2vw,.95rem)",letterSpacing:".12em",
+            color:"rgba(200,186,255,.72)",maxWidth:560,margin:"12px auto 0",
+            lineHeight:1.5,animation:"lvlSub .45s ease .12s both"}}>
+            {lvlCard.brief}
           </div>
           {/* Animated line */}
           <div style={{height:2,marginTop:18,
@@ -5107,7 +6282,7 @@ export default function GameNight(){
       </div>
       <div style={{marginBottom:3}}>
         <span style={{fontFamily:"Fredoka One",color:"var(--orange)",fontSize:".86rem"}}>🎯 {SITE_TITLE}</span>
-        {" · Hosted by "}{HOSTED_BY}{" · Mon–Sat 5–7 PM UTC · "}{FEATURED_GAME}
+        {" · Hosted by "}{HOSTED_BY}{" · Mon-Sat 5-7 PM UTC · "}{FEATURED_GAME}
       </div>
       <div>Built for the community 💛</div>
     </footer>
