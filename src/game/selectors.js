@@ -1,4 +1,10 @@
 import { SEASONS } from "./config";
+import {
+  APRIL_FOOLS_DATE,
+  EASTER_SATURDAY_DATE,
+  GOOD_FRIDAY_DATE,
+  filterSessionsBySeason,
+} from "./seasons";
 import { todayStr } from "./time";
 
 export const parseSessionIdNumber = (sessionId = "") => {
@@ -22,6 +28,16 @@ export const createNextSessionId = (sessions) => {
     ) + 1;
 
   return `s${String(nextNumber).padStart(2, "0")}`;
+};
+
+export const createNextPlayerId = (players) => {
+  const nextNumber =
+    players.reduce(
+      (highest, player) => Math.max(highest, parseSessionIdNumber(player.id)),
+      0,
+    ) + 1;
+
+  return `p${String(nextNumber).padStart(2, "0")}`;
 };
 
 export const buildPlayerIndex = (players) =>
@@ -64,18 +80,7 @@ export const getPeriodSessions = (sessions, period = "all") => {
 };
 
 export const getSeasonSessions = (sessions, seasonId) => {
-  if (seasonId === "all") {
-    return sessions;
-  }
-
-  const season = SEASONS.find((item) => item.id === seasonId);
-  if (!season) {
-    return sessions;
-  }
-
-  return sessions.filter(
-    (session) => session.date >= season.start && session.date <= season.end,
-  );
+  return filterSessionsBySeason(sessions, seasonId);
 };
 
 export const getStats = (playerId, sessions) => {
@@ -335,7 +340,13 @@ export const getBadges = (playerId, sessions) => {
     badges.push({ icon: "☄️", label: "Rampage", hot: true });
   }
 
-  if (sessions.some((session) => session.date === "2026-04-04" && session.attendees?.includes(playerId))) {
+  if (
+    sessions.some(
+      (session) =>
+        session.date === EASTER_SATURDAY_DATE &&
+        session.attendees?.includes(playerId),
+    )
+  ) {
     badges.push({ icon: "🥚", label: "Easter Egg" });
   }
 
@@ -343,15 +354,17 @@ export const getBadges = (playerId, sessions) => {
     badges.push({ icon: "🎂", label: "Day One" });
   }
 
-  if (sessions.some((session) => session.date === "2026-04-03" && session.attendees?.includes(playerId))) {
+  if (
+    sessions.some(
+      (session) =>
+        session.date === GOOD_FRIDAY_DATE && session.attendees?.includes(playerId),
+    )
+  ) {
     badges.push({ icon: "💪", label: "No Days Off" });
   }
 
-  const seasonTwo = SEASONS.find((season) => season.id === "s2");
-  if (seasonTwo) {
-    const seasonTwoSessions = sessions.filter(
-      (session) => session.date >= seasonTwo.start && session.date <= seasonTwo.end,
-    );
+  const seasonTwoSessions = filterSessionsBySeason(sessions, "s2");
+  if (seasonTwoSessions.length > 0) {
     const seasonTwoDays = [...new Set(seasonTwoSessions.map((session) => session.date))].sort();
     if (
       seasonTwoDays.length > 0 &&
@@ -388,13 +401,16 @@ export const getBadges = (playerId, sessions) => {
     }
   }
 
-  if (sessions.some((session) => session.date === "2026-04-01" && session.winner === playerId)) {
+  if (
+    sessions.some(
+      (session) =>
+        session.date === APRIL_FOOLS_DATE && session.winner === playerId,
+    )
+  ) {
     badges.push({ icon: "🃏", label: "Fool's Crown", hot: true });
   }
 
-  const seasonOneSessions = sessions.filter(
-    (session) => session.date >= "2026-03-01" && session.date <= "2026-03-31",
-  );
+  const seasonOneSessions = filterSessionsBySeason(sessions, "s1");
   if (seasonOneSessions.length > 0) {
     const seasonOneWinMap = {};
     seasonOneSessions.forEach((session) => {
@@ -761,31 +777,56 @@ export const getWeeklyMissions = (sessions) => {
     {
       icon: "🎮",
       color: "#00E5FF",
-      label: "FULL DEPLOYMENT",
-      desc: "15 lobbies played this week",
+      label: "ROOM LOCKDOWN",
+      desc: "Get 15 lobbies onto the weekly file before reset",
       progress: Math.min(weeklySessions.length, lobbyTarget),
       target: lobbyTarget,
-      unit: `${weeklySessions.length} of ${lobbyTarget} lobbies`,
+      unit: `${weeklySessions.length}/${lobbyTarget} lobbies on file`,
+      measureSingular: "room",
+      measurePlural: "rooms",
+      clearedCopy: "Fifteen rooms on file means the week has real weight now.",
     },
     {
       icon: "💀",
       color: "#FF4D8F",
-      label: "KILL QUOTA",
-      desc: "Community racks up 60 kills",
+      label: "DAMAGE SURGE",
+      desc: "Push 60 kills through the weekly board",
       progress: Math.min(weeklyKills, killTarget),
       target: killTarget,
-      unit: `${weeklyKills} of ${killTarget} kills`,
+      unit: `${weeklyKills}/${killTarget} kills confirmed`,
+      measureSingular: "kill",
+      measurePlural: "kills",
+      clearedCopy: "Sixty kills on file means nobody got a quiet week.",
     },
     {
       icon: "👑",
       color: "#FFD700",
-      label: "THRONE CONTESTED",
-      desc: "4 different winners claim a lobby",
+      label: "CROWN SHAKEUP",
+      desc: "Force 4 different winners onto the weekly file",
       progress: Math.min(uniqueWinners, winnerTarget),
       target: winnerTarget,
-      unit: `${uniqueWinners} of ${winnerTarget} winners`,
+      unit: `${uniqueWinners}/${winnerTarget} winners rotated`,
+      measureSingular: "winner",
+      measurePlural: "winners",
+      clearedCopy: "Four winners on file means the week refused to sit under one crown.",
     },
   ];
+};
+
+const createAdaptiveMissionState = (progress, target, color) => {
+  const gap = Math.max(target - progress, 0);
+  const pct = target > 0 ? progress / target : 0;
+
+  if (gap <= 1) {
+    return { stateLabel: "ON THE EDGE", stateColor: "#FFD700" };
+  }
+  if (pct >= 0.72) {
+    return { stateLabel: "CLOSING IN", stateColor: color };
+  }
+  if (pct >= 0.45) {
+    return { stateLabel: "BUILDING", stateColor: color };
+  }
+  return { stateLabel: "LIVE WATCH", stateColor: "rgba(255,255,255,.56)" };
 };
 
 export const getRecords = (sessions, players) => {
@@ -1043,6 +1084,831 @@ export const getDayRecap = (date, sessions, players) => {
   };
 };
 
+export const getLatestDayConsequences = (
+  sessions,
+  players,
+  date = getLatestSessionDate(sessions),
+) => {
+  if (!date || !sessions.length || !players.length) {
+    return null;
+  }
+
+  const latestSessions = [...sessions]
+    .filter((session) => session.date === date)
+    .sort(compareSessionsAsc);
+  if (!latestSessions.length) {
+    return null;
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const getPlayer = (playerId) => getPlayerById(playerIndex, playerId);
+  const zeroStats = { wins: 0, kills: 0, appearances: 0 };
+  const byWins = (left, right) => right.wins - left.wins || right.kills - left.kills;
+  const byKills = (left, right) => right.kills - left.kills || right.wins - left.wins;
+  const findTotals = (rows, playerId) =>
+    rows.find((row) => row.id === playerId) || zeroStats;
+  const pushConsequence = (bucket, entry) => {
+    if (!entry?.text || bucket.some((item) => item.text === entry.text)) {
+      return;
+    }
+    bucket.push(entry);
+  };
+
+  const latestTotals = allStats(players, latestSessions).filter(
+    (player) => player.appearances > 0,
+  );
+  const priorSessions = sessions.filter((session) => session.date < date);
+  const beforeTotals = allStats(players, priorSessions).filter(
+    (player) => player.appearances > 0,
+  );
+  const afterTotals = allStats(players, sessions).filter(
+    (player) => player.appearances > 0,
+  );
+
+  const dayWinnerMap = {};
+  latestSessions.forEach((session) => {
+    if (session.winner) {
+      dayWinnerMap[session.winner] = (dayWinnerMap[session.winner] || 0) + 1;
+    }
+  });
+
+  const dayWinners = Object.entries(dayWinnerMap)
+    .map(([pid, wins]) => ({
+      pid,
+      wins,
+      player: getPlayer(pid),
+      kills: findTotals(latestTotals, pid).kills,
+    }))
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+
+  const topWinCount = dayWinners[0]?.wins || 0;
+  const topWinners = topWinCount > 0
+    ? dayWinners.filter((entry) => entry.wins === topWinCount)
+    : [];
+
+  const topKillerRow = [...latestTotals].sort(byKills)[0] || null;
+  const topKillerPlayer = topKillerRow ? getPlayer(topKillerRow.id) : null;
+  const topKiller = topKillerRow && topKillerPlayer
+    ? { ...topKillerRow, player: topKillerPlayer }
+    : null;
+  const topKillCount = topKiller?.kills || 0;
+  const topKillers = topKillCount > 0
+    ? [...latestTotals]
+        .filter((row) => row.kills === topKillCount)
+        .map((row) => ({
+          ...row,
+          player: getPlayer(row.id),
+        }))
+    : [];
+
+  const zeroKillWinSession = latestSessions.find(
+    (session) => session.winner && (session.kills?.[session.winner] || 0) === 0,
+  ) || null;
+  const zeroKillWin = zeroKillWinSession
+    ? {
+        session: zeroKillWinSession,
+        player: getPlayer(zeroKillWinSession.winner),
+      }
+    : null;
+
+  const reboundCandidates = latestSessions
+    .map((session, index) => {
+      if (!session.winner) {
+        return null;
+      }
+      const winner = getPlayer(session.winner);
+      if (!winner) {
+        return null;
+      }
+      const earlierDaySessions = latestSessions
+        .slice(0, index)
+        .filter((entry) => entry.attendees?.includes(winner.id));
+      const earlierDayWins = earlierDaySessions.filter(
+        (entry) => entry.winner === winner.id,
+      ).length;
+      const kills = session.kills?.[winner.id] || 0;
+      if (earlierDaySessions.length < 4 || earlierDayWins > 0 || kills < 3) {
+        return null;
+      }
+      return {
+        player: winner,
+        session,
+        kills,
+        priorDayLobbies: earlierDaySessions.length,
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (left, right) =>
+        right.priorDayLobbies - left.priorDayLobbies || right.kills - left.kills,
+    );
+  const reboundWin = reboundCandidates[0] || null;
+
+  const legendCrossers = [...afterTotals]
+    .filter((player) => {
+      const before = findTotals(beforeTotals, player.id);
+      return before.wins < 10 && player.wins >= 10;
+    })
+    .sort(byWins)
+    .map((player) => ({ player: getPlayer(player.id), wins: player.wins }));
+
+  const killCrossers = [...afterTotals]
+    .filter((player) => {
+      const before = findTotals(beforeTotals, player.id);
+      return before.kills < 100 && player.kills >= 100;
+    })
+    .sort(byKills)
+    .map((player) => ({ player: getPlayer(player.id), kills: player.kills }));
+
+  const beforeRanks = [...beforeTotals].sort(byWins);
+  const afterRanks = [...afterTotals].sort(byWins);
+  const getRankFor = (rows, playerId) => rows.findIndex((row) => row.id === playerId) + 1;
+  const topFiveShift = afterRanks
+    .map((player) => ({
+      player: getPlayer(player.id),
+      wins: player.wins,
+      beforeRank: getRankFor(beforeRanks, player.id),
+      afterRank: getRankFor(afterRanks, player.id),
+    }))
+    .find(
+      (entry) =>
+        entry.afterRank > 0 && entry.afterRank <= 5 && entry.beforeRank > entry.afterRank,
+    ) || null;
+
+  const biggestClimber = afterRanks
+    .map((player) => ({
+      player: getPlayer(player.id),
+      beforeRank: getRankFor(beforeRanks, player.id),
+      afterRank: getRankFor(afterRanks, player.id),
+      dayWins: dayWinnerMap[player.id] || 0,
+      dayKills: findTotals(latestTotals, player.id).kills,
+    }))
+    .filter(
+      (entry) =>
+        entry.player &&
+        entry.afterRank > 0 &&
+        entry.beforeRank > 0 &&
+        entry.beforeRank > entry.afterRank,
+    )
+    .sort(
+      (left, right) =>
+        right.beforeRank -
+          right.afterRank -
+          (left.beforeRank - left.afterRank) ||
+        right.dayWins - left.dayWins ||
+        right.dayKills - left.dayKills,
+    )[0] || null;
+
+  const buildRivalPressure = (leftName, rightName) => {
+    const leftPlayer = players.find((player) => player.username === leftName) || null;
+    const rightPlayer = players.find((player) => player.username === rightName) || null;
+    if (!leftPlayer || !rightPlayer) {
+      return null;
+    }
+
+    const pair = (rows) =>
+      rows.find(
+        (entry) =>
+          [entry.p1, entry.p2].includes(leftPlayer.id) &&
+          [entry.p1, entry.p2].includes(rightPlayer.id),
+      );
+
+    const beforePair = pair(getRivals(priorSessions));
+    const afterPair = pair(getRivals(sessions));
+    if (!afterPair) {
+      return null;
+    }
+
+    const leftWins = afterPair.p1 === leftPlayer.id ? afterPair.p1wins : afterPair.p2wins;
+    const rightWins = afterPair.p1 === rightPlayer.id ? afterPair.p1wins : afterPair.p2wins;
+    const leftBefore = beforePair
+      ? beforePair.p1 === leftPlayer.id
+        ? beforePair.p1wins
+        : beforePair.p2wins
+      : 0;
+    const rightBefore = beforePair
+      ? beforePair.p1 === rightPlayer.id
+        ? beforePair.p1wins
+        : beforePair.p2wins
+      : 0;
+    const leader = leftWins >= rightWins ? leftPlayer : rightPlayer;
+    const trailer = leader.id === leftPlayer.id ? rightPlayer : leftPlayer;
+    const beforeGap = Math.abs(leftBefore - rightBefore);
+    const afterGap = Math.abs(leftWins - rightWins);
+
+    return {
+      leftPlayer,
+      rightPlayer,
+      leader,
+      trailer,
+      total: afterPair.total,
+      totalDelta: afterPair.total - (beforePair?.total || 0),
+      leaderWins: Math.max(leftWins, rightWins),
+      trailerWins: Math.min(leftWins, rightWins),
+      leaderDelta: leader.id === leftPlayer.id ? leftWins - leftBefore : rightWins - rightBefore,
+      beforeGap,
+      afterGap,
+      tightened: afterPair.total > (beforePair?.total || 0) && afterGap < beforeGap,
+    };
+  };
+
+  const latestDateRecap = getDayRecap(date, sessions, players);
+  const bestRun = getLongestWinRun(latestSessions, playerIndex);
+  const priorHotStreaks = getLiveStreaks(priorSessions, players);
+  const brokenStreak = priorHotStreaks
+    .map((entry) => {
+      const playedToday = latestSessions.some((session) => session.attendees?.includes(entry.id));
+      const winsToday = dayWinnerMap[entry.id] || 0;
+      if (!playedToday || winsToday > 0) {
+        return null;
+      }
+      return entry;
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.streak - left.streak)[0] || null;
+
+  const activeSeason = SEASONS.find(
+    (season) => date >= season.start && date <= season.end,
+  ) || null;
+  const seasonSessions = activeSeason
+    ? filterSessionsBySeason(sessions, activeSeason.id).filter((session) => session.date <= date)
+    : [];
+  const seasonBeforeSessions = seasonSessions.filter((session) => session.date < date);
+  const seasonAfterRanks = allStats(players, seasonSessions)
+    .filter((player) => player.appearances > 0)
+    .sort(byWins);
+  const seasonBeforeTotals = allStats(players, seasonBeforeSessions)
+    .filter((player) => player.appearances > 0);
+
+  const consequences = [];
+  const seasonLeader = seasonAfterRanks[0] || null;
+  const seasonRunner = seasonAfterRanks[1] || null;
+  if (activeSeason && seasonLeader && seasonRunner) {
+    const leaderPlayer = getPlayer(seasonLeader.id);
+    const runnerPlayer = getPlayer(seasonRunner.id);
+    const beforeGap =
+      findTotals(seasonBeforeTotals, seasonLeader.id).wins -
+      findTotals(seasonBeforeTotals, seasonRunner.id).wins;
+    const afterGap = seasonLeader.wins - seasonRunner.wins;
+    const leaderDayWins = dayWinnerMap[seasonLeader.id] || 0;
+    if (leaderPlayer && runnerPlayer && leaderDayWins > 0 && afterGap >= beforeGap) {
+      pushConsequence(consequences, {
+        type: "kept-lead",
+        icon: "👑",
+        color: "#FFD700",
+        priority: 96,
+        text:
+          afterGap > beforeGap
+            ? `${leaderPlayer.username} kept the ${activeSeason.name} lead and pushed the gap over ${runnerPlayer.username} to ${afterGap} wins.`
+            : `${leaderPlayer.username} kept the ${activeSeason.name} lead with ${leaderDayWins} wins on the day.`,
+        shortText:
+          afterGap > beforeGap
+            ? `${leaderPlayer.username} kept the lead at +${afterGap}.`
+            : `${leaderPlayer.username} kept the lead.`,
+      });
+    }
+  }
+
+  if (biggestClimber?.player) {
+    const climbLine =
+      biggestClimber.afterRank <= 5
+        ? `${biggestClimber.player.username} climbed into ${formatOrdinal(biggestClimber.afterRank)} on the all-time wins table.`
+        : `${biggestClimber.player.username} climbed to ${formatOrdinal(biggestClimber.afterRank)} on the all-time wins table.`;
+    pushConsequence(consequences, {
+      type: "climbed",
+      icon: "📈",
+      color: "#00E5FF",
+      priority: 95,
+      text: climbLine,
+      shortText: climbLine,
+    });
+  }
+
+  if (legendCrossers.length || killCrossers.length) {
+    const legendLine = legendCrossers.length
+      ? `${joinHumanNames(
+          legendCrossers.map((entry) => entry.player?.username || "Unknown"),
+        )} ${legendCrossers.length === 1 ? "reached" : "reached"} Legend`
+      : "";
+    const killLine = killCrossers[0]
+      ? `${killCrossers[0].player?.username || "Unknown"} crossed ${killCrossers[0].kills} kills`
+      : "";
+    pushConsequence(consequences, {
+      type: "benchmark",
+      icon: "🏁",
+      color: "#FFAB40",
+      priority: 94,
+      text: [legendLine, killLine].filter(Boolean).join(". ")+".",
+      shortText: [legendLine, killLine].filter(Boolean).join(". ")+".",
+    });
+  }
+
+  const teriqHackqamPressure = buildRivalPressure("Teriqstp", "Hackqam");
+  const mekulaTeriqPressure = buildRivalPressure("MekulaGG", "Teriqstp");
+  if (teriqHackqamPressure?.tightened) {
+    pushConsequence(consequences, {
+      type: "tightened-rivalry",
+      icon: "⚔️",
+      color: "#FF4D8F",
+      priority: 92,
+      text: `${teriqHackqamPressure.leftPlayer.username} and ${teriqHackqamPressure.rightPlayer.username} tightened their rivalry to ${teriqHackqamPressure.leaderWins}-${teriqHackqamPressure.trailerWins} across ${teriqHackqamPressure.total} top-two clashes.`,
+      shortText: `${teriqHackqamPressure.leftPlayer.username} and ${teriqHackqamPressure.rightPlayer.username} tightened the rivalry.`,
+    });
+  } else if (mekulaTeriqPressure?.totalDelta > 0) {
+    pushConsequence(consequences, {
+      type: "rivalry-pressure",
+      icon: "⚔️",
+      color: "#FF4D8F",
+      priority: 88,
+      text: `${mekulaTeriqPressure.leader.username} kept the edge over ${mekulaTeriqPressure.trailer.username} at ${mekulaTeriqPressure.leaderWins}-${mekulaTeriqPressure.trailerWins} across ${mekulaTeriqPressure.total} top-two clashes.`,
+      shortText: `${mekulaTeriqPressure.leader.username} kept the duel edge.`,
+    });
+  }
+
+  if (reboundWin) {
+    pushConsequence(consequences, {
+      type: "broke-drought",
+      icon: "🔁",
+      color: "#00E5FF",
+      priority: 90,
+      text: `${reboundWin.player.username} broke a ${reboundWin.priorDayLobbies}-lobby dry spell and closed ${getLobbyLabel(reboundWin.session.id)} with ${reboundWin.kills} kills.`,
+      shortText: `${reboundWin.player.username} broke a ${reboundWin.priorDayLobbies}-lobby dry spell.`,
+    });
+  }
+
+  if (bestRun?.player && bestRun.length >= 3) {
+    pushConsequence(consequences, {
+      type: "extended-streak",
+      icon: "🔥",
+      color: "#FF6B35",
+      priority: 89,
+      text: `${bestRun.player.username} extended a ${bestRun.length}-lobby streak from ${getLobbyLabel(bestRun.start.id)} through ${getLobbyLabel(bestRun.end.id)}.`,
+      shortText: `${bestRun.player.username} extended a ${bestRun.length}-lobby streak.`,
+    });
+  }
+
+  if (brokenStreak) {
+    pushConsequence(consequences, {
+      type: "broke-streak",
+      icon: "🛑",
+      color: "#FFD700",
+      priority: 83,
+      text: `${brokenStreak.username} lost a ${brokenStreak.streak}-win run as soon as the new day opened.`,
+      shortText: `${brokenStreak.username} lost a ${brokenStreak.streak}-win run.`,
+    });
+  }
+
+  if ((latestDateRecap?.winnersList?.length || 0) >= 4) {
+    pushConsequence(consequences, {
+      type: "opened-room-up",
+      icon: "🪟",
+      color: "#C77DFF",
+      priority: 84,
+      text: `${latestDateRecap.winnersList.length} different winners kept the room open across ${latestSessions.length} lobbies.`,
+      shortText: `${latestDateRecap.winnersList.length} winners kept the room open.`,
+    });
+  }
+
+  if (zeroKillWin?.player) {
+    pushConsequence(consequences, {
+      type: "zero-kill-win",
+      icon: "🫥",
+      color: "#C77DFF",
+      priority: 82,
+      text: `${zeroKillWin.player.username} stole ${getLobbyLabel(zeroKillWin.session.id)} without a kill.`,
+      shortText: `${zeroKillWin.player.username} stole a zero-kill win.`,
+    });
+  }
+
+  consequences.sort((left, right) => right.priority - left.priority);
+
+  return {
+    date,
+    latestSessions,
+    topWinCount,
+    topWinners,
+    topKiller,
+    topKillers,
+    zeroKillWin,
+    reboundWin,
+    legendCrossers,
+    killCrossers,
+    topFiveShift,
+    biggestClimber,
+    mekulaTeriqPressure,
+    teriqHackqamPressure,
+    bestRun,
+    brokenStreak,
+    activeSeason,
+    consequences,
+    summary: consequences.slice(0, 3).map((entry) => entry.shortText || entry.text),
+  };
+};
+
+const joinHumanNames = (names) => {
+  const cleaned = names.filter(Boolean);
+  if (!cleaned.length) {
+    return "";
+  }
+  if (cleaned.length === 1) {
+    return cleaned[0];
+  }
+  if (cleaned.length === 2) {
+    return `${cleaned[0]} and ${cleaned[1]}`;
+  }
+  return `${cleaned.slice(0, -1).join(", ")}, and ${cleaned[cleaned.length - 1]}`;
+};
+
+export const formatOrdinal = (value) => {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) {
+    return `${value}th`;
+  }
+  if (value % 10 === 1) {
+    return `${value}st`;
+  }
+  if (value % 10 === 2) {
+    return `${value}nd`;
+  }
+  if (value % 10 === 3) {
+    return `${value}rd`;
+  }
+  return `${value}th`;
+};
+
+const getPlacementIndex = (session, playerId) =>
+  (session.placements || session.attendees || []).indexOf(playerId);
+
+const getLobbyLabel = (sessionId = "") => {
+  const lobbyNumber = parseSessionIdNumber(sessionId);
+  return `Lobby ${lobbyNumber || sessionId}`;
+};
+
+const buildDayPlayerStats = (daySessions, playerIndex) => {
+  const stats = {};
+  const ensure = (playerId) => {
+    if (!stats[playerId]) {
+      stats[playerId] = {
+        id: playerId,
+        player: playerIndex[playerId] || null,
+        appearances: 0,
+        wins: 0,
+        kills: 0,
+        podiums: 0,
+        top2: 0,
+        placements: [],
+        bestFinish: Infinity,
+      };
+    }
+    return stats[playerId];
+  };
+
+  daySessions.forEach((session) => {
+    (session.attendees || []).forEach((playerId) => {
+      ensure(playerId).appearances += 1;
+    });
+
+    (session.placements || session.attendees || []).forEach((playerId, index) => {
+      const row = ensure(playerId);
+      const finish = index + 1;
+      row.placements.push(finish);
+      row.bestFinish = Math.min(row.bestFinish, finish);
+      if (index < 3) {
+        row.podiums += 1;
+      }
+      if (index < 2) {
+        row.top2 += 1;
+      }
+    });
+
+    if (session.winner) {
+      ensure(session.winner).wins += 1;
+    }
+
+    Object.entries(session.kills || {}).forEach(([playerId, kills]) => {
+      ensure(playerId).kills += Number(kills) || 0;
+    });
+  });
+
+  return Object.values(stats).filter((row) => row.appearances > 0);
+};
+
+const getLongestPlacementRun = (daySessions, playerId, limit = 3) => {
+  let currentLength = 0;
+  let currentStart = null;
+  let best = null;
+
+  daySessions.forEach((session) => {
+    const placementIndex = getPlacementIndex(session, playerId);
+    const onRun = placementIndex !== -1 && placementIndex < limit;
+
+    if (onRun) {
+      currentLength += 1;
+      currentStart = currentStart || session;
+      if (!best || currentLength > best.length) {
+        best = {
+          length: currentLength,
+          start: currentStart,
+          end: session,
+        };
+      }
+      return;
+    }
+
+    currentLength = 0;
+    currentStart = null;
+  });
+
+  return best;
+};
+
+const getLongestWinRun = (daySessions, playerIndex) => {
+  let currentWinner = "";
+  let currentLength = 0;
+  let currentStart = null;
+  let best = null;
+
+  daySessions.forEach((session) => {
+    if (!session.winner) {
+      currentWinner = "";
+      currentLength = 0;
+      currentStart = null;
+      return;
+    }
+
+    if (session.winner === currentWinner) {
+      currentLength += 1;
+    } else {
+      currentWinner = session.winner;
+      currentLength = 1;
+      currentStart = session;
+    }
+
+    if (currentLength >= 2 && (!best || currentLength > best.length)) {
+      best = {
+        player: playerIndex[currentWinner] || null,
+        length: currentLength,
+        start: currentStart,
+        end: session,
+      };
+    }
+  });
+
+  return best;
+};
+
+const buildPlacementRankMap = (players, sessions, sort = "wins") => {
+  const ranked = allStats(players, sessions)
+    .filter((player) => player.appearances > 0)
+    .sort((left, right) => {
+      if (sort === "kills") {
+        return right.kills - left.kills || right.wins - left.wins;
+      }
+      return right.wins - left.wins || right.kills - left.kills;
+    });
+
+  return Object.fromEntries(ranked.map((player, index) => [player.id, index + 1]));
+};
+
+export const getDayStorylines = (date, sessions, players) => {
+  const daySessions = [...sessions]
+    .filter((session) => session.date === date)
+    .sort(compareSessionsAsc);
+  if (!daySessions.length) {
+    return [];
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const hostPlayer = players.find((player) => player.host) || null;
+  const dayStats = buildDayPlayerStats(daySessions, playerIndex);
+  const dayStatsMap = Object.fromEntries(dayStats.map((row) => [row.id, row]));
+  const byWins = [...dayStats].sort(
+    (left, right) => right.wins - left.wins || right.kills - left.kills,
+  );
+  const byKills = [...dayStats].sort(
+    (left, right) => right.kills - left.kills || right.wins - left.wins,
+  );
+  const storylines = [];
+  const pushStoryline = (text) => {
+    if (!text || storylines.includes(text)) {
+      return;
+    }
+    storylines.push(text);
+  };
+
+  const topWinCount = byWins[0]?.wins || 0;
+  const topKillCount = byKills[0]?.kills || 0;
+  const topWinners = byWins.filter((row) => row.wins === topWinCount && topWinCount > 0);
+  const topKillers = byKills.filter((row) => row.kills === topKillCount && topKillCount > 0);
+
+  if (topWinCount > 0 && topKillCount > 0) {
+    if (topWinners.length === 1 && topKillers.length === 1 && topWinners[0].id === topKillers[0].id) {
+      pushStoryline(
+        `${topWinners[0].player?.username || "Unknown"} owned both the win column with ${topWinCount} wins and the damage race with ${topKillCount} kills.`,
+      );
+    } else if (topWinners.length === 1 && topKillers.length === 1) {
+      pushStoryline(
+        `${topWinners[0].player?.username || "Unknown"} owned the win column with ${topWinCount} wins, but ${topKillers[0].player?.username || "Unknown"} owned the damage race with ${topKillCount} kills.`,
+      );
+    } else if (topWinners.length > 1 && topKillers.length === 1) {
+      pushStoryline(
+        `${joinHumanNames(topWinners.map((row) => row.player?.username || "Unknown"))} split the win column at ${topWinCount} each, but ${topKillers[0].player?.username || "Unknown"} owned the damage race with ${topKillCount} kills.`,
+      );
+    } else if (topWinners.length === 1 && topKillers.length > 1) {
+      pushStoryline(
+        `${topWinners[0].player?.username || "Unknown"} owned the win column with ${topWinCount} wins, while ${joinHumanNames(topKillers.map((row) => row.player?.username || "Unknown"))} tied on damage at ${topKillCount} kills each.`,
+      );
+    } else {
+      pushStoryline(
+        `${joinHumanNames(topWinners.map((row) => row.player?.username || "Unknown"))} split the win column at ${topWinCount} each, and ${joinHumanNames(topKillers.map((row) => row.player?.username || "Unknown"))} matched the damage line at ${topKillCount} kills each.`,
+      );
+    }
+  }
+
+  if (hostPlayer && dayStatsMap[hostPlayer.id]) {
+    const hostStats = dayStatsMap[hostPlayer.id];
+    const hostPodiumRun = getLongestPlacementRun(daySessions, hostPlayer.id, 3);
+    if (hostPodiumRun?.length >= 4) {
+      pushStoryline(
+        `${hostPlayer.username} put together a ${hostPodiumRun.length}-lobby podium streak from ${getLobbyLabel(hostPodiumRun.start.id)} through ${getLobbyLabel(hostPodiumRun.end.id)}.`,
+      );
+    } else if (hostStats.top2 >= Math.ceil(daySessions.length / 2)) {
+      pushStoryline(
+        `${hostPlayer.username} stayed in the fight all day with ${hostStats.top2} top-two finishes in ${daySessions.length} lobbies.`,
+      );
+    } else if (hostStats.podiums >= Math.ceil(daySessions.length * 0.6)) {
+      pushStoryline(
+        `${hostPlayer.username} kept the room under pressure with ${hostStats.podiums} podiums in ${daySessions.length} lobbies.`,
+      );
+    }
+  }
+
+  const bestWinRun = getLongestWinRun(daySessions, playerIndex);
+  if (bestWinRun?.player) {
+    pushStoryline(
+      `${bestWinRun.player.username} had the cleanest run of the day with ${bestWinRun.length} straight wins from ${getLobbyLabel(bestWinRun.start.id)} through ${getLobbyLabel(bestWinRun.end.id)}.`,
+    );
+  }
+
+  if (hostPlayer && dayStatsMap[hostPlayer.id] && byWins[0] && byWins[0].id !== hostPlayer.id) {
+    let hostBetter = 0;
+    let leaderBetter = 0;
+    let sharedLobbies = 0;
+    daySessions.forEach((session) => {
+      if (!session.attendees?.includes(hostPlayer.id) || !session.attendees?.includes(byWins[0].id)) {
+        return;
+      }
+      const hostPlacement = getPlacementIndex(session, hostPlayer.id);
+      const leaderPlacement = getPlacementIndex(session, byWins[0].id);
+      if (hostPlacement === -1 || leaderPlacement === -1) {
+        return;
+      }
+      sharedLobbies += 1;
+      if (hostPlacement < leaderPlacement) {
+        hostBetter += 1;
+      } else if (leaderPlacement < hostPlacement) {
+        leaderBetter += 1;
+      }
+    });
+
+    if (sharedLobbies >= 3 && (hostBetter || leaderBetter)) {
+      const hostKills = dayStatsMap[hostPlayer.id].kills;
+      const leaderKills = dayStatsMap[byWins[0].id]?.kills || 0;
+      if (leaderBetter > hostBetter && hostKills > leaderKills) {
+        pushStoryline(
+          `${byWins[0].player?.username || "Unknown"} beat ${hostPlayer.username} ${leaderBetter}-${hostBetter} on placement in their shared lobbies, but ${hostPlayer.username} still won the damage race ${hostKills}-${leaderKills}.`,
+        );
+      } else if (hostBetter > leaderBetter && leaderKills > hostKills) {
+        pushStoryline(
+          `${hostPlayer.username} beat ${byWins[0].player?.username || "Unknown"} ${hostBetter}-${leaderBetter} on placement in their shared lobbies, but ${byWins[0].player?.username || "Unknown"} still kept the heavier damage line at ${leaderKills}-${hostKills}.`,
+        );
+      } else {
+        const leaderName = leaderBetter >= hostBetter
+          ? byWins[0].player?.username || "Unknown"
+          : hostPlayer.username;
+        const trailerName = leaderBetter >= hostBetter
+          ? hostPlayer.username
+          : byWins[0].player?.username || "Unknown";
+        const leaderScore = Math.max(leaderBetter, hostBetter);
+        const trailerScore = Math.min(leaderBetter, hostBetter);
+        pushStoryline(
+          `${leaderName} had the better placement line over ${trailerName} at ${leaderScore}-${trailerScore} across their shared lobbies.`,
+        );
+      }
+    }
+  }
+
+  const zeroKillWins = daySessions
+    .filter((session) => session.winner && !Number(session.kills?.[session.winner] || 0))
+    .map((session) => ({
+      player: playerIndex[session.winner] || null,
+      sid: session.id,
+    }));
+  if (zeroKillWins.length === 1) {
+    pushStoryline(
+      `${zeroKillWins[0].player?.username || "Unknown"} stole ${getLobbyLabel(zeroKillWins[0].sid)} without landing a kill.`,
+    );
+  } else if (zeroKillWins.length > 1) {
+    const zeroKillSummary =
+      zeroKillWins.length === 2
+        ? `${joinHumanNames(zeroKillWins.slice(0, 3).map((entry) => `${entry.player?.username || "Unknown"} in ${getLobbyLabel(entry.sid)}`))} both closed wins without landing a kill.`
+        : `${joinHumanNames(zeroKillWins.slice(0, 3).map((entry) => `${entry.player?.username || "Unknown"} in ${getLobbyLabel(entry.sid)}`))} all closed wins without landing a kill.`;
+    pushStoryline(
+      zeroKillSummary,
+    );
+  }
+
+  let topGameKills = 0;
+  const topGames = [];
+  daySessions.forEach((session) => {
+    Object.entries(session.kills || {}).forEach(([playerId, kills]) => {
+      const killCount = Number(kills) || 0;
+      if (killCount > topGameKills) {
+        topGameKills = killCount;
+        topGames.length = 0;
+        topGames.push({ player: playerIndex[playerId] || null, sid: session.id, kills: killCount });
+      } else if (
+        killCount > 0 &&
+        killCount === topGameKills &&
+        !topGames.find((entry) => entry.player?.id === playerId)
+      ) {
+        topGames.push({ player: playerIndex[playerId] || null, sid: session.id, kills: killCount });
+      }
+    });
+  });
+
+  if (topGameKills > 0) {
+    if (topGameKills <= 3) {
+      pushStoryline(
+        `No one broke the room open on raw damage. The top single-lobby count was ${topGameKills}, shared by ${joinHumanNames(topGames.map((entry) => entry.player?.username || "Unknown"))}.`,
+      );
+    } else if (topGames.length === 1) {
+      pushStoryline(
+        `${topGames[0].player?.username || "Unknown"} posted the top single-lobby line with ${topGameKills} kills in ${getLobbyLabel(topGames[0].sid)}.`,
+      );
+    } else {
+      pushStoryline(
+        `${joinHumanNames(topGames.map((entry) => entry.player?.username || "Unknown"))} matched the top single-lobby line at ${topGameKills} kills.`,
+      );
+    }
+  }
+
+  const priorSessions = sessions.filter((session) => session.date < date);
+  const winRankBefore = buildPlacementRankMap(players, priorSessions, "wins");
+  const winRankAfter = buildPlacementRankMap(players, sessions, "wins");
+  const killRankBefore = buildPlacementRankMap(players, priorSessions, "kills");
+  const killRankAfter = buildPlacementRankMap(players, sessions, "kills");
+  const debutLines = [];
+  const milestoneLines = [];
+
+  dayStats.forEach((row) => {
+    const beforeStats = getStats(row.id, priorSessions);
+    const afterStats = getStats(row.id, sessions);
+    if (beforeStats.appearances === 0 && afterStats.appearances > 0) {
+      debutLines.push(
+        `${row.player?.username || "Unknown"} opened a new file with ${afterStats.appearances} lobbies, ${afterStats.kills} kills, and a best finish of ${formatOrdinal(row.bestFinish)}.`,
+      );
+      return;
+    }
+
+    const triggered = [];
+    [1, 3, 6, 10, 25, 50, 100].forEach((milestone) => {
+      if (beforeStats.wins < milestone && afterStats.wins >= milestone) {
+        triggered.push(`${milestone} all-time wins`);
+      }
+    });
+    [50, 100, 150, 200, 500, 600].forEach((milestone) => {
+      if (beforeStats.kills < milestone && afterStats.kills >= milestone) {
+        triggered.push(`${milestone} all-time kills`);
+      }
+    });
+
+    if (winRankAfter[row.id] <= 5 && (winRankBefore[row.id] || Infinity) > 5) {
+      triggered.push(`the top 5 all-time wins`);
+    }
+    if (killRankAfter[row.id] <= 5 && (killRankBefore[row.id] || Infinity) > 5) {
+      triggered.push(`the top 5 all-time kills`);
+    }
+
+    if (triggered.length) {
+      const playerName = row.player?.username || "Unknown";
+      const firstWinOnly =
+        triggered.length === 1 && triggered[0] === "1 all-time wins";
+
+      milestoneLines.push(
+        firstWinOnly
+          ? `${playerName} earned a first all-time win.`
+          : `${playerName} crossed into ${joinHumanNames(triggered)}.`,
+      );
+    }
+  });
+
+  debutLines.forEach(pushStoryline);
+  milestoneLines.slice(0, 2).forEach(pushStoryline);
+
+  return storylines.slice(0, 7);
+};
+
 export const getMilestones = (playerId, sessions) => {
   const stats = getStats(playerId, sessions);
   const alerts = [];
@@ -1135,6 +2001,358 @@ export const getBenchmark = (playerId, players, sessions) => {
   };
 };
 
+const getLobbyTotalKills = (session) =>
+  Object.values(session?.kills || {}).reduce((sum, value) => sum + value, 0);
+
+export const getLeaderboardShiftData = (
+  players,
+  sessions,
+  {
+    seasonId = "all",
+    period = "all",
+    sortBy = "wins",
+  } = {},
+) => {
+  const seasonSessions =
+    seasonId === "all" ? sessions : getSeasonSessions(sessions, seasonId);
+  const scopedSessions = getPeriodSessions(seasonSessions, period);
+  const latestScopeDate = scopedSessions.length
+    ? getLatestSessionDate(scopedSessions)
+    : "";
+
+  if (!latestScopeDate) {
+    return { map: {}, biggestRise: null, biggestSlide: null, latestScopeDate: "" };
+  }
+
+  let previousSessions = [];
+  if (period === "today") {
+    previousSessions = getPeriodSessions(
+      seasonSessions.filter((session) => session.date < latestScopeDate),
+      "today",
+    );
+  } else if (period === "week") {
+    previousSessions = getPeriodSessions(
+      seasonSessions.filter((session) => session.date < latestScopeDate),
+      "week",
+    );
+    if (!previousSessions.length) {
+      previousSessions = getPeriodSessions(
+        seasonSessions.filter((session) => session.date < latestScopeDate),
+        "today",
+      );
+    }
+  } else {
+    previousSessions = seasonSessions.filter(
+      (session) => session.date < latestScopeDate,
+    );
+  }
+
+  if (!previousSessions.length) {
+    return { map: {}, biggestRise: null, biggestSlide: null, latestScopeDate };
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const buildRows = (source) =>
+    getSortedLeaderboard({
+      players,
+      sessions: source,
+      seasonId: "all",
+      period: "all",
+      sortBy,
+    }).filter((row) => row.appearances > 0);
+
+  const currentRows = buildRows(scopedSessions);
+  const previousRows = buildRows(previousSessions);
+  const previousIndex = Object.fromEntries(
+    previousRows.map((row, index) => [row.id, index]),
+  );
+  const map = {};
+  let biggestRise = null;
+  let biggestSlide = null;
+
+  currentRows.forEach((row, index) => {
+    const priorIndex = previousIndex[row.id];
+    if (priorIndex === undefined) {
+      map[row.id] = { delta: null, label: "NEW", tone: "new" };
+      if (!biggestRise) {
+        biggestRise = {
+          player: getPlayerById(playerIndex, row.id),
+          delta: null,
+          label: "NEW",
+        };
+      }
+      return;
+    }
+
+    const delta = priorIndex - index;
+    const tone = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+    const label = delta > 0 ? `↑${delta}` : delta < 0 ? `↓${Math.abs(delta)}` : "HOLD";
+    map[row.id] = { delta, label, tone };
+
+    if (delta > 0 && (!biggestRise || delta > (biggestRise.delta ?? -1))) {
+      biggestRise = {
+        player: getPlayerById(playerIndex, row.id),
+        delta,
+        label,
+      };
+    }
+    if (delta < 0 && (!biggestSlide || delta < biggestSlide.delta)) {
+      biggestSlide = {
+        player: getPlayerById(playerIndex, row.id),
+        delta,
+        label,
+      };
+    }
+  });
+
+  return { map, biggestRise, biggestSlide, latestScopeDate };
+};
+
+export const getSeasonCampaignFile = (seasonSessions, players) => {
+  const ordered = [...seasonSessions].sort(compareSessionsAsc);
+  if (!ordered.length) {
+    return null;
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const getPlayer = (playerId) => getPlayerById(playerIndex, playerId);
+  const seasonRows = allStats(players, ordered).filter((row) => row.appearances > 0);
+  const byWins = [...seasonRows].sort(
+    (left, right) => right.wins - left.wins || right.kills - left.kills,
+  );
+  const byKills = [...seasonRows].sort(
+    (left, right) => right.kills - left.kills || right.wins - left.wins,
+  );
+  const byAppearances = [...seasonRows].sort(
+    (left, right) => right.appearances - left.appearances || right.wins - left.wins,
+  );
+  const dayMap = {};
+  let topGame = { pid: "", k: 0, sid: "", date: "" };
+
+  ordered.forEach((session) => {
+    const dayRow = dayMap[session.date] || {
+      date: session.date,
+      lobbies: 0,
+      totalKills: 0,
+      wins: {},
+      kills: {},
+      attendees: {},
+    };
+
+    dayRow.lobbies += 1;
+    dayRow.totalKills += getLobbyTotalKills(session);
+    (session.attendees || []).forEach((playerId) => {
+      dayRow.attendees[playerId] = true;
+    });
+    if (session.winner) {
+      dayRow.wins[session.winner] = (dayRow.wins[session.winner] || 0) + 1;
+    }
+    Object.entries(session.kills || {}).forEach(([playerId, kills]) => {
+      dayRow.kills[playerId] = (dayRow.kills[playerId] || 0) + kills;
+      if (kills > topGame.k) {
+        topGame = { pid: playerId, k: kills, sid: session.id, date: session.date };
+      }
+    });
+    dayMap[session.date] = dayRow;
+  });
+
+  const seasonChampionId = byWins[0]?.id || "";
+  const seasonRunnerUpId = byWins[1]?.id || "";
+  const leaderTimeline = [];
+  const dayRows = Object.values(dayMap).map((dayRow) => {
+    const topWinnerCount = Math.max(...Object.values(dayRow.wins), 0);
+    const topWinners =
+      topWinnerCount > 0
+        ? Object.entries(dayRow.wins)
+            .filter(([, wins]) => wins === topWinnerCount)
+            .map(([playerId, wins]) => ({
+              pid: playerId,
+              wins,
+              player: getPlayer(playerId),
+            }))
+        : [];
+    const topKillerPid =
+      Object.entries(dayRow.kills).sort((left, right) => right[1] - left[1])[0]?.[0] ||
+      "";
+    return {
+      ...dayRow,
+      uniquePlayers: Object.keys(dayRow.attendees || {}).length,
+      winnerSpread: Object.keys(dayRow.wins || {}).length,
+      topWinnerCount,
+      topWinners,
+      topKiller: topKillerPid
+        ? {
+            pid: topKillerPid,
+            player: getPlayer(topKillerPid),
+            kills: dayRow.kills[topKillerPid] || 0,
+          }
+        : null,
+    };
+  });
+  const loudestDay =
+    [...dayRows].sort(
+      (left, right) =>
+        right.totalKills - left.totalKills ||
+        right.lobbies - left.lobbies ||
+        right.date.localeCompare(left.date),
+    )[0] || null;
+  const biggestCrowd =
+    [...dayRows].sort(
+      (left, right) =>
+        right.uniquePlayers - left.uniquePlayers ||
+        right.lobbies - left.lobbies ||
+        right.date.localeCompare(left.date),
+    )[0] || null;
+  const widestWinnerDay =
+    [...dayRows].sort(
+      (left, right) =>
+        right.winnerSpread - left.winnerSpread ||
+        right.lobbies - left.lobbies ||
+        right.totalKills - left.totalKills ||
+        right.date.localeCompare(left.date),
+    )[0] || null;
+  let championWinsSoFar = 0;
+  let runnerUpWinsSoFar = 0;
+  let turningNight = null;
+  const orderedDays = [...dayRows].sort((left, right) =>
+    left.date.localeCompare(right.date),
+  );
+  const cumulativeWins = {};
+  orderedDays.forEach((dayRow) => {
+    Object.entries(dayRow.wins).forEach(([playerId, wins]) => {
+      cumulativeWins[playerId] = (cumulativeWins[playerId] || 0) + wins;
+    });
+    const rankedLeaders = Object.entries(cumulativeWins).sort(
+      (left, right) => right[1] - left[1],
+    );
+    const leadWins = rankedLeaders[0]?.[1] || 0;
+    const leaders = rankedLeaders
+      .filter(([, wins]) => wins === leadWins)
+      .map(([playerId]) => playerId);
+    leaderTimeline.push({ date: dayRow.date, leaders, leadWins });
+    if (!seasonChampionId || !seasonRunnerUpId) {
+      return;
+    }
+    const championDayWins = dayRow.wins[seasonChampionId] || 0;
+    const runnerUpDayWins = dayRow.wins[seasonRunnerUpId] || 0;
+    championWinsSoFar += championDayWins;
+    runnerUpWinsSoFar += runnerUpDayWins;
+    const gap = championWinsSoFar - runnerUpWinsSoFar;
+    const gapShift = championDayWins - runnerUpDayWins;
+    const candidate = {
+      ...dayRow,
+      championDayWins,
+      runnerUpDayWins,
+      gap,
+      gapShift,
+    };
+    if (gapShift <= 0) {
+      return;
+    }
+    if (
+      !turningNight ||
+      gapShift > turningNight.gapShift ||
+      (gapShift === turningNight.gapShift &&
+        championDayWins > turningNight.championDayWins) ||
+      (gapShift === turningNight.gapShift &&
+        championDayWins === turningNight.championDayWins &&
+        dayRow.totalKills > turningNight.totalKills) ||
+      (gapShift === turningNight.gapShift &&
+        championDayWins === turningNight.championDayWins &&
+        dayRow.totalKills === turningNight.totalKills &&
+        dayRow.date.localeCompare(turningNight.date) < 0)
+    ) {
+      turningNight = candidate;
+    }
+  });
+
+  let bestRun = { id: "", streak: 0, start: null, end: null, totalKills: 0 };
+  seasonRows.forEach((row) => {
+    const played = ordered.filter((session) => session.attendees?.includes(row.id));
+    let current = { streak: 0, start: null, end: null, totalKills: 0, lastDate: "" };
+    played.forEach((session) => {
+      if (session.date !== current.lastDate) {
+        current = { streak: 0, start: null, end: null, totalKills: 0, lastDate: session.date };
+      }
+      if (session.winner === row.id) {
+        current.streak += 1;
+        current.start = current.start || session;
+        current.end = session;
+        current.totalKills += session.kills?.[row.id] || 0;
+        if (
+          current.streak > bestRun.streak ||
+          (current.streak === bestRun.streak &&
+            current.totalKills > bestRun.totalKills)
+        ) {
+          bestRun = {
+            id: row.id,
+            streak: current.streak,
+            start: current.start,
+            end: current.end,
+            totalKills: current.totalKills,
+          };
+        }
+      } else {
+        current = { streak: 0, start: null, end: null, totalKills: 0, lastDate: session.date };
+      }
+    });
+    const streak = getStreak(row.id, ordered);
+    if (streak > bestRun.streak) {
+      bestRun = { id: row.id, streak, start: null, end: null, totalKills: 0 };
+    }
+  });
+  const lockNight = seasonChampionId
+    ? leaderTimeline.find(
+        (entry, index) =>
+          entry.leaders.length === 1 &&
+          entry.leaders[0] === seasonChampionId &&
+          leaderTimeline
+            .slice(index)
+            .every(
+              (future) =>
+                future.leaders.length === 1 &&
+                future.leaders[0] === seasonChampionId,
+            ),
+      ) || null
+    : null;
+  const leaderChanges = leaderTimeline.reduce((count, entry, index) => {
+    if (index === 0) {
+      return count;
+    }
+    const prev = leaderTimeline[index - 1];
+    const same =
+      prev.leaders.length === entry.leaders.length &&
+      prev.leaders.every((playerId, leaderIndex) => playerId === entry.leaders[leaderIndex]);
+    return same ? count : count + 1;
+  }, 0);
+
+  return {
+    ordered,
+    opener: ordered[0],
+    openerWinner: getPlayer(ordered[0]?.winner),
+    closer: ordered[ordered.length - 1],
+    closerWinner: getPlayer(ordered[ordered.length - 1]?.winner),
+    leaderRow: byWins[0] || null,
+    leader: getPlayer(byWins[0]?.id),
+    chaserRow: byWins[1] || null,
+    chaser: getPlayer(byWins[1]?.id),
+    killLeaderRow: byKills[0] || null,
+    killLeader: getPlayer(byKills[0]?.id),
+    attendanceLeaderRow: byAppearances[0] || null,
+    attendanceLeader: getPlayer(byAppearances[0]?.id),
+    loudestDay,
+    biggestCrowd,
+    widestWinnerDay,
+    turningNight,
+    lockNight,
+    leaderChanges,
+    leaderTimeline,
+    topGame,
+    topGamePlayer: getPlayer(topGame.pid),
+    bestRun: bestRun.streak > 0 ? { ...bestRun, player: getPlayer(bestRun.id) } : null,
+  };
+};
+
 export const getLastSeen = (playerId, sessions) => {
   const playerSessions = sessions.filter((session) =>
     session.attendees?.includes(playerId),
@@ -1147,6 +2365,1073 @@ export const getLastSeen = (playerId, sessions) => {
     (latestDate, session) => (session.date > latestDate ? session.date : latestDate),
     "",
   );
+};
+
+export const getOnDeckPressure = (
+  sessions,
+  players,
+  {
+    seasonId = "all",
+    period = "all",
+    limit = 4,
+  } = {},
+) => {
+  if (!sessions.length || !players.length) {
+    return {
+      items: [],
+      summary: [],
+      topItem: null,
+      scopeLabel: "board",
+    };
+  }
+
+  const seasonSessions = filterSessionsBySeason(sessions, seasonId);
+  const scopedSessions = getPeriodSessions(seasonSessions, period);
+  if (!scopedSessions.length) {
+    return {
+      items: [],
+      summary: [],
+      topItem: null,
+      scopeLabel:
+        period === "today"
+          ? "latest day board"
+          : period === "week"
+            ? "week board"
+            : seasonId !== "all"
+              ? "season board"
+              : "all-time board",
+    };
+  }
+
+  const latestDate = getLatestSessionDate(sessions);
+  const recentFloor = new Date(`${latestDate}T12:00:00Z`);
+  recentFloor.setUTCDate(recentFloor.getUTCDate() - 7);
+  const recentFloorString = recentFloor.toISOString().split("T")[0];
+  const recentIds = new Set(
+    sessions
+      .filter((session) => session.date >= recentFloorString)
+      .flatMap((session) => session.attendees || []),
+  );
+  const scopedIds = new Set(
+    scopedSessions.flatMap((session) => session.attendees || []),
+  );
+  const playerIndex = buildPlayerIndex(players);
+  const getPlayer = (playerId) => getPlayerById(playerIndex, playerId);
+  const byWins = (left, right) => right.wins - left.wins || right.kills - left.kills;
+  const allRows = allStats(players, sessions)
+    .filter((player) => player.appearances > 0)
+    .sort(byWins);
+  const scopeRows = allStats(players, scopedSessions)
+    .filter((player) => player.appearances > 0)
+    .sort(byWins);
+  const scopeLabel =
+    period === "today"
+      ? "latest day board"
+      : period === "week"
+        ? "week board"
+        : seasonId !== "all"
+          ? "season board"
+          : "all-time board";
+  const isRelevant = (playerId) => scopedIds.has(playerId) || recentIds.has(playerId);
+  const items = [];
+  const pushItem = (entry) => {
+    if (!entry?.text || items.some((item) => item.text === entry.text)) {
+      return;
+    }
+    items.push(entry);
+  };
+
+  const scopeLeader = scopeRows[0] || null;
+  const scopeRunner = scopeRows[1] || null;
+  if (scopeLeader && scopeRunner) {
+    const leaderPlayer = getPlayer(scopeLeader.id);
+    const runnerPlayer = getPlayer(scopeRunner.id);
+    const winGap = scopeLeader.wins - scopeRunner.wins;
+    if (leaderPlayer && runnerPlayer) {
+      if (winGap === 0) {
+        pushItem({
+          type: "scope-flip",
+          players: [leaderPlayer.id, runnerPlayer.id],
+          color: leaderPlayer.color,
+          priority: 96,
+          text: `Next clean win breaks the ${scopeLabel} tie between ${leaderPlayer.username} and ${runnerPlayer.username}.`,
+          shortText: `Next win breaks the ${leaderPlayer.username} and ${runnerPlayer.username} tie.`,
+        });
+      } else if (winGap === 1) {
+        pushItem({
+          type: "scope-flip",
+          players: [leaderPlayer.id, runnerPlayer.id],
+          color: runnerPlayer.color,
+          priority: 95,
+          text: `${runnerPlayer.username} is 1 win from leveling ${leaderPlayer.username} on the ${scopeLabel}.`,
+          shortText: `${runnerPlayer.username} is 1 win from leveling ${leaderPlayer.username}.`,
+        });
+      } else if (winGap === 2 && period !== "all") {
+        pushItem({
+          type: "scope-flip",
+          players: [leaderPlayer.id, runnerPlayer.id],
+          color: runnerPlayer.color,
+          priority: 90,
+          text: `One good night from ${runnerPlayer.username} drags the ${scopeLabel} back within a win of ${leaderPlayer.username}.`,
+          shortText: `One good night from ${runnerPlayer.username} tightens the ${scopeLabel}.`,
+        });
+      }
+    }
+  }
+
+  const rivalryRows = getRivals(seasonId === "all" ? sessions : seasonSessions)
+    .filter((entry) => isRelevant(entry.p1) || isRelevant(entry.p2))
+    .map((entry) => {
+      const leftPlayer = getPlayer(entry.p1);
+      const rightPlayer = getPlayer(entry.p2);
+      if (!leftPlayer || !rightPlayer) {
+        return null;
+      }
+      const gap = Math.abs(entry.p1wins - entry.p2wins);
+      const leader = entry.p1wins >= entry.p2wins ? leftPlayer : rightPlayer;
+      const trailer = leader.id === leftPlayer.id ? rightPlayer : leftPlayer;
+      const leaderWins = Math.max(entry.p1wins, entry.p2wins);
+      const trailerWins = Math.min(entry.p1wins, entry.p2wins);
+      if (gap === 0 && entry.total >= 8) {
+        return {
+          type: "rivalry",
+          players: [leftPlayer.id, rightPlayer.id],
+          color: trailer.color,
+          priority: 94,
+          total: entry.total,
+          text: `${leftPlayer.username} and ${rightPlayer.username} are dead level at ${leaderWins}-${trailerWins}. Next clean finish breaks it.`,
+          shortText: `${leftPlayer.username} and ${rightPlayer.username} are dead level at ${leaderWins}-${trailerWins}.`,
+        };
+      }
+      if (gap === 1 && entry.total >= 10) {
+        return {
+          type: "rivalry",
+          players: [leader.id, trailer.id],
+          color: trailer.color,
+          priority: 95,
+          total: entry.total,
+          text: `${trailer.username} is 1 result from leveling ${leader.username} in a ${leaderWins}-${trailerWins} rivalry.`,
+          shortText: `${trailer.username} is 1 result from leveling ${leader.username}.`,
+        };
+      }
+      if (gap === 2 && entry.total >= 10) {
+        return {
+          type: "rivalry",
+          players: [leader.id, trailer.id],
+          color: trailer.color,
+          priority: 89,
+          total: entry.total,
+          text: `One clean finish from ${trailer.username} cuts ${leader.username}'s rivalry edge to one.`,
+          shortText: `${trailer.username} is one result from cutting ${leader.username}'s edge to one.`,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.priority - left.priority || right.total - left.total);
+  if (rivalryRows[0]) {
+    pushItem(rivalryRows[0]);
+  }
+
+  const winTargets = [
+    { milestone: 3, label: "Gunslinger", icon: "⭐", color: "#40C4FF", priority: 84 },
+    { milestone: 6, label: "Veteran", icon: "🔥", color: "#FFAB40", priority: 91 },
+    { milestone: 10, label: "Legend", icon: "⚡", color: "#C77DFF", priority: 97 },
+  ];
+  const winCandidates = allRows
+    .map((row) => {
+      if (!isRelevant(row.id)) {
+        return null;
+      }
+      const target = winTargets.find((entry) => row.wins < entry.milestone);
+      if (!target) {
+        return null;
+      }
+      const gap = target.milestone - row.wins;
+      if (gap < 1 || gap > 2) {
+        return null;
+      }
+      return {
+        type: "wins-benchmark",
+        players: [row.id],
+        color: target.color,
+        benchmarkLabel: target.label,
+        benchmarkValue: target.milestone,
+        priority: target.priority - (gap - 1),
+        gap,
+        wins: row.wins,
+        lastSeen: getLastSeen(row.id, sessions) || "",
+        text: `${getPlayer(row.id)?.username || "Unknown"} is ${gap} win${gap === 1 ? "" : "s"} from ${target.label}.`,
+        shortText: `${getPlayer(row.id)?.username || "Unknown"} is ${gap} win${gap === 1 ? "" : "s"} from ${target.label}.`,
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (left, right) =>
+        left.gap - right.gap ||
+        right.priority - left.priority ||
+        right.wins - left.wins ||
+        right.lastSeen.localeCompare(left.lastSeen),
+    );
+
+  const killTargets = [
+    { milestone: 50, color: "#FF4D8F", priority: 87, maxGap: 10 },
+    { milestone: 100, color: "#FF4D8F", priority: 90, maxGap: 10 },
+    { milestone: 500, color: "#FF4D8F", priority: 93, maxGap: 15 },
+  ];
+  const killCandidates = allRows
+    .map((row) => {
+      if (!isRelevant(row.id)) {
+        return null;
+      }
+      const target = killTargets.find((entry) => row.kills < entry.milestone);
+      if (!target) {
+        return null;
+      }
+      const gap = target.milestone - row.kills;
+      if (gap < 1 || gap > target.maxGap) {
+        return null;
+      }
+      return {
+        type: "kills-benchmark",
+        players: [row.id],
+        color: target.color,
+        benchmarkValue: target.milestone,
+        priority: 90 - gap,
+        gap,
+        kills: row.kills,
+        lastSeen: getLastSeen(row.id, sessions) || "",
+        text: `${getPlayer(row.id)?.username || "Unknown"} is ${gap} kill${gap === 1 ? "" : "s"} from ${target.milestone}.`,
+        shortText: `${getPlayer(row.id)?.username || "Unknown"} is ${gap} kill${gap === 1 ? "" : "s"} from ${target.milestone}.`,
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (left, right) =>
+        left.gap - right.gap ||
+        right.priority - left.priority ||
+        right.kills - left.kills ||
+        right.lastSeen.localeCompare(left.lastSeen),
+    );
+
+  const candidates = [...items, ...winCandidates, ...killCandidates].sort(
+    (left, right) => right.priority - left.priority,
+  );
+  const selected = [];
+  const playerUse = new Map();
+  const typeUse = new Map();
+  const typeCaps = {
+    "scope-flip": 1,
+    rivalry: 1,
+    "wins-benchmark": 1,
+    "kills-benchmark": 1,
+  };
+  candidates.forEach((candidate) => {
+    if (selected.length >= limit) {
+      return;
+    }
+    const playerIds = candidate.players || [];
+    const typeCount = typeUse.get(candidate.type) || 0;
+    if (typeCaps[candidate.type] && typeCount >= typeCaps[candidate.type]) {
+      return;
+    }
+    const repeatedPlayer =
+      candidate.type !== "rivalry" &&
+      playerIds.some((playerId) => (playerUse.get(playerId) || 0) > 0);
+    if (repeatedPlayer) {
+      return;
+    }
+    selected.push(candidate);
+    playerIds.forEach((playerId) => {
+      playerUse.set(playerId, (playerUse.get(playerId) || 0) + 1);
+    });
+    typeUse.set(candidate.type, typeCount + 1);
+  });
+
+  return {
+    items: selected,
+    summary: selected.map((entry) => entry.shortText || entry.text),
+    topItem: selected[0] || null,
+    scopeLabel,
+  };
+};
+
+const WIN_MILESTONE_TARGETS = [1, 3, 6, 10, 25, 50, 100, 150, 200];
+const KILL_MILESTONE_TARGETS = [25, 50, 100, 150, 200, 300, 500, 700];
+
+const hashSeed = (value = "") =>
+  [...String(value)].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7);
+
+const pickDailyVariant = (variants, seed) => {
+  if (!Array.isArray(variants) || variants.length === 0) {
+    return null;
+  }
+  return variants[hashSeed(seed) % variants.length];
+};
+
+const getNextMilestone = (value, milestones) =>
+  milestones.find((milestone) => value < milestone) || null;
+
+const getRankTier = (rank, seasonRank) => {
+  if ((rank && rank <= 5) || (seasonRank && seasonRank <= 3)) {
+    return "top";
+  }
+  if ((rank && rank <= 15) || (seasonRank && seasonRank <= 8)) {
+    return "mid";
+  }
+  return "support";
+};
+
+const getRowRank = (rows, playerId) => rows.findIndex((row) => row.id === playerId) + 1;
+
+export const getDailyOrdersForPlayer = (
+  playerId,
+  players,
+  sessions,
+  {
+    minOrders = 2,
+    maxOrders = 2,
+    dayKey = todayStr(),
+  } = {},
+) => {
+  if (!playerId || !players.length || !sessions.length) {
+    return [];
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const player = getPlayerById(playerIndex, playerId);
+  if (!player) {
+    return [];
+  }
+
+  const latestDate = getLatestSessionDate(sessions);
+  const latestDaySessions = sessions.filter((session) => session.date === latestDate);
+  const weekSessions = getPeriodSessions(sessions, "week");
+  const currentSeason =
+    SEASONS.find((season) => latestDate >= season.start && latestDate <= season.end) || null;
+  const seasonSessions = currentSeason
+    ? getSeasonSessions(sessions, currentSeason.id)
+    : sessions;
+  const allRows = allStats(players, sessions)
+    .filter((row) => row.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+  const seasonRows = allStats(players, seasonSessions)
+    .filter((row) => row.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+  const weekRows = allStats(players, weekSessions)
+    .filter((row) => row.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+  const currentRow = allRows.find((row) => row.id === playerId) || getStats(playerId, sessions);
+  const seasonRow = seasonRows.find((row) => row.id === playerId) || getStats(playerId, seasonSessions);
+  const weekRow = weekRows.find((row) => row.id === playerId) || getStats(playerId, weekSessions);
+  const allTimeRank = getRowRank(allRows, playerId);
+  const seasonRank = getRowRank(seasonRows, playerId);
+  const rankTier = getRankTier(allTimeRank, seasonRank);
+  const lastSeen = getLastSeen(playerId, sessions);
+  const daysSinceSeen = lastSeen
+    ? Math.floor((new Date() - new Date(`${lastSeen}T12:00:00Z`)) / (1000 * 60 * 60 * 24))
+    : null;
+  const liveStreak = getLiveStreaks(sessions, players).find((entry) => entry.id === playerId) || null;
+  const form = getFormGuide(playerId, sessions, 5);
+  const recentWins = form.filter((entry) => entry.win).length;
+  const drought = getDrought(playerId, sessions);
+  const topRival = getRivals(sessions).find((entry) => entry.p1 === playerId || entry.p2 === playerId) || null;
+  const latestFallout = getLatestDayConsequences(sessions, players, latestDate);
+  const latestDayWins = latestDaySessions.filter((session) => session.winner === playerId).length;
+  const latestDayKills = latestDaySessions.reduce(
+    (total, session) => total + (session.kills?.[playerId] || 0),
+    0,
+  );
+  const nextWinMilestone = getNextMilestone(currentRow.wins, WIN_MILESTONE_TARGETS);
+  const nextKillMilestone = getNextMilestone(currentRow.kills, KILL_MILESTONE_TARGETS);
+  const winMilestoneGap = nextWinMilestone ? nextWinMilestone - currentRow.wins : null;
+  const killMilestoneGap = nextKillMilestone ? nextKillMilestone - currentRow.kills : null;
+  const variantKey = `${dayKey}:${playerId}`;
+  const allTimeBenchmark = getBenchmark(playerId, players, sessions);
+  const seasonBenchmark = (() => {
+    const currentIndex = seasonRows.findIndex((row) => row.id === playerId);
+    if (currentIndex <= 0) {
+      return null;
+    }
+    const target = seasonRows[currentIndex - 1];
+    const targetPlayer = getPlayerById(playerIndex, target.id);
+    return targetPlayer
+      ? {
+          target: targetPlayer,
+          rank: currentIndex + 1,
+          winGap: target.wins - seasonRow.wins,
+          killGap: target.kills - seasonRow.kills,
+          sameWins: target.wins === seasonRow.wins,
+        }
+      : null;
+  })();
+  const seasonChaser = (() => {
+    const currentIndex = seasonRows.findIndex((row) => row.id === playerId);
+    if (currentIndex < 0 || currentIndex >= seasonRows.length - 1) {
+      return null;
+    }
+    const chaser = seasonRows[currentIndex + 1];
+    const chaserPlayer = getPlayerById(playerIndex, chaser.id);
+    return chaserPlayer
+      ? {
+          target: chaserPlayer,
+          rank: currentIndex + 2,
+          winGap: seasonRow.wins - chaser.wins,
+          killGap: seasonRow.kills - chaser.kills,
+          sameWins: chaser.wins === seasonRow.wins,
+        }
+      : null;
+  })();
+  const allTimeChaser = (() => {
+    const currentIndex = allRows.findIndex((row) => row.id === playerId);
+    if (currentIndex < 0 || currentIndex >= allRows.length - 1) {
+      return null;
+    }
+    const chaser = allRows[currentIndex + 1];
+    const chaserPlayer = getPlayerById(playerIndex, chaser.id);
+    return chaserPlayer
+      ? {
+          target: chaserPlayer,
+          rank: currentIndex + 2,
+          winGap: currentRow.wins - chaser.wins,
+          killGap: currentRow.kills - chaser.kills,
+          sameWins: chaser.wins === currentRow.wins,
+        }
+      : null;
+  })();
+
+  const candidates = [];
+  const getVariant = (category, variants) =>
+    pickDailyVariant(variants, `${variantKey}:${category}`);
+  const pushOrder = (order) => {
+    if (!order?.label || !order?.text) {
+      return;
+    }
+    if (candidates.some((entry) => entry.category === order.category)) {
+      return;
+    }
+    candidates.push(order);
+  };
+
+  if (liveStreak?.streak >= 2) {
+    pushOrder({
+      category: "streak-hold",
+      priority: rankTier === "top" ? 98 : 95,
+      icon: "🔥",
+      color: "#FF6B35",
+      label: "KEEP IT GOING",
+      text:
+        liveStreak.streak >= 3
+          ? `Win again today and keep the ${liveStreak.streak}-room streak alive.`
+          : "Win again today and turn this hot finish into a real run.",
+      note:
+        liveStreak.streak >= 3
+          ? "Another clean close turns this from noise into control."
+          : "One more win makes the room treat this as a trend.",
+    });
+  }
+
+  if (topRival && topRival.total >= 6) {
+    const rivalId = topRival.p1 === playerId ? topRival.p2 : topRival.p1;
+    const rival = getPlayerById(playerIndex, rivalId);
+    const playerWins = topRival.p1 === playerId ? topRival.p1wins : topRival.p2wins;
+    const rivalWins = topRival.p1 === playerId ? topRival.p2wins : topRival.p1wins;
+    const gap = Math.abs(playerWins - rivalWins);
+    if (rival) {
+      if (gap === 0) {
+        pushOrder({
+          category: "rivalry-answer",
+          priority: 97,
+          icon: "⚔️",
+          color: "#FF4D8F",
+          label: "TAKE THE RIVAL EDGE",
+          text: `Finish ahead of ${rival.username} today and move this dead level duel your way.`,
+          note: "The next clean result decides who walks in ahead.",
+        });
+      } else if (playerWins < rivalWins && gap <= 2) {
+        pushOrder({
+          category: "rivalry-answer",
+          priority: 96 - gap,
+          icon: "⚔️",
+          color: "#FF4D8F",
+          label: "HIT BACK TODAY",
+          text: `Finish ahead of ${rival.username} today and cut the duel from ${rivalWins}-${playerWins}.`,
+          note:
+            gap === 1
+              ? "One room is enough to pull this rivalry level."
+              : "One good night cuts the edge and changes the tone fast.",
+        });
+      }
+    }
+  }
+
+  if (winMilestoneGap && winMilestoneGap <= 2) {
+    const milestoneLabel =
+      nextWinMilestone === 10
+        ? "Legend"
+        : nextWinMilestone === 6
+          ? "Veteran"
+          : `${nextWinMilestone} wins`;
+    const milestoneTargetText =
+      nextWinMilestone === 10
+        ? "Legend"
+        : nextWinMilestone === 6
+          ? "Veteran"
+          : nextWinMilestone === 3
+            ? "a third win"
+            : `${nextWinMilestone} wins`;
+    const benchmarkLabel =
+      nextWinMilestone === 10
+        ? "REACH LEGEND"
+        : nextWinMilestone === 6
+          ? "REACH VETERAN"
+          : nextWinMilestone === 3
+            ? "WIN YOUR THIRD"
+            : "REACH THE NEXT MARK";
+    pushOrder({
+      category: "benchmark-watch",
+      priority: 95 - (winMilestoneGap - 1),
+      icon: nextWinMilestone === 10 ? "⚡" : "🏁",
+      color: nextWinMilestone === 10 ? "#C77DFF" : "#FFD700",
+      label: benchmarkLabel,
+      text:
+        winMilestoneGap === 1
+          ? `Take 1 win today and reach ${milestoneLabel}.`
+          : `Take ${winMilestoneGap} wins today and reach ${milestoneTargetText}.`,
+      note:
+        nextWinMilestone === 3
+          ? "That is the first number that makes this file feel settled."
+          : nextWinMilestone === 10
+            ? "That next crown changes how the whole room reads this file."
+            : "That number is close enough to change the read right now.",
+    });
+  }
+
+  if (!candidates.some((entry) => entry.category === "benchmark-watch") && killMilestoneGap && killMilestoneGap <= 8) {
+    pushOrder({
+      category: "kill-benchmark",
+      priority: 91 - Math.min(killMilestoneGap, 6),
+      icon: "🎯",
+      color: "#FF4D8F",
+      label: "HIT THE DAMAGE MARK",
+      text: `Put up ${killMilestoneGap} more kill${killMilestoneGap === 1 ? "" : "s"} today and reach ${nextKillMilestone}.`,
+      note:
+        killMilestoneGap <= 4
+          ? "One loud room can settle that number tonight."
+          : "A strong damage night brings that mark into play.",
+    });
+  }
+
+  if (weekRow.appearances >= 4 && weekRow.wins === 0) {
+    const weeklyStartVariant = getVariant("first-weekly-win", [
+      {
+        text: "Take your first weekly win today.",
+        note: "One breakthrough close changes the whole weekly mood around this file.",
+      },
+      {
+        text: "Get on the weekly board with a win today.",
+        note: "The longer that first close waits, the more the room notices.",
+      },
+    ]);
+    pushOrder({
+      category: "first-weekly-win",
+      priority: rankTier === "support" ? 95 : 90,
+      icon: "🎮",
+      color: "#00E5FF",
+      label: "GET ON THE BOARD",
+      text: weeklyStartVariant.text,
+      note: weeklyStartVariant.note,
+    });
+  }
+
+  if (drought >= 5 && currentRow.wins > 0) {
+    const droughtVariant = getVariant("drought-break", [
+      {
+        label: "END THE DRY SPELL",
+        text: `Win today and end the ${drought}-lobby dry spell.`,
+        note: "A drought this loud follows a name into every room.",
+      },
+      {
+        label: "END THE QUIET",
+        text: `Take one room today so this ${drought}-lobby quiet run stops leading the file.`,
+        note: "Right now the silence is doing more talking than the highs.",
+      },
+      {
+        label: "STOP THE SLIDE",
+        text: `Close a room today and stop the ${drought}-lobby slide.`,
+        note: "The longer it sits there, the louder it gets.",
+      },
+    ]);
+    pushOrder({
+      category: "drought-break",
+      priority: 92,
+      icon: "🔁",
+      color: "#FFAB40",
+      label: droughtVariant.label,
+      text: droughtVariant.text,
+      note: droughtVariant.note,
+    });
+  }
+
+  if (seasonBenchmark && seasonBenchmark.winGap > 0 && seasonBenchmark.winGap <= 2) {
+    pushOrder({
+      category: "rank-climb-pressure",
+      priority: rankTier === "mid" ? 94 : 89,
+      icon: "📈",
+      color: player.color,
+      label: "TAKE THE NEXT SPOT",
+      text: `Finish ${seasonBenchmark.winGap === 1 ? "1 win" : `${seasonBenchmark.winGap} wins`} better than ${seasonBenchmark.target.username} today and pull level in Season 2.`,
+      note:
+        seasonBenchmark.winGap === 1
+          ? "One good night puts those files side by side."
+          : "Two wins is enough to drag that chase into plain view.",
+    });
+  } else if (allTimeBenchmark && ((allTimeBenchmark.winGap > 0 && allTimeBenchmark.winGap <= 2) || (allTimeBenchmark.sameWins && Math.abs(allTimeBenchmark.killGap) <= 12))) {
+    pushOrder({
+      category: "rank-climb-pressure",
+      priority: 88,
+      icon: "📈",
+      color: player.color,
+      label: "MOVE UP THE FILE",
+      text: allTimeBenchmark.sameWins
+        ? `Outkill ${allTimeBenchmark.target.username} by ${Math.max(allTimeBenchmark.killGap, 0)} today and take the all-time tiebreak.`
+        : `Finish ${allTimeBenchmark.winGap === 1 ? "1 win" : `${allTimeBenchmark.winGap} wins`} better than ${allTimeBenchmark.target.username} today and pull level all time.`,
+      note: "One good night is enough to make that file blink.",
+    });
+  }
+
+  if (
+    !candidates.some((entry) => entry.category === "rank-climb-pressure") &&
+    ((seasonChaser &&
+      ((seasonChaser.winGap >= 0 && seasonChaser.winGap <= 2) ||
+        (seasonChaser.sameWins && Math.abs(seasonChaser.killGap) <= 12))) ||
+      (allTimeChaser &&
+        ((allTimeChaser.winGap >= 0 && allTimeChaser.winGap <= 2) ||
+          (allTimeChaser.sameWins && Math.abs(allTimeChaser.killGap) <= 12))))
+  ) {
+    const chase = seasonChaser &&
+      ((seasonChaser.winGap >= 0 && seasonChaser.winGap <= 2) ||
+        (seasonChaser.sameWins && Math.abs(seasonChaser.killGap) <= 12))
+      ? seasonChaser
+      : allTimeChaser;
+    const scopeLabel = chase === seasonChaser ? "Season 2" : "all-time";
+    if (chase) {
+      pushOrder({
+        category: "lead-defense",
+        priority: rankTier === "top" ? 94 : 88,
+        icon: "🛡️",
+        color: "#FFAB40",
+        label: "PROTECT THE LEAD",
+        text: chase.sameWins
+          ? `Finish ahead of ${chase.target.username} today and keep the ${scopeLabel} lead in your hands.`
+          : `Finish ahead of ${chase.target.username} today to keep the ${scopeLabel} lead intact.`,
+        note: chase.sameWins
+          ? "The lead is live right now. One rough room gives it away."
+          : chase.winGap === 0
+            ? "This line is already level. The next close decides who owns it."
+            : `They are only ${chase.winGap} win${chase.winGap === 1 ? "" : "s"} back, so one rough room puts pressure on it.`,
+      });
+    }
+  }
+
+  if (!candidates.some((entry) => entry.category === "streak-hold") && recentWins >= 3) {
+    pushOrder({
+      category: "form-convert",
+      priority: 87,
+      icon: "📍",
+      color: "#00E5FF",
+      label: "MAKE IT REAL",
+      text: `Win again today and turn this ${recentWins}-in-5 run into something the room has to respect.`,
+      note: "The next good room decides whether this is form or just a flash.",
+    });
+  } else if (!candidates.some((entry) => entry.category === "drought-break") && form.length >= 4 && recentWins === 0) {
+    const resetVariant = getVariant("form-reset", [
+      {
+        text: `Win today and break the quiet run from the last ${form.length} logged lobbies.`,
+        note: "Right now the silence is louder than the highs.",
+      },
+      {
+        text: `Take one room today and stop the last ${form.length} rooms from defining this file.`,
+        note: "A flat run never stays invisible for long.",
+      },
+    ]);
+    pushOrder({
+      category: "form-reset",
+      priority: 86,
+      icon: "🧭",
+      color: "#FFD700",
+      label: "CHANGE THE READ",
+      text: resetVariant.text,
+      note: resetVariant.note,
+    });
+  }
+
+  if (daysSinceSeen != null && daysSinceSeen >= 3 && currentRow.appearances >= 5) {
+    const returnVariant = getVariant("return-to-file", [
+      {
+        text: "Show up today and put this file back in the room.",
+        note: "Long gaps let the board move on without you.",
+      },
+      {
+        text: `Get back on file today after ${daysSinceSeen} day${daysSinceSeen === 1 ? "" : "s"} away.`,
+        note: "Time away never stays neutral for long.",
+      },
+    ]);
+    pushOrder({
+      category: "return-to-file",
+      priority: 82,
+      icon: "📅",
+      color: "#00E5FF",
+      label: "RETURN TO FILE",
+      text: returnVariant.text,
+      note: returnVariant.note,
+    });
+  }
+
+  if (
+    !candidates.some((entry) => entry.category === "benchmark-watch") &&
+    latestFallout &&
+    (latestDayWins >= 2 || latestDayKills >= 6)
+  ) {
+    const latestDayVariant = getVariant("latest-day-pressure", [
+      {
+        text:
+          latestDayWins >= 2
+            ? "Back up the last session day with another strong finish today."
+            : `Put up another loud damage line today after ${latestDayKills} kills on the last session day.`,
+        note:
+          latestDayWins >= 2
+            ? "Back to back strong days turn heat into control."
+            : "Do it twice and the room stops calling it a spike.",
+      },
+      {
+        text:
+          latestDayWins >= 2
+            ? `Win again today so that ${latestDayWins}-win day starts to look like the new read.`
+            : `Follow that ${latestDayKills}-kill day with another heavy room today.`,
+        note:
+          latestDayWins >= 2
+            ? "The freshest pressure always gets the most attention."
+            : "A second loud room makes the damage line feel real.",
+      },
+    ]);
+    pushOrder({
+      category: "latest-day-pressure",
+      priority: 90,
+      icon: "☄️",
+      color: player.color,
+      label: latestDayWins >= 2 ? "DO IT AGAIN" : "STAY LOUD",
+      text: latestDayVariant.text,
+      note: latestDayVariant.note,
+    });
+  }
+
+  candidates.sort((left, right) => right.priority - left.priority);
+  const selected = [];
+  const usedCategories = new Set();
+  candidates.forEach((candidate) => {
+    if (selected.length >= maxOrders) {
+      return;
+    }
+    if (usedCategories.has(candidate.category)) {
+      return;
+    }
+    if (selected.length >= minOrders && candidate.priority < 90) {
+      return;
+    }
+    selected.push(candidate);
+    usedCategories.add(candidate.category);
+  });
+
+  if (selected.length < minOrders) {
+    candidates.forEach((candidate) => {
+      if (selected.length >= minOrders) {
+        return;
+      }
+      if (usedCategories.has(candidate.category)) {
+        return;
+      }
+      selected.push(candidate);
+      usedCategories.add(candidate.category);
+    });
+  }
+
+  return selected.slice(0, maxOrders);
+};
+
+export const getMissionBoardState = (sessions, players) => {
+  const missions = getWeeklyMissions(sessions);
+  const clearedCount = missions.filter((mission) => mission.progress >= mission.target).length;
+  const openCount = missions.length - clearedCount;
+  const hottestMission = [...missions]
+    .filter((mission) => mission.progress < mission.target)
+    .sort(
+      (left, right) =>
+        (right.progress / right.target) - (left.progress / left.target) ||
+        right.progress - left.progress,
+    )[0] || null;
+  const nextMission = missions.find((mission) => mission.progress < mission.target) || null;
+  const latestDate = getLatestSessionDate(sessions);
+  const weekSessions = getPeriodSessions(sessions, "week");
+  const nextMissionRemaining = nextMission
+    ? Math.max((nextMission.target || 0) - (nextMission.progress || 0), 0)
+    : 0;
+  const nextMissionMeasure =
+    nextMissionRemaining === 1
+      ? nextMission?.measureSingular
+      : nextMission?.measurePlural || "results";
+  const uniqueWeeklyWinners = [
+    ...new Set(
+      weekSessions
+        .filter((session) => session.winner)
+        .map((session) => session.winner),
+    ),
+  ].length;
+
+  if (openCount > 0 || !players.length || !weekSessions.length) {
+    return {
+      mode: "core",
+      missions,
+      clearedCount,
+      openCount,
+      hottestMission,
+      nextMission,
+      title:
+        openCount === 1 && nextMission
+          ? `${nextMission.label} is the last open objective still changing the week`
+          : hottestMission
+            ? `${hottestMission.label} is pulling hardest on the room right now`
+            : `${openCount} live objectives are still shaping the week`,
+      subline: hottestMission
+        ? `${clearedCount} CLEARED · ${openCount} LIVE · ${nextMissionRemaining} ${nextMissionMeasure.toUpperCase()} LEFT`
+        : `${clearedCount} CLEARED · ${openCount} LIVE`,
+      supportLines: [],
+    };
+  }
+
+  const currentSeason =
+    SEASONS.find((season) => latestDate >= season.start && latestDate <= season.end) || null;
+  const currentSeasonId = currentSeason?.id || "all";
+  const weekRows = allStats(players, weekSessions)
+    .filter((player) => player.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+  const weekKills = [...weekRows].sort(
+    (left, right) => right.kills - left.kills || right.wins - left.wins,
+  );
+  const seasonPressure = getOnDeckPressure(sessions, players, {
+    seasonId: currentSeasonId,
+    period: "week",
+    limit: 4,
+  });
+  const adaptiveMissions = [];
+  const supportLines = [];
+  const usedPlayers = new Set();
+  const addMission = (mission) => {
+    if (!mission || adaptiveMissions.length >= 3) {
+      return false;
+    }
+    const playerIds = mission.players || [];
+    if (playerIds.some((playerId) => usedPlayers.has(playerId))) {
+      return false;
+    }
+    adaptiveMissions.push(mission);
+    playerIds.forEach((playerId) => usedPlayers.add(playerId));
+    return true;
+  };
+
+  const winBenchmark = seasonPressure.items.find((item) => item.type === "wins-benchmark");
+  if (winBenchmark) {
+    const gap = winBenchmark.gap || 0;
+    const target = winBenchmark.benchmarkValue || ((winBenchmark.wins || 0) + gap);
+    const progress = Math.max(target - gap, 0);
+    const player = getPlayerById(buildPlayerIndex(players), winBenchmark.players?.[0]);
+    if (player) {
+      const missionState = createAdaptiveMissionState(progress, target, winBenchmark.color);
+      addMission({
+        icon: "⚡",
+        color: winBenchmark.color,
+        label: `${(winBenchmark.benchmarkLabel || "LIVE").toUpperCase()} WATCH`,
+        desc: `${player.username} is ${gap} win${gap === 1 ? "" : "s"} from ${winBenchmark.benchmarkLabel || "the next rank"}`,
+        progress,
+        target,
+        unit: `${progress}/${target} wins on file`,
+        measureSingular: "win",
+        measurePlural: "wins",
+        clearedCopy: `${player.username} locked the benchmark and changed the room read.`,
+        mood: gap === 1
+          ? "One clean room flips the badge and changes how the week reads."
+          : `${gap} more wins puts this file on a new line and changes who the room is talking about.`,
+        footer: "BADGE IN SIGHT",
+        players: [player.id],
+        ...missionState,
+      });
+    }
+  }
+
+  const killLeader = weekKills[0] || null;
+  const killChaser = weekKills[1] || null;
+  if (
+    killLeader &&
+    killChaser &&
+    killLeader.id !== killChaser.id &&
+    killLeader.kills - killChaser.kills > 0 &&
+    killLeader.kills - killChaser.kills <= 12
+  ) {
+    const gap = killLeader.kills - killChaser.kills;
+    const leaderPlayer = players.find((player) => player.id === killLeader.id) || null;
+    const chaserPlayer = players.find((player) => player.id === killChaser.id) || null;
+    if (leaderPlayer && chaserPlayer) {
+      const missionState = createAdaptiveMissionState(killChaser.kills, killLeader.kills, "#FF4D8F");
+      addMission({
+        icon: "💀",
+        color: "#FF4D8F",
+        label: "DAMAGE LINE",
+        desc: `${chaserPlayer.username} is chasing ${leaderPlayer.username} on the weekly damage line`,
+        progress: killChaser.kills,
+        target: killLeader.kills,
+        unit: `${killChaser.kills}/${killLeader.kills} kills on the week board`,
+        measureSingular: "kill",
+        measurePlural: "kills",
+        clearedCopy: `${chaserPlayer.username} flipped the weekly damage line.`,
+        mood:
+          gap === 1
+            ? "One more kill draws the weekly damage line level."
+            : `${gap} kills turns the weekly damage lane over and puts a new name on top.`,
+        footer: "TOP DAMAGE OPEN",
+        players: [leaderPlayer.id, chaserPlayer.id],
+        ...missionState,
+      });
+    }
+  }
+
+  for (let index = 1; index < Math.min(weekRows.length, 6); index += 1) {
+    const upper = weekRows[index - 1];
+    const chaser = weekRows[index];
+    const gap = upper.wins - chaser.wins;
+    if (
+      gap <= 0 ||
+      gap > 2 ||
+      usedPlayers.has(upper.id) ||
+      usedPlayers.has(chaser.id)
+    ) {
+      continue;
+    }
+    const upperPlayer = players.find((player) => player.id === upper.id) || null;
+    const chaserPlayer = players.find((player) => player.id === chaser.id) || null;
+    if (!upperPlayer || !chaserPlayer) {
+      continue;
+    }
+    const rankLabel = formatOrdinal(index);
+    const missionState = createAdaptiveMissionState(chaser.wins, upper.wins, chaserPlayer.color);
+    if (
+      addMission({
+        icon: index <= 3 ? "👑" : "📈",
+        color: chaserPlayer.color,
+        label: index <= 3 ? "PODIUM WATCH" : "TABLE WATCH",
+        desc: `${chaserPlayer.username} is chasing ${upperPlayer.username} for ${rankLabel} on the week board`,
+        progress: chaser.wins,
+        target: upper.wins,
+        unit: `${chaser.wins}/${upper.wins} wins on the week board`,
+        measureSingular: "win",
+        measurePlural: "wins",
+        clearedCopy: `${chaserPlayer.username} pulled the table level.`,
+        mood:
+          gap === 1
+            ? `One clean win draws ${rankLabel} level and shakes the chase pack.`
+            : `${gap} wins puts ${rankLabel} within reach and changes who the room is tracking next.`,
+        footer: index <= 3 ? "PODIUM UNDER PRESSURE" : "TABLE UNDER PRESSURE",
+        players: [upperPlayer.id, chaserPlayer.id],
+        ...missionState,
+      })
+    ) {
+      break;
+    }
+  }
+
+  const killBenchmark = seasonPressure.items.find((item) => item.type === "kills-benchmark");
+  if (adaptiveMissions.length < 3 && killBenchmark) {
+    const gap = killBenchmark.gap || 0;
+    const target = killBenchmark.benchmarkValue || ((killBenchmark.kills || 0) + gap);
+    const progress = Math.max(target - gap, 0);
+    const player = getPlayerById(buildPlayerIndex(players), killBenchmark.players?.[0]);
+    if (player) {
+      const missionState = createAdaptiveMissionState(progress, target, killBenchmark.color);
+      addMission({
+        icon: "🎯",
+        color: killBenchmark.color,
+        label: "KILL WATCH",
+        desc: `${player.username} is ${gap} kill${gap === 1 ? "" : "s"} from ${target}`,
+        progress,
+        target,
+        unit: `${progress}/${target} kills on file`,
+        measureSingular: "kill",
+        measurePlural: "kills",
+        clearedCopy: `${player.username} broke the benchmark line.`,
+        mood:
+          gap === 1
+            ? "One clean lobby locks the number and changes the read."
+            : `${gap} more kills puts the benchmark on the board and changes the room read.`,
+        footer: "BENCHMARK IN PLAY",
+        players: [player.id],
+        ...missionState,
+      });
+    }
+  }
+
+  const firstWinChasers = weekRows
+    .filter((player) => player.wins === 0 && player.appearances >= 5)
+    .sort(
+      (left, right) =>
+        right.appearances - left.appearances ||
+        right.kills - left.kills,
+    );
+  if (adaptiveMissions.length < 3 && firstWinChasers.length) {
+    const leader = firstWinChasers[0];
+    const player = players.find((entry) => entry.id === leader.id) || null;
+    if (player) {
+      addMission({
+        icon: "🎮",
+        color: "#00E5FF",
+        label: "FIRST BREAKTHROUGH",
+        desc: `${player.username} is still chasing a first weekly win`,
+        progress: 0,
+        target: 1,
+        unit: `${leader.appearances} lobbies played without a weekly win`,
+        measureSingular: "win",
+        measurePlural: "wins",
+        clearedCopy: `${player.username} broke through and changed the board mood.`,
+        mood: "One breakthrough win changes how the whole support pack feels.",
+        footer: "FIRST WIN WATCH",
+        players: [player.id],
+        stateLabel: "LIVE WATCH",
+        stateColor: "#00E5FF",
+      });
+    }
+  }
+
+  if (killBenchmark && !adaptiveMissions.some((mission) => mission.label === "KILL WATCH")) {
+    supportLines.push(killBenchmark.shortText || killBenchmark.text);
+  }
+
+  if (firstWinChasers.length) {
+    supportLines.push(
+      firstWinChasers.length === 1
+        ? `${firstWinChasers[0].username} is still chasing a first weekly win after ${firstWinChasers[0].appearances} lobbies.`
+        : `${joinHumanNames(firstWinChasers.slice(0, 3).map((player) => player.username))} are still chasing a first weekly win this week.`,
+    );
+  }
+
+  return {
+    mode: "adaptive",
+    missions: adaptiveMissions.slice(0, 3),
+    clearedCount,
+    openCount: adaptiveMissions.length,
+    hottestMission: adaptiveMissions[0] || null,
+    nextMission: adaptiveMissions[0] || null,
+    title: "Core weekly board is cleared. Live watches stay open.",
+    subline: `${weekSessions.length} LOBBIES THIS WEEK · ${uniqueWeeklyWinners} WINNERS ON FILE`,
+    supportLines: supportLines.slice(0, 2),
+  };
 };
 
 export const getDaysActive = (playerId, sessions) =>
@@ -1322,29 +3607,30 @@ export const getSortedLeaderboard = ({
   period = "all",
   sortBy = "wins",
 }) => {
-  let sourceSessions = sessions;
-  if (seasonId === "s1") {
-    sourceSessions = sessions.filter(
-      (session) => session.date >= "2026-03-01" && session.date <= "2026-03-31",
-    );
-  } else if (seasonId === "s2") {
-    sourceSessions = sessions.filter(
-      (session) => session.date >= "2026-04-01" && session.date <= "2026-04-30",
-    );
-  } else if (seasonId !== "all") {
-    const season = SEASONS.find((entry) => entry.id === seasonId);
-    if (season) {
-      sourceSessions = sourceSessions.filter(
-        (session) => session.date >= season.start && session.date <= season.end,
-      );
-    }
-  }
-
-  const base = allStats(players, sourceSessions);
+  const sourceSessions = filterSessionsBySeason(sessions, seasonId);
+  const scopedSessions = getPeriodSessions(sourceSessions, period);
+  const base = allStats(players, scopedSessions);
   const ranked =
     seasonId === "all" && period === "all"
       ? base
       : base.filter((player) => player.appearances > 0);
+  const scopedMetricById = {};
+
+  if (sortBy === "carry" || sortBy === "consistency" || sortBy === "drought") {
+    ranked.forEach((player) => {
+      if (sortBy === "carry") {
+        scopedMetricById[player.id] = getCarryScore(player.id, scopedSessions);
+        return;
+      }
+
+      if (sortBy === "consistency") {
+        scopedMetricById[player.id] = getConsistency(player.id, scopedSessions);
+        return;
+      }
+
+      scopedMetricById[player.id] = getDrought(player.id, scopedSessions);
+    });
+  }
 
   return ranked.sort((left, right) => {
     if (sortBy === "wins") {
@@ -1367,13 +3653,13 @@ export const getSortedLeaderboard = ({
       return right.appearances - left.appearances;
     }
     if (sortBy === "carry") {
-      return getCarryScore(right.id, sourceSessions) - getCarryScore(left.id, sourceSessions);
+      return scopedMetricById[right.id] - scopedMetricById[left.id];
     }
     if (sortBy === "consistency") {
-      return getConsistency(right.id, sourceSessions) - getConsistency(left.id, sourceSessions);
+      return scopedMetricById[right.id] - scopedMetricById[left.id];
     }
     if (sortBy === "drought") {
-      return getDrought(left.id, sourceSessions) - getDrought(right.id, sourceSessions);
+      return scopedMetricById[left.id] - scopedMetricById[right.id];
     }
     return (
       right.wins - left.wins ||

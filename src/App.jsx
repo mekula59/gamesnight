@@ -16,7 +16,9 @@ import {
 import {
   allStats as selectAllStats,
   buildPlayerIndex,
+  compareSessionsAsc,
   compareSessionsDesc,
+  createNextPlayerId,
   createNextSessionId,
   getBadges as selectGetBadges,
   getBenchmark as selectGetBenchmark,
@@ -25,28 +27,35 @@ import {
   getConsistency as selectGetConsistency,
   getDailyMVP as selectGetDailyMVP,
   getDayRecap as selectGetDayRecap,
+  getDayStorylines as selectGetDayStorylines,
+  getDailyOrdersForPlayer as selectGetDailyOrdersForPlayer,
   getDaysActive as selectGetDaysActive,
   getDrought as selectGetDrought,
   getFormGuide as selectGetFormGuide,
   getHeadToHead as selectGetHeadToHead,
   getLastSeen as selectGetLastSeen,
+  getLatestDayConsequences as selectGetLatestDayConsequences,
   getLatestSessionDate as selectGetLatestSessionDate,
+  getLeaderboardShiftData as selectGetLeaderboardShiftData,
   getLiveStreaks as selectGetLiveStreaks,
   getMilestones as selectGetMilestones,
+  getMissionBoardState as selectGetMissionBoardState,
+  getOnDeckPressure as selectGetOnDeckPressure,
   getPeriodSessions as selectGetPeriodSessions,
   getPlayerLevel as selectGetPlayerLevel,
   getRank as selectGetRank,
   getRecords as selectGetRecords,
   getRivals as selectGetRivals,
+  getSeasonCampaignFile as selectGetSeasonCampaignFile,
   getSeasonOneWrap as selectGetSeasonOneWrap,
   getSeasonSessions as selectGetSeasonSessions,
   getSortedLeaderboard as selectGetSortedLeaderboard,
   getStats as selectGetStats,
   getStreak as selectGetStreak,
-  getWeeklyMissions as selectGetWeeklyMissions,
+  formatOrdinal,
   parseSessionIdNumber,
 } from "./game/selectors";
-import { createStorageAdapter, loadGameData, persistGameData } from "./game/storage";
+import { createStorageAdapter } from "./game/storage";
 import {
   getNextSession,
   isEventActive,
@@ -55,6 +64,15 @@ import {
   scrambleName,
   todayStr,
 } from "./game/time";
+import {
+  SEASON_TWO_ID,
+  SEASON_TWO_LAUNCH_AT,
+  SEASON_TWO_LAUNCH_DATE,
+  SPECIAL_DATE_MARKERS,
+  filterSessionsBySeason,
+  getSeasonForDate,
+} from "./game/seasons";
+import { useGameData } from "./game/useGameData";
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Barlow+Condensed:wght@400;600;700;900&family=Nunito:wght@400;600;700;800;900&family=Share+Tech+Mono&display=swap');
@@ -583,6 +601,31 @@ const CSS = `
   .nav-desktop{-webkit-overflow-scrolling:touch;}
 `;
 
+const DEFAULT_LOBBY_LIMIT = 8;
+const gameStore = createStorageAdapter();
+
+const createFoolsConfetti = () => {
+  const colors = [
+    "#FF4D8F",
+    "#FFD700",
+    "#C77DFF",
+    "#00E5FF",
+    "#FF6B35",
+    "#00FF94",
+    "#FF6B6B",
+    "#4ECDC4",
+  ];
+
+  return Array.from({ length: 20 }, (_, index) => ({
+    id: index,
+    color: colors[index % colors.length],
+    left: Math.random() * 100,
+    delay: Math.random() * 1.5,
+    duration: 2 + Math.random() * 2,
+    size: 6 + Math.random() * 8,
+  }));
+};
+
 // ═══════════════════════════════════════════════════
 //  COMPONENT
 // ═══════════════════════════════════════════════════
@@ -727,22 +770,22 @@ function LeaderSlideshow({slides}){
   );
 }
 
-function HomeStage({tag,title,sub,accent,children,marginBottom=22}){
+function HomeStage({tag,title,sub,accent,children,marginBottom=30}){
   return(
     <section style={{marginBottom}}>
-      <div style={{marginBottom:12}}>
+      <div style={{marginBottom:15}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",
-          gap:10,flexWrap:"wrap",marginBottom:8}}>
+          gap:12,flexWrap:"wrap",marginBottom:10}}>
           <div>
             <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
-              color:`${accent}bb`,marginBottom:4}}>
+              color:`${accent}bb`,marginBottom:6}}>
               ▸ {tag}
             </div>
-            {title&&<div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",
-              letterSpacing:".04em",lineHeight:1.5,maxWidth:780}}>{title}</div>}
+            {title&&<div className="bc7" style={{fontSize:".8rem",color:"var(--text2)",
+              letterSpacing:".04em",lineHeight:1.62,maxWidth:820}}>{title}</div>}
           </div>
-          {sub&&<div className="bc7" style={{fontSize:".6rem",letterSpacing:".16em",
-            color:"var(--text3)",textTransform:"uppercase"}}>{sub}</div>}
+          {sub&&<div className="bc7" style={{fontSize:".64rem",letterSpacing:".16em",
+            color:"var(--text3)",textTransform:"uppercase",paddingBottom:2}}>{sub}</div>}
         </div>
         <div style={{height:1,
           background:`linear-gradient(90deg,${accent}66,rgba(255,255,255,.05),transparent)`}}/>
@@ -752,8 +795,45 @@ function HomeStage({tag,title,sub,accent,children,marginBottom=22}){
   );
 }
 
+function PlayerIntelCard({p,rank,form,drought,stats}){
+  return(
+    <div className="intel-card" style={{border:`1px solid ${p.color}44`,borderTop:`2px solid ${p.color}`}}>
+      <div className="bc9" style={{fontSize:".72rem",color:p.color,letterSpacing:".07em",marginBottom:4}}>
+        {rank.title}
+      </div>
+      <div style={{display:"flex",gap:3,marginBottom:6}}>
+        {form.map((entry,index)=>(
+          <div key={index} style={{width:8,height:8,borderRadius:"50%",
+            background:entry.win?p.color:"rgba(255,255,255,.2)",
+            boxShadow:entry.win?`0 0 5px ${p.color}88`:"none"}}/>
+        ))}
+      </div>
+      <div className="bc7" style={{fontSize:".68rem",color:"#c8baff",letterSpacing:".05em"}}>
+        {stats.wins}W · {stats.kills}K
+        {drought>3&&<span style={{color:"#FF6B35",marginLeft:6}}>{drought}G drought</span>}
+      </div>
+    </div>
+  );
+}
+
+function Avatar({p,size=44,glow=false,intel=null}){
+  return(
+    <div className="av-wrap">
+      <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,
+        background:`linear-gradient(135deg,${p.color},${p.color}88)`,
+        display:"flex",alignItems:"center",justifyContent:"center",
+        fontFamily:"Barlow Condensed",fontWeight:900,fontSize:size*.38+"px",color:"#fff",
+        textShadow:"0 1px 4px rgba(0,0,0,.6)",
+        boxShadow:glow?`0 0 24px ${p.color}66`:"none"}}>
+        {p.username[0].toUpperCase()}
+      </div>
+      {intel}
+    </div>
+  );
+}
+
 // ── VotePanel — module-level so hooks are stable ──
-function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToast,dn,Av}){
+function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToast,dn}){
   const voteKey="gn-s2-vote-mvp";
   const [voteCounts,setVoteCounts]=useState({});
 
@@ -764,28 +844,32 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
           ?await window.storage.get(voteKey,true).catch(()=>null)
           :await store.get(voteKey);
         if(r?.value)setVoteCounts(JSON.parse(r.value));
-      }catch{}
+      }catch{
+        setVoteCounts({});
+      }
     };
     load();
     const iv=setInterval(load,12000);
     return()=>clearInterval(iv);
-  },[]);
+  },[store]);
 
   const castVote=async(pid)=>{
     if(s2Prediction)return;
     setS2Prediction(pid);
+    const name=players.find(p=>p.id===pid)?.username||"?";
     try{
       const counts={...voteCounts};
       counts[pid]=(counts[pid]||0)+1;
       setVoteCounts(counts);
       const str=JSON.stringify(counts);
       if(typeof window!=="undefined"&&window.storage?.set){
-        await window.storage.set(voteKey,str,true).catch(()=>{});
+        await window.storage.set(voteKey,str,true).catch(()=>null);
       }
       await store.set(voteKey,str);
-    }catch{}
-    const name=players.find(p=>p.id===pid)?.username||"?";
-    showToast(`Vote locked in for ${dn(name)}!`);
+      showToast(`Vote locked in for ${dn(name)}!`);
+    }catch{
+      showToast(`Vote saved for ${dn(name)}. Shared tally will sync later.`);
+    }
   };
 
   const votePlayers=allStats().filter(p=>p.appearances>=3)
@@ -795,33 +879,65 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
     .filter(Boolean);
 
   const totalVotes=Object.values(voteCounts).reduce((a,b)=>a+b,0);
-  const topVotedId=Object.entries(voteCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  const sortedVotes=Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]);
+  const topVotedId=sortedVotes[0]?.[0];
+  const topVotedPlayer=topVotedId?players.find((player)=>player.id===topVotedId):null;
+  const voteLeadGap=sortedVotes.length>1?(sortedVotes[0][1]-sortedVotes[1][1]):(sortedVotes[0]?.[1]||0);
+  const voteSummary=totalVotes>0&&topVotedPlayer
+    ?voteLeadGap<=1&&sortedVotes.length>1
+      ?`${dn(topVotedPlayer.username)} is only a vote ahead. The room has not settled.`
+      :`${dn(topVotedPlayer.username)} has the cleanest trust line so far.`
+    :"No favorite yet. The first calls still set the tone.";
+  const voteSubSummary=totalVotes>0
+    ?`${totalVotes} vote${totalVotes===1?"":"s"} on file`
+    :"Ballot box open";
 
   return(
     <div style={{
-      background:"linear-gradient(135deg,rgba(199,125,255,.08),rgba(0,229,255,.04))",
-      border:"1px solid rgba(199,125,255,.3)",
+      background:"linear-gradient(135deg,rgba(199,125,255,.08),rgba(0,229,255,.035))",
+      border:"1px solid rgba(199,125,255,.24)",
       borderLeft:"3px solid rgba(199,125,255,.6)",
-      borderRadius:"0 12px 12px 0",padding:"20px 20px",marginBottom:20}}>
-      <div style={{marginBottom:14}}>
-        <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
-          letterSpacing:".25em",color:"rgba(199,125,255,.8)",marginBottom:6}}>
-          🗳️ S2 MVP VOTE · LIVE
+      borderRadius:"0 12px 12px 0",padding:"17px 18px",marginBottom:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(190px,260px)",gap:12,alignItems:"start",marginBottom:12}}>
+        <div>
+          <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
+            letterSpacing:".25em",color:"rgba(199,125,255,.8)",marginBottom:6}}>
+            🗳️ S2 MVP VOTE · LIVE
+          </div>
+          <div style={{fontFamily:"Fredoka One",fontSize:"1.02rem",color:"#fff",marginBottom:4}}>
+            Who has the strongest Season 2 file right now?
+          </div>
+          <div style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
+            color:"var(--text3)",letterSpacing:".04em",lineHeight:1.55}}>
+            {totalVotes>0
+              ?`${totalVotes} vote${totalVotes===1?"":"s"} in. The room is already showing where trust is landing.`
+              :"Ballot box is open. The first calls still shape the read."}
+            {s2Prediction?" Your vote is locked in.":""}
+          </div>
         </div>
-        <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#fff",marginBottom:4}}>
-          Who is the MVP of Season 2 so far?
-        </div>
-        <div style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
-          color:"var(--text3)",letterSpacing:".04em"}}>
-          {totalVotes>0
-            ?`${totalVotes} vote${totalVotes===1?"":"s"} in. Results refresh every 12 seconds.`
-            :"Cast your vote. Everyone sees the count in real time."}
-          {s2Prediction?" Your vote is locked in.":""}
+        <div style={{
+          alignSelf:"stretch",
+          background:"linear-gradient(135deg,rgba(0,0,0,.24),rgba(199,125,255,.08))",
+          border:"1px solid rgba(199,125,255,.18)",
+          borderLeft:"3px solid rgba(199,125,255,.44)",
+          borderRadius:"0 10px 10px 0",
+          padding:"12px 13px",
+          minHeight:74,
+        }}>
+          <div className="bc7" style={{fontSize:".55rem",letterSpacing:".22em",color:"rgba(199,125,255,.72)",marginBottom:6}}>
+            CURRENT READ
+          </div>
+          <div className="bc9" style={{fontSize:".82rem",lineHeight:1.28,color:"#fff",marginBottom:4}}>
+            {voteSummary}
+          </div>
+          <div className="bc7" style={{fontSize:".62rem",lineHeight:1.55,color:"var(--text3)"}}>
+            {voteSubSummary}
+          </div>
         </div>
       </div>
 
       {totalVotes>0&&(
-        <div style={{marginBottom:14}}>
+        <div style={{marginBottom:12}}>
           {Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([pid,count])=>{
             const vp=players.find(p=>p.id===pid);
             if(!vp)return null;
@@ -832,7 +948,7 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
                 <div style={{display:"flex",justifyContent:"space-between",
                   alignItems:"center",marginBottom:3}}>
                   <div style={{display:"flex",alignItems:"center",gap:7}}>
-                    <Av p={vp} size={20}/>
+                    <Avatar p={vp} size={20}/>
                     <span style={{fontFamily:"Barlow Condensed",fontWeight:900,
                       fontSize:".75rem",color:isTop?vp.color:"var(--text2)"}}>
                       {isTop?"👑 ":""}{dn(vp.username)}
@@ -870,7 +986,7 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
                 borderRadius:6,padding:"8px 10px",cursor:s2Prediction?"default":"pointer",
                 textAlign:"left",transition:"all .12s",outline:"none",
                 opacity:s2Prediction&&!isVoted?0.5:1}}>
-              <Av p={player} size={26}/>
+              <Avatar p={player} size={26}/>
               <div style={{minWidth:0}}>
                 <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
                   color:player.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
@@ -878,7 +994,7 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
                 </div>
                 <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
                   fontSize:".58rem",color:"var(--text3)"}}>
-                  {vcount>0?`${vcount} vote${vcount===1?"":"s"}`:"board still quiet"}
+                  {vcount>0?`${vcount} vote${vcount===1?"":"s"}`:"first call still open"}
                 </div>
               </div>
             </button>
@@ -931,21 +1047,21 @@ function TypedBio({text,color}){
 
 function BriefingFeed({stories}){
   const [visibleCount,setVisibleCount]=useState(0);
+  const storyCount=stories.length;
   const storySignature=stories.map((story)=>`${story.icon}|${story.color}|${story.text}`).join("||");
 
   useEffect(()=>{
-    setVisibleCount(0);
-    if(!stories.length)return undefined;
+    if(!storyCount)return undefined;
     const timers=[
       setTimeout(()=>setVisibleCount(1),140),
-      ...stories.slice(1).map((_,index)=>setTimeout(()=>{
-        setVisibleCount((count)=>Math.min(stories.length,count+1));
+      ...Array.from({length:Math.max(storyCount-1,0)},(_,index)=>setTimeout(()=>{
+        setVisibleCount((count)=>Math.min(storyCount,count+1));
       },520+(index*240))),
     ];
     return()=>timers.forEach(clearTimeout);
-  },[stories.length,storySignature]);
+  },[storyCount,storySignature]);
 
-  if(!stories.length){
+  if(!storyCount){
     return null;
   }
 
@@ -956,7 +1072,7 @@ function BriefingFeed({stories}){
       borderTop:"2px solid rgba(0,255,148,.3)",
       borderRadius:"0 6px 6px 0",
       borderLeft:"3px solid rgba(0,255,148,.35)",
-      padding:"14px 16px",
+      padding:"17px 18px 18px",
       fontFamily:"'Share Tech Mono',monospace",
       overflow:"hidden",
     }}>
@@ -966,11 +1082,11 @@ function BriefingFeed({stories}){
         return(
           <div key={`${story.icon}-${index}-${story.text.slice(0,18)}`} style={{
             display:"grid",
-            gridTemplateColumns:"18px minmax(0,1fr)",
-            gap:10,
+            gridTemplateColumns:"20px minmax(0,1fr)",
+            gap:12,
             alignItems:"flex-start",
-            padding:"8px 0",
-            borderBottom:index<stories.length-1?"1px solid rgba(255,255,255,.04)":"none",
+            padding:index===0?"4px 0 12px":"12px 0 13px",
+            borderBottom:index<stories.length-1?"1px solid rgba(255,255,255,.05)":"none",
             opacity:isVisible?1:0,
             transform:isVisible?"translateY(0)":"translateY(10px)",
             transition:"opacity .28s ease, transform .28s ease",
@@ -979,11 +1095,11 @@ function BriefingFeed({stories}){
               {story.icon}
             </span>
             <div style={{minWidth:0}}>
-              <div style={{fontSize:".78rem",lineHeight:1.68,color:"rgba(200,186,255,.88)",
+              <div style={{fontSize:".8rem",lineHeight:1.8,color:"rgba(200,186,255,.92)",
                 letterSpacing:".02em",wordBreak:"break-word"}}>
                 {story.text}
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
+              <div style={{display:"flex",alignItems:"center",gap:9,marginTop:8}}>
                 <div style={{height:2,flex:1,maxWidth:isVisible?"100%":"0%",
                   background:`linear-gradient(90deg,${story.color},transparent)`,
                   transition:"max-width .32s ease"}}/>
@@ -1000,16 +1116,14 @@ function BriefingFeed({stories}){
 }
 
 export default function GameNight(){
+  const foolsDay=isFoolsDay();
   const [view,       setView]      = useState("home");
-  const [players,    setPlayers]   = useState([]);
-  const [sessions,   setSessions]  = useState([]);
-  const [loaded,     setLoaded]    = useState(false);
   const [adminMode,  setAdminMode] = useState(false);
   const [showLogin,  setShowLogin] = useState(false);
   const [adminInput, setAdminInput]= useState("");
   const [adminTab,   setAdminTab]  = useState("session");
   const [sortBy,     setSortBy]    = useState("wins");
-  const [lbPeriod,   setLbPeriod]  = useState("all");
+  const [lbPeriod,   setLbPeriod]  = useState("week");
   const [toast,      setToast]     = useState("");
   const [cd,         setCd]        = useState({d:0,h:0,m:0,s:0});
   const [live,       setLive]      = useState(false);
@@ -1028,16 +1142,9 @@ export default function GameNight(){
   const [lobbyFilter,setLobbyFilter] = useState("");
   const [lobbyDate,  setLobbyDate]   = useState("");
   const [lobbySearch,setLobbySearch] = useState("");
-  const [lobbyLimit, setLobbyLimit]  = useState(8);
-  const [pollVote,   setPollVote]     = useState(null);
-  const [pollClosed, setPollClosed]   = useState(false);
-  const [prevView,   setPrevView]     = useState("home");
+  const [lobbyLimit, setLobbyLimit]  = useState(DEFAULT_LOBBY_LIMIT);
   const [queuedView, setQueuedView]   = useState(null);
   const [zonePulse,  setZonePulse]    = useState(0);
-  const [showCeremony,setShowCeremony]= useState(false);
-  const [ceremonyPending,setCeremonyPending]= useState(false);
-  const [ceremonySnoozed,setCeremonySnoozed]= useState(false);
-  const [s2Prediction,setS2Prediction]= useState(null); // pid voted for S2 winner
   const [s2CdClock,  setS2CdClock]   = useState({d:0,h:0,m:0,s:0});
 
   const emptyForm=()=>({date:todayStr(),attendees:[],winner:"",kills:{},deaths:{},notes:"",placements:[],clip:""});
@@ -1045,58 +1152,76 @@ export default function GameNight(){
   const [np,setNp]=useState({username:"",color:"#FFD700"});
   const [chartPid,setChartPid]=useState("");
   const [shareCard,setShareCard]=useState(null); // {sid, visible}
-  const [confetti,setConfetti]=useState([]);
+  const [confetti,setConfetti]=useState(()=>foolsDay?createFoolsConfetti():[]);
   const [foolsToast,setFoolsToast]=useState(0); // 0=hidden 1=warning 2=reveal
   const [lvlCard,setLvlCard]=useState(null); // {label, icon, color, phase:'in'|'out'}
   const [bootPhase,setBootPhase]=useState(0); // 0=logo 1=bar 2=done
+  const [utcDayKey,setUtcDayKey]=useState(todayStr());
 
   // ── Dual storage: window.storage (artifact) + localStorage (Netlify) ──
-  const store=createStorageAdapter();
-  const CEREMONY_SNOOZE_KEY="gn-s2-ceremony-snoozed";
+  const store=gameStore;
   const zoneTimersRef=useRef({swap:null,clear:null});
-
-  // ── load ──
-  useEffect(()=>{
-    let active=true;
-
-    const boot=async()=>{
-      const data=await loadGameData(store);
-      if(!active)return;
-
-      setPlayers(data.players);
-      setSessions(data.sessions);
-      setPollVote(data.pollVote);
-      setS2Prediction(data.s2Prediction);
-      setCeremonyPending(data.showCeremony);
-      if(typeof window!=="undefined"){
-        setCeremonySnoozed(window.sessionStorage?.getItem(CEREMONY_SNOOZE_KEY)==="1");
-      }
-      setLoaded(true);
-    };
-
-    boot();
-    return()=>{active=false;};
-  },[]);
-
-  const persist=(nextPlayers,nextSessions)=>
-    persistGameData(store,nextPlayers,nextSessions);
+  const {
+    players,
+    setPlayers,
+    sessions,
+    setSessions,
+    loaded,
+    persist,
+    showCeremony,
+    ceremonyPending,
+    markCeremonySeen,
+    snoozeCeremony,
+    openCeremony,
+    s2Prediction,
+    setS2Prediction,
+  } = useGameData({ store, view });
 
   // ── clock ──
   useEffect(()=>{
     const tick=()=>{
-      const isLive=isLiveNow();setLive(isLive);
-      if(!isLive){const diff=getNextSession()-new Date();
-        if(diff>0){const t=Math.floor(diff/1000);
-          setCd({d:Math.floor(t/86400),h:Math.floor((t%86400)/3600),m:Math.floor((t%3600)/60),s:t%60});}}
+      const isLive=isLiveNow();
+      setLive(isLive);
+      const diff=getNextSession()-new Date();
+      if(diff>0){
+        const t=Math.floor(diff/1000);
+        setCd({d:Math.floor(t/86400),h:Math.floor((t%86400)/3600),m:Math.floor((t%3600)/60),s:t%60});
+      }else{
+        setCd({d:0,h:0,m:0,s:0});
+      }
     };
     tick();const id=setInterval(tick,1000);return()=>clearInterval(id);
   },[]);
 
+  useEffect(()=>{
+    let timeoutId=null;
+    let intervalId=null;
+    const syncDayKey=()=>{
+      const nextKey=todayStr();
+      setUtcDayKey(prev=>prev===nextKey?prev:nextKey);
+    };
+    const scheduleMidnightRefresh=()=>{
+      const now=new Date();
+      const nextMidnight=new Date(now);
+      nextMidnight.setUTCHours(24,0,0,50);
+      timeoutId=setTimeout(()=>{
+        syncDayKey();
+        intervalId=setInterval(syncDayKey,24*60*60*1000);
+      },Math.max(nextMidnight-now,50));
+    };
+    syncDayKey();
+    scheduleMidnightRefresh();
+    return()=>{
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  },[]);
+
   // ── S2 launch countdown ──
   useEffect(()=>{
-    if(todayStr()>="2026-04-01")return;
+    if(todayStr()>=SEASON_TWO_LAUNCH_DATE)return;
     const tick=()=>{
-      const s2Launch=new Date("2026-04-01T17:00:00Z"); // 5PM UTC, first session
+      const s2Launch=new Date(SEASON_TWO_LAUNCH_AT);
       const diff=s2Launch-new Date();
       if(diff<=0){setS2CdClock({d:0,h:0,m:0,s:0});return;}
       const t=Math.floor(diff/1000);
@@ -1119,80 +1244,41 @@ export default function GameNight(){
 
   // ── April Fools: confetti burst + fake alert ──
   useEffect(()=>{
-    if(!isFoolsDay())return;
-    // Confetti — 20 pieces, different colors and timings
-    const colors=["#FF4D8F","#FFD700","#C77DFF","#00E5FF","#FF6B35","#00FF94","#FF6B6B","#4ECDC4"];
-    const pieces=Array.from({length:20},(_,i)=>({
-      id:i,
-      color:colors[i%colors.length],
-      left:Math.random()*100,
-      delay:Math.random()*1.5,
-      duration:2+Math.random()*2,
-      size:6+Math.random()*8,
-    }));
-    setConfetti(pieces);
+    if(!foolsDay)return;
     const t=setTimeout(()=>setConfetti([]),4000);
     // Fake alert — shows at 2s, changes at 5s, gone at 8s
     const t1=setTimeout(()=>setFoolsToast(1),2000);
     const t2=setTimeout(()=>setFoolsToast(2),5000);
     const t3=setTimeout(()=>setFoolsToast(0),8000);
     return()=>{clearTimeout(t);clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
-  },[]);
+  },[foolsDay]);
 
   useEffect(()=>{
     if(typeof window==="undefined")return;
     const h=()=>setShowScroll(window.scrollY>320);
     window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);
   },[]);
-
-  useEffect(()=>{
-    if(typeof window==="undefined")return;
-    const onKeyDown=e=>{
-      if(e.key==="Escape"&&showCeremony){
-        setShowCeremony(false);
-        setCeremonySnoozed(true);
-        window.sessionStorage?.setItem(CEREMONY_SNOOZE_KEY,"1");
-      }
-    };
-    window.addEventListener("keydown",onKeyDown);
-    return()=>window.removeEventListener("keydown",onKeyDown);
-  },[showCeremony]);
-
-  useEffect(()=>{
-    if(!loaded||!ceremonyPending||showCeremony||ceremonySnoozed)return;
-    if(view!=="home")return;
-    if(typeof window!=="undefined"&&window.scrollY>120)return;
-    const id=setTimeout(()=>setShowCeremony(true),900);
-    return()=>clearTimeout(id);
-  },[loaded,ceremonyPending,showCeremony,ceremonySnoozed,view]);
-
-  useEffect(()=>{
-    setLobbyLimit(8);
+  const resetLobbyScope=()=>{
+    setLobbyLimit(DEFAULT_LOBBY_LIMIT);
     setExpandedSid(null);
-  },[lobbyFilter,lobbyDate,lobbySearch]);
-
-  const markCeremonySeen=async()=>{
-    setShowCeremony(false);
-    setCeremonyPending(false);
-    setCeremonySnoozed(false);
-    if(typeof window!=="undefined"){
-      window.sessionStorage?.removeItem(CEREMONY_SNOOZE_KEY);
-    }
-    try{await store.set("gn-s2-ceremony-seen","1");}catch{}
   };
-  const snoozeCeremony=()=>{
-    setShowCeremony(false);
-    setCeremonySnoozed(true);
-    if(typeof window!=="undefined"){
-      window.sessionStorage?.setItem(CEREMONY_SNOOZE_KEY,"1");
-    }
+  const updateLobbyFilter=value=>{
+    setLobbyFilter(value);
+    resetLobbyScope();
   };
-  const openCeremony=()=>{
-    setCeremonySnoozed(false);
-    if(typeof window!=="undefined"){
-      window.sessionStorage?.removeItem(CEREMONY_SNOOZE_KEY);
-    }
-    setShowCeremony(true);
+  const updateLobbyDate=value=>{
+    setLobbyDate(value);
+    resetLobbyScope();
+  };
+  const updateLobbySearch=value=>{
+    setLobbySearch(value);
+    resetLobbyScope();
+  };
+  const clearLobbyFilters=()=>{
+    setLobbyFilter("");
+    setLobbyDate("");
+    setLobbySearch("");
+    resetLobbyScope();
   };
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),3000);};
@@ -1250,7 +1336,6 @@ export default function GameNight(){
   };
   const go=v=>{
     const fromView=queuedView||view;
-    setPrevView(fromView);
     setMobileOpen(false);
     const lv=LEVEL_MAP[v];
     if(lv&&v!==fromView){
@@ -1289,7 +1374,6 @@ export default function GameNight(){
   const playerIndex=buildPlayerIndex(players);
   const getPlayer=pid=>playerIndex[pid]||null;
   const getLatestSessionDate=(src=sessions)=>selectGetLatestSessionDate(src);
-  const getPeriodSessions=(period=lbPeriod)=>selectGetPeriodSessions(sessions,period);
   const getStats=(pid,src=sessions)=>selectGetStats(pid,src);
   const allStats=(src=sessions)=>selectAllStats(players,src);
   const getRank=pid=>selectGetRank(pid,players,sessions);
@@ -1299,11 +1383,18 @@ export default function GameNight(){
   const getDailyMVP=()=>selectGetDailyMVP(sessions,players);
   const getRivals=()=>selectGetRivals(sessions);
   const getSeasonSessions=sid=>selectGetSeasonSessions(sessions,sid);
-  const getWeeklyMissions=()=>selectGetWeeklyMissions(sessions);
+  const getMissionBoardState=()=>selectGetMissionBoardState(sessions,players);
   const getRecords=()=>selectGetRecords(sessions,players);
   const getChartData=pid=>selectGetChartData(pid,sessions);
   const getLiveStreaks=()=>selectGetLiveStreaks(sessions,players);
   const getDayRecap=date=>selectGetDayRecap(date,sessions,players);
+  const getDayStorylines=date=>selectGetDayStorylines(date,sessions,players);
+  const getDailyOrdersForPlayer=pid=>
+    selectGetDailyOrdersForPlayer(pid,players,sessions,{dayKey:utcDayKey});
+  const getLatestDayConsequences=date=>selectGetLatestDayConsequences(sessions,players,date);
+  const getLeaderboardShiftData=(seasonId="all",period=lbPeriod,sortKey=sortBy)=>
+    selectGetLeaderboardShiftData(players,sessions,{seasonId,period,sortBy:sortKey});
+  const getOnDeckPressure=(options)=>selectGetOnDeckPressure(sessions,players,options);
   const getFormGuide=(pid,n=5)=>selectGetFormGuide(pid,sessions,n);
   const getCarryScore=(pid,src=sessions)=>selectGetCarryScore(pid,src);
   const getDrought=pid=>selectGetDrought(pid,sessions);
@@ -1312,6 +1403,20 @@ export default function GameNight(){
   const getBenchmark=pid=>selectGetBenchmark(pid,players,sessions);
   const getLastSeen=pid=>selectGetLastSeen(pid,sessions);
   const getDaysActive=pid=>selectGetDaysActive(pid,sessions);
+  const buildSeasonCampaignFile=(seasonSessions)=>
+    selectGetSeasonCampaignFile(seasonSessions,players);
+  const renderPlayerIntel=p=>{
+    if(!p?.id)return null;
+    return(
+      <PlayerIntelCard
+        p={p}
+        rank={getRank(p.id)}
+        form={getFormGuide(p.id,5)}
+        drought={getDrought(p.id)}
+        stats={getStats(p.id)}
+      />
+    );
+  };
 
   useEffect(()=>()=>clearZoneTimers(),[]);
 
@@ -1323,151 +1428,14 @@ export default function GameNight(){
     return`${list.slice(0,-1).join(", ")}, and ${list[list.length-1]}`;
   };
 
-  const buildLatestFallout=(date)=>{
-    if(!date)return null;
-    const latestSessions=[...sessions]
-      .filter((session)=>session.date===date)
-      .sort((left,right)=>(parseSessionIdNumber(left.id)||0)-(parseSessionIdNumber(right.id)||0));
-    if(!latestSessions.length)return null;
-
-    const zeroStats={wins:0,kills:0,appearances:0};
-    const latestTotals=allStats(latestSessions).filter((player)=>player.appearances>0);
-    const priorSessions=sessions.filter((session)=>session.date<date);
-    const beforeTotals=allStats(priorSessions).filter((player)=>player.appearances>0);
-    const afterTotals=allStats().filter((player)=>player.appearances>0);
-    const playerByUsername=(username)=>players.find((player)=>player.username===username)||null;
-    const findTotals=(rows,pid)=>rows.find((row)=>row.id===pid)||zeroStats;
-    const byWins=(left,right)=>right.wins-left.wins||right.kills-left.kills;
-    const dayWinnerMap={};
-    latestSessions.forEach((session)=>{
-      if(session.winner){
-        dayWinnerMap[session.winner]=(dayWinnerMap[session.winner]||0)+1;
-      }
-    });
-    const dayWinners=Object.entries(dayWinnerMap)
-      .map(([pid,wins])=>({
-        pid,
-        wins,
-        player:getPlayer(pid),
-        kills:findTotals(latestTotals,pid).kills,
-      }))
-      .sort((left,right)=>right.wins-left.wins||right.kills-left.kills);
-    const topWinCount=dayWinners[0]?.wins||0;
-    const topWinners=topWinCount>0
-      ?dayWinners.filter((entry)=>entry.wins===topWinCount)
-      :[];
-    const topKiller=[...latestTotals].sort((left,right)=>right.kills-left.kills||right.wins-left.wins)[0]||null;
-    const topKillerPlayer=topKiller?getPlayer(topKiller.id):null;
-    const zeroKillWinSession=latestSessions.find((session)=>
-      session.winner&&(session.kills?.[session.winner]||0)===0,
-    )||null;
-    const zeroKillWinner=zeroKillWinSession?getPlayer(zeroKillWinSession.winner):null;
-
-    const mekulaPlayer=playerByUsername("MekulaGG");
-    let reboundWin=null;
-    if(mekulaPlayer){
-      const reboundIndex=latestSessions.findIndex((session)=>
-        session.winner===mekulaPlayer.id&&(session.kills?.[mekulaPlayer.id]||0)>=4,
-      );
-      if(reboundIndex>=0){
-        const reboundSession=latestSessions[reboundIndex];
-        const priorDaySessions=latestSessions
-          .slice(0,reboundIndex)
-          .filter((session)=>session.attendees?.includes(mekulaPlayer.id));
-        reboundWin={
-          player:mekulaPlayer,
-          session:reboundSession,
-          kills:reboundSession.kills?.[mekulaPlayer.id]||0,
-          priorDayLobbies:priorDaySessions.length,
-          priorDayWins:priorDaySessions.filter((session)=>session.winner===mekulaPlayer.id).length,
-        };
-      }
-    }
-
-    const legendCrossers=[...afterTotals]
-      .filter((player)=>{
-        const before=findTotals(beforeTotals,player.id);
-        return before.wins<10&&player.wins>=10;
-      })
-      .sort(byWins)
-      .map((player)=>({player:getPlayer(player.id),wins:player.wins}));
-
-    const killCrossers=[...afterTotals]
-      .filter((player)=>{
-        const before=findTotals(beforeTotals,player.id);
-        return before.kills<100&&player.kills>=100;
-      })
-      .sort((left,right)=>right.kills-left.kills||right.wins-left.wins)
-      .map((player)=>({player:getPlayer(player.id),kills:player.kills}));
-
-    const beforeRanks=[...beforeTotals].sort(byWins);
-    const afterRanks=[...afterTotals].sort(byWins);
-    const getRankFor=(rows,pid)=>rows.findIndex((row)=>row.id===pid)+1;
-    const topFiveShift=[...afterRanks]
-      .map((player)=>({
-        player:getPlayer(player.id),
-        wins:player.wins,
-        beforeRank:getRankFor(beforeRanks,player.id),
-        afterRank:getRankFor(afterRanks,player.id),
-      }))
-      .find((entry)=>entry.afterRank>0&&entry.afterRank<=5&&entry.beforeRank>entry.afterRank)||null;
-
-    const buildRivalPressure=(leftName,rightName)=>{
-      const leftPlayer=playerByUsername(leftName);
-      const rightPlayer=playerByUsername(rightName);
-      if(!leftPlayer||!rightPlayer)return null;
-      const pair=(rows)=>rows.find((entry)=>
-        [entry.p1,entry.p2].includes(leftPlayer.id)&&[entry.p1,entry.p2].includes(rightPlayer.id),
-      );
-      const beforePair=pair(selectGetRivals(priorSessions));
-      const afterPair=pair(selectGetRivals(sessions));
-      if(!afterPair)return null;
-      const leftWins=afterPair.p1===leftPlayer.id?afterPair.p1wins:afterPair.p2wins;
-      const rightWins=afterPair.p1===rightPlayer.id?afterPair.p1wins:afterPair.p2wins;
-      const leftBefore=beforePair?(beforePair.p1===leftPlayer.id?beforePair.p1wins:beforePair.p2wins):0;
-      const rightBefore=beforePair?(beforePair.p1===rightPlayer.id?beforePair.p1wins:beforePair.p2wins):0;
-      const leader=leftWins>=rightWins?leftPlayer:rightPlayer;
-      const trailer=leader.id===leftPlayer.id?rightPlayer:leftPlayer;
-      return{
-        leftPlayer,
-        rightPlayer,
-        leader,
-        trailer,
-        total:afterPair.total,
-        totalDelta:afterPair.total-(beforePair?.total||0),
-        leaderWins:Math.max(leftWins,rightWins),
-        trailerWins:Math.min(leftWins,rightWins),
-        leaderDelta:leader.id===leftPlayer.id?leftWins-leftBefore:rightWins-rightBefore,
-      };
-    };
-
-    return{
-      latestSessions,
-      topWinCount,
-      topWinners,
-      topKiller:topKiller&&topKillerPlayer
-        ?{...topKiller,player:topKillerPlayer}
-        :null,
-      zeroKillWin:zeroKillWinSession&&zeroKillWinner
-        ?{session:zeroKillWinSession,player:zeroKillWinner}
-        :null,
-      reboundWin,
-      legendCrossers,
-      killCrossers,
-      topFiveShift,
-      mekulaTeriqPressure:buildRivalPressure("MekulaGG","Teriqstp"),
-      teriqHackqamPressure:buildRivalPressure("Teriqstp","Hackqam"),
-    };
-  };
-
   // ── Storylines engine: 8 lines, human, passionate, varied, no em dashes ──
   const getStorylines=()=>{
     if(!sessions.length||!players.length)return[];
     const latestDate=getLatestSessionDate();
     if(!latestDate)return[];
-    const latestFallout=buildLatestFallout(latestDate);
+    const latestFallout=getLatestDayConsequences(latestDate);
     const allSt=allStats();
-    const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
+    const s2Sess=filterSessionsBySeason(sessions,SEASON_TWO_ID);
     const s2St=allStats(s2Sess).filter(p=>p.appearances>0);
     const latestSess=sessions.filter(s=>s.date===latestDate);
     const seed=parseInt(latestDate.replace(/-/g,"").slice(-3),10)||0;
@@ -1487,7 +1455,34 @@ export default function GameNight(){
       return lastWinIndex===-1?priorSessions.length:lastWinIndex;
     };
 
-    if(latestFallout?.topWinners.length>=2&&latestFallout.topKiller?.player){
+    const latestTopKillers=latestFallout?.topKillers?.length
+      ?latestFallout.topKillers
+      :(latestFallout?.topKiller?.player?[latestFallout.topKiller]:[]);
+    const latestTopKillerNames=latestTopKillers.length
+      ?joinHumanList(latestTopKillers.map((entry)=>dn(entry.player?.username||"")))
+      :"";
+    const latestTopKillCount=latestTopKillers[0]?.kills||latestFallout?.topKiller?.kills||0;
+
+    if(latestFallout?.topWinners.length===1&&latestTopKillers.length>1){
+      const winnerName=dn(latestFallout.topWinners[0].player?.username||"");
+      const winnerOwnsDamage=latestTopKillers.some((entry)=>entry.player?.id===latestFallout.topWinners[0].player?.id);
+      addCandidate("⚡","#FFD700",10,[
+        winnerOwnsDamage
+          ?`${winnerName} owned the last session day with ${latestFallout.topWinCount} wins, and the damage race still ended level between ${latestTopKillerNames} at ${latestTopKillCount} kills each.`
+          :`${winnerName} owned the last session day with ${latestFallout.topWinCount} wins, while ${latestTopKillerNames} tied on damage at ${latestTopKillCount} kills each.`,
+        winnerOwnsDamage
+          ?`${winnerName} took control of the wins column with ${latestFallout.topWinCount}, but ${latestTopKillerNames} still closed the day tied on damage at ${latestTopKillCount} each.`
+          :`${winnerName} set the win pace with ${latestFallout.topWinCount} wins. The damage line still finished level between ${latestTopKillerNames} on ${latestTopKillCount} kills each.`,
+      ]);
+    }else if(latestFallout?.topWinners.length>=2&&latestTopKillers.length>1){
+      const splitLeaders=joinHumanList(
+        latestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")),
+      );
+      addCandidate("⚡","#FFD700",10,[
+        `${splitLeaders} split the last session day at ${latestFallout.topWinCount} wins each, and ${latestTopKillerNames} matched the damage line at ${latestTopKillCount} kills each.`,
+        `${splitLeaders} finished level on wins, and ${latestTopKillerNames} left the damage race tied on ${latestTopKillCount} kills each.`,
+      ]);
+    }else if(latestFallout?.topWinners.length>=2&&latestFallout.topKiller?.player){
       const splitLeaders=joinHumanList(
         latestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")),
       );
@@ -1532,15 +1527,18 @@ export default function GameNight(){
       const killLine=latestFallout.killCrossers[0]
         ?`${dn(latestFallout.killCrossers[0].player.username)} broke through ${latestFallout.killCrossers[0].kills} kills`
         :"";
-      const rankLine=latestFallout.topFiveShift
-        ?`${dn(latestFallout.topFiveShift.player?.username||"")} climbed into ${latestFallout.topFiveShift.afterRank}th all-time wins`
+      const climbPlayer=latestFallout.biggestClimber?.player||latestFallout.topFiveShift?.player||null;
+      const climbStats=climbPlayer?getStats(climbPlayer.id):null;
+      const winsToLegend=climbStats&&climbStats.wins<10?10-climbStats.wins:null;
+      const rankLine=latestFallout.biggestClimber
+        ?`${dn(climbPlayer?.username||"")} climbed to ${formatOrdinal(latestFallout.biggestClimber.afterRank)} on the all-time wins table${winsToLegend&&winsToLegend<=2?` and now sits ${winsToLegend} win${winsToLegend===1?"":"s"} from Legend`:""}`
         :"";
       addCandidate("🏁","#FFAB40",8,[
         [
           legendLine,
           killLine,
           rankLine,
-        ].filter(Boolean).join(", ")+". April 8 moved real furniture.",
+        ].filter(Boolean).join(", ")+". The latest file changed more than the top row.",
         [
           rankLine,
           killLine,
@@ -1549,7 +1547,22 @@ export default function GameNight(){
               ?`${legendNames} both reached Legend`
               :`${legendNames} reached Legend`
             :"",
-        ].filter(Boolean).join(", ")+". That day shifted more than the top row.",
+        ].filter(Boolean).join(", ")+". The room felt that shift right away.",
+      ]);
+    }
+
+    const weeklyShift=getLeaderboardShiftData("all","week","wins");
+    const weeklyClimbPlayer=weeklyShift.biggestRise?.player||null;
+    if(weeklyClimbPlayer&&weeklyShift.biggestRise?.delta&&weeklyShift.biggestRise.delta>=3){
+      const weeklyClimbStats=getStats(weeklyClimbPlayer.id);
+      const killGapToTwoHundred=weeklyClimbStats.kills<200?200-weeklyClimbStats.kills:null;
+      addCandidate("📈","#00E5FF",7,[
+        killGapToTwoHundred&&killGapToTwoHundred<=6
+          ?`${dn(weeklyClimbPlayer.username)} jumped ${weeklyShift.biggestRise.delta} places on this week's board and now sits ${killGapToTwoHundred} kills from 200 all time.`
+          :`${dn(weeklyClimbPlayer.username)} made the sharpest move on this week's board with a ${weeklyShift.biggestRise.delta}-place jump.`,
+        killGapToTwoHundred&&killGapToTwoHundred<=6
+          ?`${dn(weeklyClimbPlayer.username)} is the weekly mover right now, up ${weeklyShift.biggestRise.delta} spots and only ${killGapToTwoHundred} kills from 200 overall.`
+          :`${dn(weeklyClimbPlayer.username)} climbed ${weeklyShift.biggestRise.delta} places on this week's board. That is the freshest move still hanging over the room.`,
       ]);
     }
 
@@ -1835,6 +1848,11 @@ export default function GameNight(){
     return candidates.slice(0,8).map(({icon,text,color})=>({icon,text,color}));
   };
 
+  const getScopedSessions=(seasonId="all",period="all")=>{
+    const seasonSessions=seasonId==="all"?sessions:getSeasonSessions(seasonId);
+    return selectGetPeriodSessions(seasonSessions,period);
+  };
+
   const getShareData=(sid)=>{
     const s=sessions.find(x=>x.id===sid);
     if(!s)return null;
@@ -1866,8 +1884,6 @@ export default function GameNight(){
     period:lbPeriod,
     sortBy,
   });
-
-  const foolsDay=isFoolsDay();
 
   // ── admin ──
   const handleLogin=()=>{
@@ -1932,7 +1948,7 @@ export default function GameNight(){
   const handleAddPlayer=()=>{
     if(!np.username.trim()){showToast("Enter a username!");return;}
     if(players.find(p=>p.username.toLowerCase()===np.username.trim().toLowerCase())){showToast("Already exists!");return;}
-    const newP=[...players,{id:"pl"+Date.now(),username:np.username.trim(),color:np.color}];
+    const newP=[...players,{id:createNextPlayerId(players),username:np.username.trim(),color:np.color}];
     setPlayers(newP);persist(newP,sessions);setNp({username:"",color:"#FFD700"});
     showToast(`🎮 ${np.username.trim()} added!`);
   };
@@ -1962,7 +1978,7 @@ export default function GameNight(){
     {id:"records",   l:"THE VAULT"},
     {id:"charts",    l:"INTEL"},
     {id:"season1",   l:"S1 ARCHIVE"},
-    {id:"season2",   l:todayStr()<"2026-04-01"?`S2 ${s2CdClock.d>0?s2CdClock.d+"d":s2CdClock.h+"h"}`:"SEASON 2"},
+    {id:"season2",   l:todayStr()<SEASON_TWO_LAUNCH_DATE?`S2 ${s2CdClock.d>0?s2CdClock.d+"d":s2CdClock.h+"h"}`:"SEASON 2"},
     {id:"faq",       l:"BRIEFING"},
   ];
 
@@ -1971,10 +1987,7 @@ export default function GameNight(){
   const formatLobbyDate=(date,opts={weekday:"short",day:"numeric",month:"short",year:"numeric"})=>
     new Date(date+"T12:00:00Z").toLocaleDateString("en-GB",opts);
   const getLobbyDateMarker=(date)=>{
-    if(date==="2026-04-04")return{icon:"🥚",label:"Easter"};
-    if(date==="2026-04-03")return{icon:"💪",label:"Good Friday"};
-    if(date==="2026-04-01")return{icon:"🃏",label:"April Fools"};
-    return null;
+    return SPECIAL_DATE_MARKERS[date]||null;
   };
   const getLobbyTotalKills=(session)=>
     Object.values(session?.kills||{}).reduce((sum,value)=>sum+value,0);
@@ -2021,7 +2034,7 @@ export default function GameNight(){
     }
 
     if(!tags.length){
-      pushTag("Filed result","var(--text2)","rgba(255,255,255,.06)","rgba(255,255,255,.12)");
+      pushTag("Room held","var(--text2)","rgba(255,255,255,.06)","rgba(255,255,255,.12)");
     }
     return tags.slice(0,2);
   };
@@ -2036,36 +2049,110 @@ export default function GameNight(){
     const attendeeCount=attendeeIds.length;
     const totalKills=getLobbyTotalKills(session);
     const {player:tkP,kills:tkK}=getLobbyTopDamage(session);
+    const winnerKills=winner?(session.kills?.[winner.id]||0):0;
+    const secondKills=second?(session.kills?.[second.id]||0):0;
+    const thirdKills=third?(session.kills?.[third.id]||0):0;
     const quietRoom=totalKills<=Math.max(2,attendeeCount);
     const packedRoom=attendeeCount>=6;
     const firefight=totalKills>=Math.max(10,attendeeCount*2);
+    const zeroKillWin=winner&&winnerKills===0;
+    const lowKillWin=winner&&winnerKills<=1;
+    const strangeFinish=winner&&tkP&&winner.id!==tkP.id&&tkK>=4;
+    const messyRoom=winner&&second&&third&&Math.abs(winnerKills-secondKills)<=1&&Math.abs(secondKills-thirdKills)<=1;
+    const cleanClose=winner&&tkP&&winner.id===tkP.id&&winnerKills>=Math.max(3,Math.ceil(totalKills/3));
+    const chooseLine=(variants)=>{
+      if(!variants.length)return "";
+      const seed=`${session.id}|${winner?.id||""}|${second?.id||""}|${third?.id||""}|${tkP?.id||""}|${attendeeCount}|${totalKills}|${winnerKills}|${secondKills}|${thirdKills}|${tkK}`;
+      let hash=0;
+      for(let index=0;index<seed.length;index+=1){
+        hash=((hash*33)+seed.charCodeAt(index))>>>0;
+      }
+      return variants[hash%variants.length];
+    };
 
-    if(winner&&tkP&&winner.id===tkP.id&&tkK>=5){
-      return `${dn(winner.username)} turned ${session.id} into target practice, ripped ${tkK} kills, and shut every comeback door before it could open.`;
+    if(zeroKillWin&&second){
+      return chooseLine([
+        `${dn(winner.username)} left ${session.id} with the win and no kills on the sheet. ${dn(second.username)} did the damage, but the room still broke the other way.`,
+        `${session.id} ended in strange fashion. ${dn(winner.username)} took it without landing a kill, while ${dn(second.username)} still had to watch the room slip away.`,
+        `${dn(winner.username)} walked out of ${session.id} on pure survival nerve. Zero kills, first place, and everyone else left arguing about how that happened.`,
+      ]);
     }
-    if(winner&&tkP&&winner.id!==tkP.id&&tkK>=4){
-      return `${dn(winner.username)} walked out with the crown, but ${dn(tkP.username)} kept the room bleeding with ${tkK} kills. The result landed hard either way.`;
+    if(cleanClose&&tkK>=5){
+      return chooseLine([
+        `${dn(winner.username)} owned ${session.id} from the front, put up ${tkK} kills, and never let the room reopen behind them.`,
+        `${dn(winner.username)} made ${session.id} look settled early, stacked ${tkK} kills, and kept everyone else chasing the same door all night.`,
+        `${dn(winner.username)} closed ${session.id} with the cleanest hand on file, carrying both the win and the damage line at ${tkK} kills.`,
+      ]);
+    }
+    if(strangeFinish&&tkP){
+      return chooseLine([
+        `${dn(winner.username)} took the room, but ${dn(tkP.username)} still left the deeper damage scar at ${tkK} kills. ${session.id} did not end the way the numbers hinted.`,
+        `${session.id} went sideways late. ${dn(winner.username)} held onto the win while ${dn(tkP.username)} walked away with the heaviest damage line.`,
+        `${dn(tkP.username)} did the bleeding in ${session.id}, but ${dn(winner.username)} still closed the file. That is the kind of finish people keep talking through on the way out.`,
+      ]);
     }
     if(winner&&second&&third&&firefight){
-      return `${dn(winner.username)} survived a loud ${session.id}, keeping ${dn(second.username)} and ${dn(third.username)} behind them while the room tore through ${totalKills} kills.`;
+      return chooseLine([
+        `${dn(winner.username)} came through the loudest stretch of ${session.id}, keeping ${dn(second.username)} and ${dn(third.username)} behind them while the room tore through ${totalKills} kills.`,
+        `${session.id} turned into a damage room fast. ${dn(winner.username)} still came out first with ${dn(second.username)} and ${dn(third.username)} hanging close behind.`,
+        `${totalKills} kills went on the report in ${session.id}, and ${dn(winner.username)} was the one who still had daylight when it finally settled.`,
+      ]);
     }
     if(winner&&second&&packedRoom){
-      return `${dn(winner.username)} found daylight in a packed ${attendeeCount}-player room, held off ${dn(second.username)}, and kept the file pointed their way.`;
+      return chooseLine([
+        `${dn(winner.username)} came through a crowded ${attendeeCount}-player room and kept ${dn(second.username)} reaching for it the whole way.`,
+        `${attendeeCount} players piled into ${session.id}, and ${dn(winner.username)} still gave ${dn(second.username)} nothing easy at the finish.`,
+        `${session.id} had bodies everywhere, but ${dn(winner.username)} still found the cleanest way out with ${dn(second.username)} right behind.`,
+      ]);
     }
     if(winner&&second&&quietRoom){
-      return `${dn(winner.username)} won a tight, low-noise ${session.id} over ${dn(second.username)}. Nobody got loose, so every finish mattered.`;
+      return chooseLine([
+        `${dn(winner.username)} took a quiet ${session.id} over ${dn(second.username)}. Nobody cracked the room open, so the finish did all the talking.`,
+        `${session.id} stayed tight and low on damage. ${dn(winner.username)} still edged past ${dn(second.username)} when there was almost nothing loose to punish.`,
+        `${dn(winner.username)} got through a low-noise room against ${dn(second.username)}. It was a finish built on small margins, not chaos.`,
+      ]);
+    }
+    if(winner&&second&&third&&messyRoom){
+      return chooseLine([
+        `${session.id} never really picked one clean shape. ${dn(winner.username)}, ${dn(second.username)}, and ${dn(third.username)} stayed tangled until the last stretch.`,
+        `${dn(winner.username)} got out of a messy room with ${dn(second.username)} and ${dn(third.username)} still close enough to matter at the line.`,
+        `${session.id} stayed crowded at the top all the way through, and ${dn(winner.username)} was the one who finally came out of the tangle first.`,
+      ]);
+    }
+    if(winner&&second&&lowKillWin){
+      return chooseLine([
+        `${dn(winner.username)} took ${session.id} without needing much damage. ${dn(second.username)} stayed close, but the room never gave them a clean swing.`,
+        `${dn(winner.username)} walked off with a low-kill win in ${session.id}. ${dn(second.username)} was close enough to feel it, but not enough to turn it.`,
+        `${session.id} was won on timing more than damage. ${dn(winner.username)} kept the edge over ${dn(second.username)} and did not need a big kill line to do it.`,
+      ]);
     }
     if(winner&&second&&third){
-      return `${dn(winner.username)} kept ${dn(second.username)} and ${dn(third.username)} reaching in ${session.id} and stamped another result into the archive.`;
+      return chooseLine([
+        `${dn(winner.username)} kept ${dn(second.username)} and ${dn(third.username)} close enough to matter, then still shut ${session.id} first.`,
+        `${dn(second.username)} and ${dn(third.username)} stayed in the room all the way through ${session.id}, but ${dn(winner.username)} was still the one who finished on top.`,
+        `${dn(winner.username)} got through a live room in ${session.id} with ${dn(second.username)} and ${dn(third.username)} still pulling at the result.`,
+      ]);
     }
     if(winner){
-      return `${dn(winner.username)} closed ${session.id} and left another room on file before the night could swing back.`;
+      return chooseLine([
+        `${dn(winner.username)} closed ${session.id} before the room could turn back on them.`,
+        `${dn(winner.username)} kept control of ${session.id} when it mattered and left with the result.`,
+        `${session.id} still finished in ${dn(winner.username)}'s hands once the last angle ran out.`,
+      ]);
     }
     if(tkP&&tkK>0){
-      return `${dn(tkP.username)} gave ${session.id} its sharpest moment with ${tkK} kills and forced the archive to remember the room their way.`;
+      return chooseLine([
+        `${dn(tkP.username)} gave ${session.id} its sharpest moment with ${tkK} kills and forced the room to remember it that way.`,
+        `${tkK} kills from ${dn(tkP.username)} was the cleanest scar ${session.id} left behind, even with no winner on file.`,
+        `${session.id} is still mostly noise, but ${dn(tkP.username)} gave it one line worth keeping with ${tkK} kills.`,
+      ]);
     }
     if(attendeeCount){
-      return `${attendeeCount} players filed into ${session.id}, the room broke on ${totalKills} kills, and the report still carries the smoke.`;
+      return chooseLine([
+        `${attendeeCount} players filed into ${session.id}, the room broke on ${totalKills} kills, and the report is still missing a clean owner.`,
+        `${session.id} pulled in ${attendeeCount} players and ${totalKills} kills, but the file still reads more like fallout than closure.`,
+        `${attendeeCount} players made noise in ${session.id}. ${totalKills} kills later, the room is still sitting on an unfinished report.`,
+      ]);
     }
     return "This room is on file, but the battle report is still waiting on detail.";
   };
@@ -2075,48 +2162,6 @@ export default function GameNight(){
     const note=hasCustomLobbyNote(session)?session.notes.trim():"";
     return `${session.id} ${session.date} ${winnerName} ${attendeeNames} ${note} ${getLobbyReport(session)}`.toLowerCase();
   };
-
-  // ── avatar ──
-  // ── Intel hover card ──
-  const IntelCard=({p})=>{
-    const st=getStats(p.id);
-    const rk=getRank(p.id);
-    const form=getFormGuide(p.id,5);
-    const dr=getDrought(p.id);
-    return(
-      <div className="intel-card" style={{border:`1px solid ${p.color}44`,borderTop:`2px solid ${p.color}`}}>
-        <div className="bc9" style={{fontSize:".72rem",color:p.color,letterSpacing:".07em",marginBottom:4}}>
-          {rk.title}
-        </div>
-        <div style={{display:"flex",gap:3,marginBottom:6}}>
-          {form.map((f,i)=>(
-            <div key={i} style={{width:8,height:8,borderRadius:"50%",
-              background:f.win?p.color:"rgba(255,255,255,.2)",
-              boxShadow:f.win?`0 0 5px ${p.color}88`:"none"}}/>
-          ))}
-        </div>
-        <div className="bc7" style={{fontSize:".68rem",color:"#c8baff",letterSpacing:".05em"}}>
-          {st.wins}W · {st.kills}K
-          {dr>3&&<span style={{color:"#FF6B35",marginLeft:6}}>{dr}G drought</span>}
-        </div>
-      </div>
-    );
-  };
-
-  // ── Avatar — intel card shown via CSS hover, zero hooks ──
-  const Av=({p,size=44,glow=false,intel=false})=>(
-    <div className="av-wrap">
-      <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,
-        background:`linear-gradient(135deg,${p.color},${p.color}88)`,
-        display:"flex",alignItems:"center",justifyContent:"center",
-        fontFamily:"Barlow Condensed",fontWeight:900,fontSize:size*.38+"px",color:"#fff",
-        textShadow:"0 1px 4px rgba(0,0,0,.6)",
-        boxShadow:glow?`0 0 24px ${p.color}66`:"none"}}>
-        {p.username[0].toUpperCase()}
-      </div>
-      {intel&&<IntelCard p={p}/>}
-    </div>
-  );
 
   // ── TypedBio — proper component so it can use hooks ──
   // ── Badge flip — DOM classList toggle, no hooks ──
@@ -2214,8 +2259,109 @@ export default function GameNight(){
     </div>
   );
 
+  const arenaLatestDate=getLatestSessionDate();
+  const arenaCurrentSeason=getSeasonForDate(arenaLatestDate)||SEASONS[SEASONS.length-1];
+  const arenaScopeSessions=getScopedSessions(lbSeason,lbPeriod);
+  const arenaScopeLatestDate=arenaScopeSessions.length?getLatestSessionDate(arenaScopeSessions):"";
+  const arenaScopeKills=arenaScopeSessions.reduce(
+    (total,session)=>total+Object.values(session.kills||{}).reduce((sum,kills)=>sum+kills,0),
+    0,
+  );
+  const arenaScopeWinnerCount=[...new Set(arenaScopeSessions.filter((session)=>session.winner).map((session)=>session.winner))].length;
+  const arenaWeekSessions=getScopedSessions("all","week");
+  const arenaWeekFirstDate=arenaWeekSessions.length?[...arenaWeekSessions].sort(compareSessionsAsc)[0].date:"";
+  const getArenaStats=pid=>selectGetStats(pid,arenaScopeSessions);
+  const getArenaStreak=pid=>selectGetStreak(pid,arenaScopeSessions);
+  const getArenaFormGuide=(pid,count=5)=>selectGetFormGuide(pid,arenaScopeSessions,count);
+  const getArenaCarry=pid=>selectGetCarryScore(pid,arenaScopeSessions);
+  const getArenaConsistency=pid=>selectGetConsistency(pid,arenaScopeSessions);
+  const getArenaBenchmark=pid=>selectGetBenchmark(pid,players,arenaScopeSessions);
+  const arenaRangeKey=lbPeriod==="today"
+    ?"today"
+    :lbPeriod==="week"
+      ?"week"
+      :lbSeason===arenaCurrentSeason.id
+        ?"season"
+        :"all";
+  const arenaRangeOptions=[
+    {
+      id:"today",
+      label:"⚡ LATEST DAY",
+      sub:arenaLatestDate?formatLobbyDate(arenaLatestDate,{weekday:"short",day:"numeric",month:"short"}):"Most recent drop",
+      color:"#00E5FF",
+      seasonId:"all",
+      period:"today",
+    },
+    {
+      id:"week",
+      label:"🔥 THIS WEEK",
+      sub:arenaWeekFirstDate&&arenaLatestDate
+        ?`${formatLobbyDate(arenaWeekFirstDate,{day:"numeric",month:"short"})} to ${formatLobbyDate(arenaLatestDate,{day:"numeric",month:"short"})}`
+        :"Recent momentum",
+      color:"#FF6B35",
+      seasonId:"all",
+      period:"week",
+    },
+    {
+      id:"season",
+      label:"🚀 SEASON",
+      sub:`${arenaCurrentSeason.name} · ${arenaCurrentSeason.label}`,
+      color:arenaCurrentSeason.color,
+      seasonId:arenaCurrentSeason.id,
+      period:"all",
+    },
+    {
+      id:"all",
+      label:"🌐 ALL TIME",
+      sub:`${sessions.length} lobbies on record`,
+      color:"#C77DFF",
+      seasonId:"all",
+      period:"all",
+    },
+  ];
+  const arenaRangeMeta=(()=>{
+    if(arenaRangeKey==="today"){
+      return{
+        strap:"LATEST DAY · LAST ROOM STILL HOT",
+        summary:arenaScopeLatestDate
+          ?`${arenaScopeSessions.length} lobbies filed on ${formatLobbyDate(arenaScopeLatestDate,{weekday:"short",day:"numeric",month:"short"})}`
+          :"Waiting on the latest room",
+        scopeLabel:"Latest day board",
+        emptyTitle:"The freshest day file is still waiting to land.",
+        emptyNote:"Once the next set of rooms closes, the newest pressure board wakes up here.",
+      };
+    }
+    if(arenaRangeKey==="week"){
+      return{
+        strap:"THIS WEEK · MOMENTUM ON THE TABLE",
+        summary:arenaWeekFirstDate&&arenaScopeLatestDate
+          ?`${arenaScopeSessions.length} lobbies from ${formatLobbyDate(arenaWeekFirstDate,{day:"numeric",month:"short"})} to ${formatLobbyDate(arenaScopeLatestDate,{day:"numeric",month:"short"})}`
+          :"This week is still waiting on its first file",
+        scopeLabel:"This week board",
+        emptyTitle:"This week has not opened a clean file yet.",
+        emptyNote:"The first room of the week sets the pace. This board fills the moment it lands.",
+      };
+    }
+    if(arenaRangeKey==="season"){
+      return{
+        strap:`${arenaCurrentSeason.name.toUpperCase()} · CAMPAIGN PRESSURE`,
+        summary:`${arenaScopeSessions.length} lobbies, ${arenaScopeKills} kills, ${arenaScopeWinnerCount} winning file${arenaScopeWinnerCount===1?"":"s"}`,
+        scopeLabel:`${arenaCurrentSeason.name} board`,
+        emptyTitle:`${arenaCurrentSeason.name} has not opened its file yet.`,
+        emptyNote:"Once the opener lands, the seasonal pressure board starts moving here.",
+      };
+    }
+    return{
+      strap:"ALL TIME · LEGACY PRESSURE OPEN",
+      summary:`${sessions.length} lobbies on record · ${arenaScopeWinnerCount} winners with history on file`,
+      scopeLabel:"All-time board",
+      emptyTitle:"The archive is still waiting on its first room.",
+      emptyNote:"Once the first results are filed, the legacy board starts taking shape here.",
+    };
+  })();
   const sortedLB=foolsDay?[...getSortedLB()].reverse():getSortedLB();
   const filteredLB=lbSearch.trim()?sortedLB.filter(p=>p.username.toLowerCase().includes(lbSearch.toLowerCase())):sortedLB;
+  const leaderboardShiftData=getLeaderboardShiftData(lbSeason,lbPeriod,sortBy);
   const rivals=getRivals();
   const filteredRivals=rivalSearch.trim()
     ?rivals.filter(r=>{
@@ -2223,6 +2369,38 @@ export default function GameNight(){
         return p1?.username.toLowerCase().includes(rivalSearch.toLowerCase())||p2?.username.toLowerCase().includes(rivalSearch.toLowerCase());
       })
     :rivals;
+  const rivalOpsTeaser=(()=>{
+    const liveFile=filteredRivals[0]||rivals[0];
+    if(!liveFile)return null;
+    const p1=players.find(x=>x.id===liveFile.p1);
+    const p2=players.find(x=>x.id===liveFile.p2);
+    if(!p1||!p2)return null;
+    const gap=Math.abs(liveFile.p1wins-liveFile.p2wins);
+    const lead=Math.max(liveFile.p1wins,liveFile.p2wins);
+    const trail=Math.min(liveFile.p1wins,liveFile.p2wins);
+    const pairLabel=`${dn(p1.username)} and ${dn(p2.username)}`;
+    if(gap===0){
+      return{
+        eyebrow:"RIVAL OPS",
+        title:`${pairLabel} are dead level at ${lead}-${trail}.`,
+        note:"That file is still quiet in public, but the next clean finish will not stay quiet for long.",
+      };
+    }
+    if(gap===1){
+      const leader=liveFile.p1wins>liveFile.p2wins?p1:p2;
+      const trailer=leader.id===p1.id?p2:p1;
+      return{
+        eyebrow:"RIVAL OPS",
+        title:`${dn(trailer.username)} is one result from leveling ${dn(leader.username)}.`,
+        note:`${lead}-${trail} is still close enough to turn fast once the room puts them back on top together.`,
+      };
+    }
+    return{
+      eyebrow:"RIVAL OPS",
+      title:`${pairLabel} still carry the hottest live duel file.`,
+      note:`${liveFile.total} shared top-two finishes are on record. The rivalry layer is not open yet, but that file is already humming.`,
+    };
+  })();
   const activeNavView=queuedView||view;
   const activeZone=LEVEL_MAP[activeNavView]||LEVEL_MAP.home;
   const currentZone=LEVEL_MAP[view]||LEVEL_MAP.home;
@@ -2258,13 +2436,13 @@ export default function GameNight(){
     )}
 
     {/* ── Season 2 Transition Ceremony — fires once on April 1+ ── */}
-    {ceremonyPending&&!showCeremony&&["home","season1","season2"].includes(view)&&(
-      <div style={{position:"fixed",left:18,bottom:18,zIndex:9500,maxWidth:320}}>
+    {ceremonyPending&&!showCeremony&&["season1"].includes(view)&&(
+      <div style={{position:"fixed",left:18,bottom:18,zIndex:9400,maxWidth:280,opacity:.84}}>
         <div style={{...card({
-          padding:"14px 14px 12px",
-          border:"1.5px solid rgba(255,215,0,.32)",
-          background:"linear-gradient(135deg,rgba(255,215,0,.12),rgba(255,107,53,.08),rgba(22,13,46,.96))",
-          boxShadow:"0 18px 40px rgba(0,0,0,.35)",
+          padding:"12px 12px 11px",
+          border:"1.5px solid rgba(255,215,0,.22)",
+          background:"linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,107,53,.05),rgba(22,13,46,.94))",
+          boxShadow:"0 14px 28px rgba(0,0,0,.26)",
         })}}>
           <div className="bc7" style={{fontSize:".58rem",letterSpacing:".18em",color:"#FFD700",textTransform:"uppercase",marginBottom:7}}>
             Transition broadcast ready
@@ -2518,25 +2696,59 @@ export default function GameNight(){
           {/* ── Season / date row ── */}
           {(()=>{
             const latestDate=getLatestSessionDate();
-            const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
-            const s2Kills=s2Sess.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
-            const allKills=sessions.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
-            const currentSeason=SEASONS.find(s=>latestDate>=s.start&&latestDate<=s.end)||SEASONS[1];
+            const currentSeason=getSeasonForDate(latestDate)||SEASONS[1];
             const seasonSess=sessions.filter(s=>s.date>=currentSeason.start&&s.date<=currentSeason.end);
+            const seasonKills=seasonSess.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
+            const seasonWinnerCount=[...new Set(seasonSess.filter((session)=>session.winner).map((session)=>session.winner))].length;
             const allStats_lb=allStats();
             const champion=allStats_lb.sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
             const championP=champion?players.find(p=>p.id===champion.id):null;
             const s2Champion_stats=allStats(seasonSess).sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
             const s2ChampP=s2Champion_stats?players.find(p=>p.id===s2Champion_stats.id):null;
             const leaderP=s2ChampP||championP;
-            const leaderSt=leaderP?getStats(leaderP.id):null;
-            const s2LeaderSt=leaderP?getStats(leaderP.id,seasonSess):null;
-            const allStatsForLB=allStats();
+            const leaderStats=leaderP?getStats(leaderP.id,seasonSess):null;
             const byS2W=allStats(seasonSess).filter(p=>p.appearances>0).sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
             const secondP=byS2W[1]?players.find(p=>p.id===byS2W[1].id):null;
             const gapW=byS2W[1]?(byS2W[0].wins-byS2W[1].wins):0;
-            const missions=getWeeklyMissions();
-            const clearedMissionCount=missions.filter((mission)=>mission.progress>=mission.target).length;
+            const missionBoard=getMissionBoardState();
+            const missions=missionBoard.missions;
+            const openMissionCount=missionBoard.openCount;
+            const hottestMission=missionBoard.hottestMission;
+            const nextOpenMission=missionBoard.nextMission;
+            const adaptiveMissionBoard=missionBoard.mode==="adaptive";
+            const nextMissionRemaining=nextOpenMission
+              ?Math.max(nextOpenMission.target-nextOpenMission.progress,0)
+              :0;
+            const nextMissionRemainingLabel=nextOpenMission
+              ?`${nextMissionRemaining} ${nextMissionRemaining===1?nextOpenMission.measureSingular:nextOpenMission.measurePlural} left`
+              :"";
+            const commandClockCompact=`${cd.d>0?`${cd.d}D `:""}${String(cd.h).padStart(2,"0")}H ${String(cd.m).padStart(2,"0")}M ${String(cd.s).padStart(2,"0")}S`;
+            const clockUrgent=!live&&cd.d===0&&cd.h<=1;
+            const commandStatusColor=live
+              ?"#00FF94"
+              :clockUrgent
+                ?"#FFD700"
+                :"#00E5FF";
+            const commandStatusLabel=live?"ROOM LIVE NOW":"NEXT ROOM OPENS IN";
+            const commandStatusCopy=live
+              ? "Results are still moving"
+              : commandClockCompact;
+            const commandStatusNote=live
+              ?adaptiveMissionBoard
+                ?"Core weekly goals are already locked. These live watches are what can still move the room before reset."
+                :nextOpenMission
+                  ?`${openMissionCount} live objective${openMissionCount===1?"":"s"} still matter, and ${nextOpenMission.label} is the one closest to moving the room.`
+                  :`${openMissionCount} live objective${openMissionCount===1?"":"s"} are still shaping the room.`
+              :adaptiveMissionBoard&&nextOpenMission
+                ?`${nextOpenMission.label} is the sharpest live watch right now at ${nextOpenMission.progress}/${nextOpenMission.target}.`
+                :nextOpenMission
+                ?`${nextOpenMission.label} is next to move at ${nextOpenMission.progress}/${nextOpenMission.target}.`
+                :"The board stays quiet until the next room opens.";
+            const frontGapValue=leaderP&&secondP
+              ?gapW===0?"TIED":`${gapW}W`
+              :leaderStats
+                ?`${leaderStats.wins}W`
+                :"OPEN";
 
             // ── Slideshow data — 4 slides (hoisted before return so esbuild stays in JS mode) ──
             const s2StatsSorted=allStats(seasonSess).filter(p=>p.appearances>0);
@@ -2572,97 +2784,81 @@ export default function GameNight(){
               slide4P&&slide4St&&{label:`${currentSeason.name.toUpperCase()} MOST APPEARANCES`,player:slide4P,stat:`${slide4St.appearances} lobbies · ${slide4St.wins}W`,sub:"Most committed player this season",icon:"📅"},
               slide5P&&slide5St&&{label:"BEST WIN STREAK THIS SEASON",player:slide5P,stat:`${s2BestStreakV} consecutive wins`,sub:`${slide5St.wins}W from ${slide5St.appearances} lobbies in ${currentSeason.name}`,icon:"🔥"},
             ].filter(Boolean);
-            const latestFallout=buildLatestFallout(latestDate);
+            const latestFallout=getLatestDayConsequences(latestDate);
             const stories=getStorylines();
+            const seasonShiftData=getLeaderboardShiftData(currentSeason.id,"wins");
             const leaderStageTitle=leaderP
               ? `${dn(leaderP.username)} is setting the pace in ${currentSeason.name}`
               : `${currentSeason.name} is still looking for a front-runner`;
-            const leaderStageSub=leaderSlides.length
-              ? `${leaderSlides.length} LIVE CARDS ROTATING`
-              : "RACE STILL FORMING";
+            const leaderStageSub=leaderP&&secondP
+              ?gapW===0
+                ? "FRONT LINE TIED"
+                :`${gapW}W GAP AT THE TOP`
+              :leaderSlides.length
+                ? `${leaderSlides.length} LIVE READS`
+                : "RACE STILL FORMING";
             const falloutDateLabel=latestDate
               ?new Date(latestDate+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"long"})
               :"";
             const splitLeaders=latestFallout?.topWinners.length
               ?joinHumanList(latestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")))
               :"";
-            const briefingTitle=latestFallout?.topWinners.length>=2&&latestFallout.topKiller?.player
-              ? `${falloutDateLabel} changed the pressure map. ${splitLeaders} split the wins at ${latestFallout.topWinCount} each, but ${dn(latestFallout.topKiller.player.username)} still hauled out the heavier ${latestFallout.topKiller.kills}-kill line.`
+            const topKillers=latestFallout?.topKillers?.length
+              ?latestFallout.topKillers
+              :(latestFallout?.topKiller?.player?[latestFallout.topKiller]:[]);
+            const topKillerNames=topKillers.length
+              ?joinHumanList(topKillers.map((entry)=>dn(entry.player?.username||"")))
+              :"";
+            const topKillCount=topKillers[0]?.kills||latestFallout?.topKiller?.kills||0;
+            const latestDayHeadline=(()=>{
+              if(!latestFallout?.topWinners.length||!topKillers.length)return "";
+              if(latestFallout.topWinners.length===1&&topKillers.length>1){
+                const winnerName=dn(latestFallout.topWinners[0].player?.username||"");
+                return `${winnerName} owned ${falloutDateLabel} with ${latestFallout.topWinCount} wins, while ${topKillerNames} tied on damage at ${topKillCount} kills each.`;
+              }
+              if(latestFallout.topWinners.length>=2&&topKillers.length>1){
+                return `${splitLeaders} split ${falloutDateLabel} at ${latestFallout.topWinCount} wins each, and ${topKillerNames} matched the damage line at ${topKillCount} kills each.`;
+              }
+              if(latestFallout.topWinners.length>=2&&latestFallout.topKiller?.player){
+                return `${splitLeaders} split ${falloutDateLabel} at ${latestFallout.topWinCount} wins each, but ${dn(latestFallout.topKiller.player.username)} still hauled out the heavier ${latestFallout.topKiller.kills}-kill line.`;
+              }
+              if(latestFallout.topWinners.length===1&&latestFallout.topKiller?.player){
+                const winnerName=dn(latestFallout.topWinners[0].player?.username||"");
+                const killerName=dn(latestFallout.topKiller.player.username);
+                return latestFallout.topWinners[0].player?.id===latestFallout.topKiller.player.id
+                  ?`${winnerName} owned ${falloutDateLabel} with ${latestFallout.topWinCount} wins and ${latestFallout.topKiller.kills} kills.`
+                  :`${winnerName} owned ${falloutDateLabel} with ${latestFallout.topWinCount} wins, while ${killerName} carried the damage race at ${latestFallout.topKiller.kills} kills.`;
+              }
+              return "";
+            })();
+            const briefingTitle=latestDayHeadline
+              ? `${falloutDateLabel} changed the pressure map. ${latestDayHeadline}`
               :stories.length
               ? "Live reads on the streaks, grudges, droughts, and pressure spikes shaping the room"
               : "Fresh reads will lock in here as soon as the room has more data";
             const recap=getDayRecap(latestDate);
+            const recapStorylines=latestDate?getDayStorylines(latestDate):[];
             const mvp=getDailyMVP();
             let dateLabel="";
             let recapTag="AFTER-ACTION REPORT";
             let recapTitle="No session report is locked in yet";
+            let recapNotesLabel="FIELD NOTES";
             let recapFieldNotes=[];
             let mvpCards=[];
             if(recap&&recap.lobbies){
               const dd=new Date(latestDate+"T12:00:00Z");
               dateLabel=dd.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
-              const specialTag=latestDate==="2026-04-03"?"🌅 Good Friday · "
-                :latestDate==="2026-04-01"?"🃏 April Fools · "
-                :latestDate==="2026-04-04"?"🥚 Easter Saturday · ":"";
+              const latestMarker=getLobbyDateMarker(latestDate);
+              const specialTag=latestMarker?`${latestMarker.icon} ${latestMarker.label} · `:"";
               recapTag=`${specialTag}AFTER-ACTION REPORT`;
-              recapTitle=latestFallout?.topWinners.length>=2&&latestFallout.topKiller?.player
-                ? `${splitLeaders} split ${falloutDateLabel} at ${latestFallout.topWinCount} wins each. ${dn(latestFallout.topKiller.player.username)} still walked out with ${latestFallout.topKiller.kills} kills on the day.`
+              recapTitle=latestDayHeadline
+                ? latestDayHeadline
                 :`${recap.totalKills} confirmed kills across ${recap.lobbies} lobbies on the last session day`;
-              const reboundSessionNo=latestFallout?.reboundWin
-                ?parseSessionIdNumber(latestFallout.reboundWin.session.id)||latestFallout.reboundWin.session.id
-                :null;
-              const zeroKillSessionNo=latestFallout?.zeroKillWin
-                ?parseSessionIdNumber(latestFallout.zeroKillWin.session.id)||latestFallout.zeroKillWin.session.id
-                :null;
-              const legendNames=latestFallout?.legendCrossers.length
-                ?joinHumanList(latestFallout.legendCrossers.map((entry)=>dn(entry.player?.username||"")))
-                :"";
-              const legendFieldNote=legendNames
-                ?latestFallout.legendCrossers.length>1
-                  ?`${legendNames} both reached Legend`
-                  :`${legendNames} reached Legend`
-                :"";
-              if(latestFallout?.reboundWin){
-                recapFieldNotes.push(
-                  `${dn(latestFallout.reboundWin.player.username)} went ${latestFallout.reboundWin.priorDayLobbies} lobbies without a win, then closed Lobby ${reboundSessionNo} with ${latestFallout.reboundWin.kills} kills.`,
-                );
-              }
-              if(latestFallout?.zeroKillWin||legendFieldNote){
-                const parts=[];
-                if(latestFallout?.zeroKillWin){
-                  parts.push(`${dn(latestFallout.zeroKillWin.player.username)} stole Lobby ${zeroKillSessionNo} without landing a kill`);
-                }
-                if(legendFieldNote){
-                  parts.push(legendFieldNote);
-                }
-                recapFieldNotes.push(parts.join(", ")+".");
-              }
-              if(latestFallout?.killCrossers[0]||latestFallout?.topFiveShift){
-                const parts=[];
-                if(latestFallout?.killCrossers[0]){
-                  parts.push(`${dn(latestFallout.killCrossers[0].player.username)} crossed ${latestFallout.killCrossers[0].kills} total kills`);
-                }
-                if(latestFallout?.topFiveShift){
-                  parts.push(`${dn(latestFallout.topFiveShift.player?.username||"?")} climbed into ${latestFallout.topFiveShift.afterRank}th all-time wins`);
-                }
-                recapFieldNotes.push(parts.join(", ")+".");
-              }
-              if(latestFallout?.mekulaTeriqPressure||latestFallout?.teriqHackqamPressure){
-                const rivalryLines=[];
-                if(latestFallout?.mekulaTeriqPressure){
-                  rivalryLines.push(
-                    `${dn(latestFallout.mekulaTeriqPressure.leader.username)} leads ${dn(latestFallout.mekulaTeriqPressure.trailer.username)} ${latestFallout.mekulaTeriqPressure.leaderWins}-${latestFallout.mekulaTeriqPressure.trailerWins} across ${latestFallout.mekulaTeriqPressure.total} top-two clashes`,
-                  );
-                }
-                if(latestFallout?.teriqHackqamPressure){
-                  rivalryLines.push(
-                    `${dn(latestFallout.teriqHackqamPressure.leader.username)} still has the edge over ${dn(latestFallout.teriqHackqamPressure.trailer.username)} at ${latestFallout.teriqHackqamPressure.leaderWins}-${latestFallout.teriqHackqamPressure.trailerWins} from ${latestFallout.teriqHackqamPressure.total}`,
-                  );
-                }
-                if(rivalryLines.length){
-                  recapFieldNotes.push(rivalryLines.join(", and ")+".");
-                }
-              }
+              const recapConsequenceEntries=(latestFallout?.consequences||[]).slice(0,4);
+              recapNotesLabel=recapConsequenceEntries.length
+                ?"CONSEQUENCE TRACKER"
+                :"FIELD NOTES";
+              recapFieldNotes=recapConsequenceEntries.map((entry)=>entry.text);
               const tw=mvp&&mvp.topWinner?players.find(p=>p.id===mvp.topWinner.id):null;
               const tk=mvp&&mvp.topKiller?players.find(p=>p.id===mvp.topKiller.id):null;
               const ta=mvp&&mvp.topAppear?players.find(p=>p.id===mvp.topAppear.id):null;
@@ -2677,24 +2873,122 @@ export default function GameNight(){
                 {icon:"📅",label:"MOST APPEARANCES", player:ta,stat:mvp?.topAppear?.appearances+"G",sub:"lobbies played",  c:"#00E5FF"},
               ].filter(c=>c.player);
             }
-            const missionTitle=clearedMissionCount===missions.length
-              ? "Every live objective is cleared and the board is waiting for the Monday reset"
-              : `${clearedMissionCount} of ${missions.length} live objectives are already cleared`;
+            const missionTitle=missionBoard.title;
+            const missionStageSub=missionBoard.subline;
+            const liveHeat=getLiveStreaks()[0]||null;
+            const liveHeatPlayer=liveHeat?players.find((player)=>player.id===liveHeat.id):null;
+            const homeOnDeck=getOnDeckPressure({seasonId:currentSeason.id,period:"all",limit:4});
+            const homeOnDeckLead=homeOnDeck.topItem?.shortText||"No loose pressure line is close enough to call yet.";
+            const homeOnDeckTrail=homeOnDeck.summary.slice(1,3);
+            const homeOnDeckNote=homeOnDeckTrail.length
+              ? `Also live: ${homeOnDeckTrail.join(" · ")}`
+              : adaptiveMissionBoard
+                ? "Core weekly goals are locked, but the mission board is still tracking what can move next."
+                : hottestMission
+                  ? `${hottestMission.label} is still active, but the next room will decide whether a player line jumps ahead of it.`
+                  : "The next room will decide which pressure line climbs onto the board.";
+            const homePulseCards=[
+              latestDayHeadline
+                ?{
+                  label:"WHAT MATTERS NOW",
+                  value:latestFallout?.topWinners.length===1
+                    ?`${dn(latestFallout.topWinners[0].player?.username||"")} owned the last session day`
+                    :`${splitLeaders} split the last session day`,
+                  note:topKillers.length>1
+                    ?`${topKillerNames} matched the damage line at ${topKillCount} kills each, so the room closed with the win board and damage board pulling in different directions.`
+                    :`${dn(latestFallout.topKiller?.player?.username||"")} still dragged out ${latestFallout.topKiller?.kills} kills and kept the room's damage line in one pair of hands.`,
+                  color:"#FFD700",
+                }
+                :latestFallout?.reboundWin
+                  ?{
+                    label:"WHAT MATTERS NOW",
+                    value:`${dn(latestFallout.reboundWin.player.username)} hit back in Lobby ${parseSessionIdNumber(latestFallout.reboundWin.session.id)||latestFallout.reboundWin.session.id}`,
+                    note:`${latestFallout.reboundWin.priorDayLobbies} earlier lobbies went quiet before that response landed with ${latestFallout.reboundWin.kills} kills.`,
+                    color:"#00E5FF",
+                  }
+                  :recap
+                    ?{
+                      label:"WHAT MATTERS NOW",
+                      value:`${recap.lobbies} lobbies moved the room on ${falloutDateLabel}`,
+                      note:`${recap.totalKills} total kills and ${recap.winnersList.length} winning file${recap.winnersList.length===1?"":"s"} came out of the last session day.`,
+                      color:"#FFD700",
+                    }
+                    :{
+                      label:"WHAT MATTERS NOW",
+                      value:"The board is waiting on the next room",
+                      note:"Once the next set of results lands, this is where the pressure change gets called first.",
+                      color:"#FFD700",
+                    },
+              leaderP&&secondP
+                ?{
+                  label:"CROWN PRESSURE",
+                  value:gapW===0
+                    ?`${dn(leaderP.username)} and ${dn(secondP.username)} are level`
+                    :`${dn(leaderP.username)} is ${gapW}W clear of ${dn(secondP.username)}`,
+                  note:seasonShiftData.biggestRise?.player&&seasonShiftData.biggestRise.player.id!==leaderP.id
+                    ?`${dn(seasonShiftData.biggestRise.player.username)} made the sharpest move on the latest session day at ${seasonShiftData.biggestRise.label}.`
+                    :liveHeatPlayer
+                      ?`${dn(liveHeatPlayer.username)} left the room on ${liveHeat.streak} straight wins, so the front spot is not breathing easy.`
+                      :`${currentSeason.name} still feels one heavy night away from changing shape.`,
+                  color:"#FF4D8F",
+                }
+                :liveHeatPlayer
+                  ?{
+                    label:"CROWN PRESSURE",
+                    value:`${dn(liveHeatPlayer.username)} is carrying a ${liveHeat.streak}W run`,
+                    note:"Nobody queues into the next room without seeing that streak first.",
+                    color:"#FF6B35",
+                  }
+                  :{
+                    label:"CROWN PRESSURE",
+                    value:"The front of the room is still unsettled",
+                    note:"No clean leader has managed to hold enough space yet.",
+                    color:"#FF4D8F",
+                  },
+              {
+                label:"ON DECK",
+                value:homeOnDeckLead,
+                note:homeOnDeckNote,
+                color:homeOnDeck.topItem?.color||nextOpenMission?.color||"#00E5FF",
+              },
+            ];
             return(<>
               {/* Status row */}
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                marginBottom:14,flexWrap:"wrap",gap:8}}>
+                marginBottom:18,flexWrap:"wrap",gap:10}}>
                 <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
                   color:`rgba(255,107,53,.7)`}}>
                   {currentSeason.name.toUpperCase()} · {currentSeason.label.toUpperCase()} · CAMPAIGN LIVE
                 </span>
-                <span className="bc7" style={{fontSize:".62rem",letterSpacing:".2em",color:"var(--text3)"}}>
-                  {seasonSess.length} LOBBIES THIS CAMPAIGN · {sessions.length} ON RECORD
-                </span>
+                <div style={{
+                  display:"flex",alignItems:"center",gap:10,
+                  padding:"11px 16px 12px",
+                  minWidth:"min(100%,320px)",
+                  background:`linear-gradient(135deg,${commandStatusColor}12,rgba(0,0,0,.32))`,
+                  border:`1px solid ${commandStatusColor}33`,
+                  borderLeft:`3px solid ${commandStatusColor}`,
+                  borderRadius:"0 10px 10px 0",
+                  boxShadow:`0 0 22px ${commandStatusColor}12`,
+                }}>
+                  <div className="bc7" style={{fontSize:".54rem",letterSpacing:".3em",
+                    color:`${commandStatusColor}bb`,marginBottom:5}}>
+                    {commandStatusLabel}
+                  </div>
+                  <div className="bc9" style={{fontSize:"clamp(1rem,3vw,1.14rem)",letterSpacing:".08em",
+                    color:commandStatusColor,
+                    textShadow:`0 0 18px ${commandStatusColor}33`,
+                    marginBottom:5}}>
+                    {commandStatusCopy}
+                  </div>
+                  <div className="bc7" style={{fontSize:".68rem",lineHeight:1.62,color:"var(--text2)",
+                    maxWidth:292}}>
+                    {commandStatusNote}
+                  </div>
+                </div>
               </div>
 
               {/* Hero title — Easter / Fools / default */}
-              <div style={{marginBottom:26,position:"relative"}}>
+              <div style={{marginBottom:34,position:"relative"}}>
                 {(()=>{
                   const isEaster=isEventActive();
                   if(isEaster) return(
@@ -2729,7 +3023,7 @@ export default function GameNight(){
                           🐣 GAMES<br/>NIGHT
                         </h1>
                       </div>
-                      <div className="bc7" style={{fontSize:".72rem",letterSpacing:".26em",color:"var(--text3)"}}>
+                      <div className="bc7" style={{fontSize:".76rem",letterSpacing:".24em",color:"var(--text3)"}}>
                         {FEATURED_GAME} · EASTER BREAK · DOOM ISLAND
                       </div>
                     </>
@@ -2744,7 +3038,7 @@ export default function GameNight(){
                         ...(foolsDay?{filter:"hue-rotate(180deg)"}:{})}}>
                         {foolsDay?"🃏 GAMES":"GAMES"}<br/>NIGHT
                       </h1>
-                      <div className="bc7" style={{fontSize:".72rem",letterSpacing:".26em",color:"var(--text3)"}}>
+                      <div className="bc7" style={{fontSize:".76rem",letterSpacing:".24em",color:"var(--text3)"}}>
                         {FEATURED_GAME} · MON-SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
                       </div>
                     </>
@@ -2752,60 +3046,47 @@ export default function GameNight(){
                 })()}
               </div>
 
-              {/* 1-month anniversary banner — shows from Apr 4, 2026 based on real date */}
-              {todayStr()>="2026-04-04"&&(
-                <div style={{
-                  marginBottom:20,
-                  background:"linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,107,53,.07),rgba(199,125,255,.08))",
-                  border:"1px solid rgba(255,215,0,.3)",
-                  borderLeft:"3px solid #FFD700",
-                  borderRadius:"0 10px 10px 0",
-                  padding:"18px 20px",
-                  position:"relative",overflow:"hidden"}}>
-                  <div style={{position:"absolute",right:12,top:"50%",
-                    transform:"translateY(-50%)",fontSize:"3.5rem",opacity:.07,
-                    pointerEvents:"none",userSelect:"none"}}>🎂</div>
-                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".3em",
-                    color:"rgba(255,215,0,.65)",marginBottom:6}}>▸ ONE MONTH IN · APRIL 4, 2026</div>
-                  <div className="bc9" style={{fontSize:"clamp(1rem,4vw,1.35rem)",
-                    color:"#FFD700",lineHeight:1.25,marginBottom:8}}>
-                    Games Night is officially one month old.
-                  </div>
-                  <div className="bc7" style={{fontSize:".8rem",color:"var(--text2)",
-                    lineHeight:1.7,maxWidth:520}}>
-                    What started as a daily lobby has turned into {sessions.length} sessions, {players.filter(p=>getStats(p.id).appearances>0).length} players
-                    on the board, and a real community that keeps showing up every single week.
-                    Thank you to everyone who played, who watched, who kept coming back after a bad night.
-                    This is only the start. Every player who was part of month one gets the Day One badge permanently.
-                  </div>
-                  <div style={{display:"flex",gap:7,marginTop:10,flexWrap:"wrap",alignItems:"center"}}>
-                    {["🎂","🏆","💀","🔥","⚡","🥚"].map((e,i)=>(
-                      <span key={i} style={{fontSize:"1.1rem",
-                        animation:`eggBounce ${1.8+i*.25}s ease-in-out ${i*.12}s infinite`,
-                        display:"inline-block"}}>{e}</span>
-                    ))}
-                    <span className="bc7" style={{fontSize:".68rem",color:"rgba(255,215,0,.5)",
-                      marginLeft:4,letterSpacing:".1em"}}>MEKULA · GAMES NIGHT</span>
-                  </div>
-                </div>
-              )}
-
               {/* Season stat strip */}
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(76px,1fr))",
-                gap:1,marginBottom:24,border:"1px solid rgba(255,215,0,.12)",borderRadius:2,overflow:"hidden"}}>
+                gap:1,marginBottom:30,border:"1px solid rgba(255,215,0,.12)",borderRadius:2,overflow:"hidden"}}>
                 {[
-                  {l:"S2 SESSIONS",v:seasonSess.length,   c:"#00E5FF"},
-                  {l:"S2 KILLS",   v:s2Kills,              c:"#FF4D8F"},
-                  {l:"S1 LOBBIES", v:332,                  c:"#FFD700"},
-                  {l:"ALL KILLS",  v:allKills.toLocaleString(), c:"#FF6B35"},
-                  {l:"PLAYERS",    v:players.length,       c:"#C77DFF"},
+                  {l:`${currentSeason.name.toUpperCase()} LOBBIES`,v:seasonSess.length,   c:"#00E5FF"},
+                  {l:`${currentSeason.name.toUpperCase()} KILLS`,  v:seasonKills, c:"#FF4D8F"},
+                  {l:"UNIQUE WINNERS", v:seasonWinnerCount, c:"#FFD700"},
+                  {l:"FRONT GAP", v:frontGapValue, c:"#C77DFF"},
                 ].map((s,i)=>(
-                  <div key={i} style={{padding:"14px 8px",textAlign:"center",
+                  <div key={i} style={{padding:"16px 10px 15px",textAlign:"center",
                     background:"rgba(255,255,255,.02)",borderRight:"1px solid rgba(255,255,255,.04)"}}>
                     <div className="bc9" style={{fontSize:"clamp(1.1rem,4vw,1.8rem)",color:s.c,
                       lineHeight:1,textShadow:`0 0 14px ${s.c}33`}}>{s.v}</div>
-                    <div className="bc7" style={{fontSize:".53rem",letterSpacing:".18em",
-                      color:"var(--text3)",marginTop:5}}>{s.l}</div>
+                    <div className="bc7" style={{fontSize:".56rem",letterSpacing:".16em",
+                      color:"var(--text3)",marginTop:6,lineHeight:1.45}}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:34}}>
+                {homePulseCards.map((card,index)=>(
+                  <div key={card.label} style={{
+                    background:index===0
+                      ?`linear-gradient(135deg,${card.color}14,rgba(0,0,0,.42))`
+                      :`linear-gradient(135deg,${card.color}09,rgba(0,0,0,.34))`,
+                    border:`1px solid ${card.color}${index===0?"36":"26"}`,
+                    borderLeft:`${index===0?4:3}px solid ${card.color}`,
+                    borderRadius:"0 8px 8px 0",
+                    padding:index===0?"17px 18px 18px":"15px 17px 16px",
+                    minHeight:index===0?118:110,
+                    boxShadow:index===0?`0 0 20px ${card.color}12`:"none",
+                  }}>
+                    <div className="bc7" style={{fontSize:".56rem",letterSpacing:".24em",color:`${card.color}bb`,marginBottom:9}}>
+                      {card.label}
+                    </div>
+                    <div className="bc9" style={{fontSize:index===0?"clamp(1rem,3vw,1.15rem)":"clamp(.94rem,3vw,1.05rem)",color:card.color,lineHeight:1.24,marginBottom:9}}>
+                      {card.value}
+                    </div>
+                    <div className="bc7" style={{fontSize:".75rem",color:"var(--text2)",lineHeight:1.72,maxWidth:index===0?null:360}}>
+                      {card.note}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2823,7 +3104,7 @@ export default function GameNight(){
                 title={briefingTitle}
                 sub={stories.length?`${stories.length} LIVE READS`:"SYNCING ROOM DATA"}
                 accent="#00FF94">
-                <BriefingFeed stories={stories}/>
+                <BriefingFeed key={stories.map((story)=>`${story.icon}|${story.color}|${story.text}`).join("||")} stories={stories}/>
               </HomeStage>
 
               {recap&&recap.lobbies&&(
@@ -2836,46 +3117,66 @@ export default function GameNight(){
                     background:"rgba(255,255,255,.02)",
                     border:"1px solid rgba(255,255,255,.07)",
                     borderLeft:"3px solid rgba(255,215,0,.4)",
-                    borderRadius:"0 8px 8px 0",padding:"16px 18px"}}>
+                    borderRadius:"0 8px 8px 0",padding:"19px 20px 20px"}}>
                     <div style={{display:"grid",
                       gridTemplateColumns:"repeat(4,1fr)",
                       gap:1,border:"1px solid rgba(255,255,255,.06)",
-                      borderRadius:2,overflow:"hidden",marginBottom:14}}>
+                      borderRadius:2,overflow:"hidden",marginBottom:18}}>
                       {[
                         {l:"LOBBIES", v:recap.lobbies,         c:"#00E5FF"},
                         {l:"PLAYERS", v:recap.uniquePlayers,   c:"#C77DFF"},
                         {l:"KILLS",   v:recap.totalKills,      c:"#FF4D8F"},
                         {l:"WINNERS", v:recap.winnersList?.length||0,c:"#FFD700"},
                       ].map((s,i)=>(
-                        <div key={i} style={{padding:"9px 6px",textAlign:"center",
+                        <div key={i} style={{padding:"11px 8px 10px",textAlign:"center",
                           background:"rgba(255,255,255,.025)"}}>
                           <div className="bc9" style={{fontSize:"clamp(.9rem,3vw,1.3rem)",
                             color:s.c,lineHeight:1}}>{s.v}</div>
-                          <div className="bc7" style={{fontSize:".5rem",letterSpacing:".15em",
-                            color:"var(--text3)",marginTop:3}}>{s.l}</div>
+                          <div className="bc7" style={{fontSize:".54rem",letterSpacing:".14em",
+                            color:"var(--text3)",marginTop:4,lineHeight:1.4}}>{s.l}</div>
                         </div>
                       ))}
                     </div>
                     {recapFieldNotes.length>0&&(
                       <div style={{
-                        display:"grid",gap:6,marginBottom:14,
-                        padding:"12px 0 0",borderTop:"1px solid rgba(255,255,255,.06)"}}>
-                        <div className="bc7" style={{fontSize:".56rem",letterSpacing:".24em",
-                          color:"rgba(0,255,148,.6)"}}>FIELD NOTES</div>
+                        display:"grid",gap:10,marginBottom:18,
+                        padding:"15px 16px 0",marginLeft:-2,marginRight:-2,
+                        borderTop:"1px solid rgba(255,255,255,.06)",
+                        background:"linear-gradient(180deg,rgba(0,255,148,.035),transparent 78%)",
+                        borderRadius:"6px 6px 0 0"}}>
+                        <div className="bc7" style={{fontSize:".6rem",letterSpacing:".22em",
+                          color:"rgba(0,255,148,.66)"}}>{recapNotesLabel}</div>
                         {recapFieldNotes.map((note,i)=>(
-                          <div key={i} className="bc7" style={{fontSize:".68rem",
-                            color:"var(--text2)",lineHeight:1.7,letterSpacing:".04em"}}>
+                          <div key={i} className="bc7" style={{fontSize:".72rem",
+                            color:"var(--text2)",lineHeight:1.75,letterSpacing:".035em"}}>
                             <span style={{color:"#00FF94",marginRight:8}}>▸</span>{note}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {recapStorylines.length>0&&(
+                      <div style={{
+                        display:"grid",gap:11,marginBottom:18,
+                        padding:"15px 16px 0",marginLeft:-2,marginRight:-2,
+                        borderTop:"1px solid rgba(255,255,255,.06)",
+                        background:"linear-gradient(180deg,rgba(255,215,0,.03),transparent 82%)",
+                        borderRadius:"6px 6px 0 0"}}>
+                        <div className="bc7" style={{fontSize:".6rem",letterSpacing:".22em",
+                          color:"rgba(255,215,0,.72)"}}>STORYLINES</div>
+                        {recapStorylines.map((line,i)=>(
+                          <div key={i} className="bc7" style={{fontSize:".74rem",
+                            color:"var(--text2)",lineHeight:1.8,letterSpacing:".03em"}}>
+                            <span style={{color:"#FFD700",marginRight:8}}>◆</span>{line}
                           </div>
                         ))}
                       </div>
                     )}
                     {mvpCards.length>0&&(
                       <div style={{display:"grid",
-                        gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:5}}>
+                        gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:9}}>
                         {mvpCards.map((c,i)=>(
                           <div key={i} onClick={()=>goProfile(c.player.id)} style={{
-                            padding:"10px 12px",cursor:"pointer",
+                            padding:"12px 14px 13px",cursor:"pointer",
                             background:`${c.c}08`,
                             border:`1px solid ${c.c}1a`,
                             borderLeft:`2px solid ${c.c}55`,
@@ -2883,10 +3184,10 @@ export default function GameNight(){
                             transition:"transform .1s"}}
                             onMouseEnter={e=>e.currentTarget.style.transform="translateX(2px)"}
                             onMouseLeave={e=>e.currentTarget.style.transform="translateX(0)"}>
-                            <div className="bc7" style={{fontSize:".54rem",letterSpacing:".2em",
-                              color:`${c.c}77`,marginBottom:6}}>{c.icon} {c.label}</div>
+                            <div className="bc7" style={{fontSize:".56rem",letterSpacing:".18em",
+                              color:`${c.c}77`,marginBottom:7}}>{c.icon} {c.label}</div>
                             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
-                              <Av p={c.player} size={24}/>
+                              <Avatar p={c.player} size={24}/>
                               <div className="bc9" style={{fontSize:".78rem",
                                 color:c.player.color,overflow:"hidden",
                                 textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
@@ -2895,15 +3196,15 @@ export default function GameNight(){
                             </div>
                             <div className="bc9" style={{fontSize:"1.1rem",color:c.c,
                               lineHeight:1,textShadow:`0 0 10px ${c.c}44`}}>{c.stat}</div>
-                            {c.sub&&<div className="bc7" style={{fontSize:".56rem",
-                              color:"var(--text3)",marginTop:3,letterSpacing:".08em"}}>{c.sub}</div>}
+                            {c.sub&&<div className="bc7" style={{fontSize:".58rem",
+                              color:"var(--text3)",marginTop:4,letterSpacing:".07em",lineHeight:1.45}}>{c.sub}</div>}
                           </div>
                         ))}
                       </div>
                     )}
                     {recap.winnersList&&recap.winnersList.length>1&&(
-                      <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
-                        lineHeight:1.8,marginTop:12,paddingTop:12,
+                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",
+                        lineHeight:1.95,marginTop:16,paddingTop:16,
                         borderTop:"1px solid rgba(255,255,255,.06)"}}>
                         {recap.winnersList.slice(0,6).map((w,i)=>(
                           <span key={i}>
@@ -2923,28 +3224,102 @@ export default function GameNight(){
               <HomeStage
                 tag="MISSION BOARD"
                 title={missionTitle}
-                sub={`${clearedMissionCount} OF ${missions.length} CLEARED · RESETS MONDAY`}
+                sub={missionStageSub}
                 accent="#C77DFF"
-                marginBottom={4}>
+                marginBottom={8}>
                 <div style={{display:"grid",
                   gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",
-                  gap:14,alignItems:"start"}}>
+                  gap:18,alignItems:"start"}}>
                   <div className="mission-board">
                     {missions.map((m,i)=>{
                       const pct=m.target>0?Math.round((m.progress/m.target)*100):0;
                       const done=m.progress>=m.target;
+                      const remaining=Math.max(m.target-m.progress,0);
+                      const heatingUp=!done&&pct>=75;
+                      const building=!done&&pct>=40;
+                      const stateLabel=m.stateLabel||(done
+                        ? "CLEARED"
+                        : remaining===1
+                          ? "ON THE EDGE"
+                          : heatingUp
+                            ? "CLOSING IN"
+                            : building
+                              ? "BUILDING"
+                              : "LIVE WATCH");
+                      const stateColor=m.stateColor||(done
+                        ? "#00FF94"
+                        : remaining===1
+                          ? "#FFD700"
+                          : heatingUp
+                            ? m.color
+                            : building
+                              ? m.color
+                              : "rgba(255,255,255,.56)");
+                      const missionMood=m.mood||(done
+                        ?m.clearedCopy
+                        : remaining===1
+                          ?`1 ${m.measureSingular} left. The next clean result changes the board.`
+                        : heatingUp
+                            ?`${remaining} ${remaining===1?m.measureSingular:m.measurePlural} left. The room can already feel this one leaning.`
+                            : building
+                              ?`${remaining} ${remaining===1?m.measureSingular:m.measurePlural} still needed. This objective is starting to shape who matters next.`
+                              : m.progress===0
+                                ?`No movement yet. The first result will decide whether this one matters.`
+                                :`${m.unit} so far. Enough movement to put this one on the room's radar.`);
+                      const missionFooter=m.footer||(done
+                        ? "PAYOFF ACTIVE"
+                        : remaining===1
+                          ? "ONE RESULT FROM A SWING"
+                        : heatingUp
+                            ? "ROOM MOOD TILTING"
+                            : building
+                              ? "PRESSURE BUILDING"
+                              : "WEEKLY OBJECTIVE");
+                      const missionReadout=done
+                        ? "LOCKED"
+                        : remaining===1
+                          ? "1 LEFT"
+                          : remaining>1
+                            ? `${remaining} LEFT`
+                            : `${pct}%`;
                       return(
-                        <div key={i} className="mission-item" style={{"--m-color":m.color}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                            <span style={{fontSize:"1.1rem",flexShrink:0}}>{m.icon}</span>
-                            <div>
-                              <div className="bc9" style={{fontSize:".72rem",
-                                color:done?"#00FF94":m.color,letterSpacing:".1em"}}>
-                                {done?"✓ ":""}{m.label}
+                        <div key={i} className="mission-item" style={{
+                          "--m-color":m.color,
+                          background:done
+                            ?`linear-gradient(135deg,${m.color}12,rgba(0,0,0,.3))`
+                            : heatingUp
+                              ?`linear-gradient(135deg,${m.color}10,rgba(0,0,0,.28))`
+                              :"rgba(255,255,255,.025)",
+                          boxShadow:done
+                            ?"0 0 16px rgba(0,255,148,.08)"
+                            : heatingUp
+                              ?`0 0 18px ${m.color}18`
+                              :"none",
+                        }}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:8}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{fontSize:"1.1rem",flexShrink:0}}>{m.icon}</span>
+                              <div>
+                                <div className="bc9" style={{fontSize:".72rem",
+                                  color:done?"#00FF94":m.color,letterSpacing:".1em"}}>
+                                  {m.label}
+                                </div>
+                                <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",
+                                  letterSpacing:".04em",marginTop:2}}>{m.desc}</div>
                               </div>
-                              <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",
-                                letterSpacing:".04em",marginTop:2}}>{m.desc}</div>
                             </div>
+                            <div className="bc7" style={{
+                              fontSize:".52rem",letterSpacing:".24em",
+                              color:stateColor,padding:"5px 7px",
+                              borderRadius:999,
+                              border:`1px solid ${done?"rgba(0,255,148,.28)":`${stateColor}44`}`,
+                              background:done?"rgba(0,255,148,.08)":`${stateColor}12`,
+                              flexShrink:0}}>
+                              {stateLabel}
+                            </div>
+                          </div>
+                          <div className="bc7" style={{fontSize:".66rem",color:"var(--text2)",lineHeight:1.65,marginBottom:8}}>
+                            {missionMood}
                           </div>
                           <div className="mission-bar-track">
                             <div className="mission-bar-fill" style={{
@@ -2953,53 +3328,110 @@ export default function GameNight(){
                               boxShadow:done?"0 0 8px rgba(0,255,148,.5)":`0 0 6px ${m.color}44`,
                             }}/>
                           </div>
-                          <div className="bc7" style={{fontSize:".6rem",
-                            color:done?"#00FF94":"var(--text3)",letterSpacing:".1em",marginTop:5}}>
-                            {done?"OBJECTIVE CLEARED":`${m.unit} · ${pct}%`}
+                          <div className="bc7" style={{display:"flex",justifyContent:"space-between",gap:12,
+                            fontSize:".58rem",color:done?"#00FF94":"var(--text3)",
+                            letterSpacing:".12em",marginTop:7,alignItems:"baseline"}}>
+                            <span>{missionFooter}</span>
+                            <span style={{color:stateColor}}>{missionReadout}</span>
                           </div>
                         </div>
                       );
                     })}
                   </div>
 
-                  {!live&&(
-                    <div style={{
+                  <div style={{
                       minHeight:"100%",
-                      background:"linear-gradient(180deg,rgba(0,229,255,.08),rgba(0,0,0,.34))",
-                      border:"1px solid rgba(0,229,255,.16)",
-                      borderLeft:"3px solid rgba(0,229,255,.38)",
-                      borderRadius:"0 8px 8px 0",
-                      padding:"16px 18px"}}>
-                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".35em",
-                        color:"rgba(0,229,255,.5)",marginBottom:12}}>
-                        ▸ NEXT SESSION IN
+                      background:`linear-gradient(180deg,${commandStatusColor}16,rgba(0,0,0,.44))`,
+                      border:`1.5px solid ${commandStatusColor}2f`,
+                      borderLeft:`4px solid ${commandStatusColor}66`,
+                      borderRadius:"0 10px 10px 0",
+                      padding:"20px 20px 21px",
+                      boxShadow:`0 0 28px ${commandStatusColor}14`,
+                    }}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:10}}>
+                        <div className="bc7" style={{fontSize:".58rem",letterSpacing:".34em",
+                          color:`${commandStatusColor}99`}}>
+                        ▸ COMMAND CLOCK
+                        </div>
+                        <div className="bc7" style={{
+                          fontSize:".5rem",letterSpacing:".24em",
+                          color:`${commandStatusColor}cc`,
+                          padding:"5px 8px",
+                          borderRadius:999,
+                          border:`1px solid ${commandStatusColor}33`,
+                          background:`${commandStatusColor}12`,
+                          flexShrink:0,
+                        }}>
+                          {live?"ROOM LIVE NOW":"COUNTDOWN ACTIVE"}
+                        </div>
                       </div>
-                      <div style={{display:"flex",gap:6,alignItems:"flex-end",flexWrap:"wrap"}}>
+                      <div className="bc9" style={{fontSize:"1.18rem",color:commandStatusColor,
+                        lineHeight:1.05,marginBottom:6,
+                        textShadow:`0 0 22px ${commandStatusColor}33`}}>
+                        {live?"Next room opens after the current window":"Next room opens in"}
+                      </div>
+                      <div className="bc7" style={{fontSize:".72rem",lineHeight:1.68,color:"var(--text2)",marginBottom:16}}>
+                        {live
+                          ? "This clock is already counting toward the next clean reset."
+                          : adaptiveMissionBoard
+                            ? "The core weekly board is locked, but these live watches stay active until the room opens."
+                            : "Every tick leaves the weekly board exactly where it is until the room opens."}
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"stretch",flexWrap:"wrap"}}>
                         {[
                           {v:String(cd.d).padStart(2,"0"), l:"DAYS",    show:cd.d>0},
                           {v:String(cd.h).padStart(2,"0"), l:"HOURS",   show:true},
                           {v:String(cd.m).padStart(2,"0"), l:"MINUTES", show:true},
                           {v:String(cd.s).padStart(2,"0"), l:"SECONDS", show:true},
                         ].filter(d=>d.show||d.l==="HOURS"||d.l==="MINUTES"||d.l==="SECONDS").map((d,i)=>(
-                          <div key={i} style={{textAlign:"center",minWidth:cd.d>0?60:70}}>
+                          <div key={i} style={{
+                            textAlign:"center",minWidth:cd.d>0?70:76,
+                            padding:"11px 10px 10px",
+                            background:`linear-gradient(180deg,rgba(0,0,0,.3),${commandStatusColor}10)`,
+                            border:`1px solid ${commandStatusColor}26`,
+                            borderRadius:12,
+                            boxShadow:`inset 0 0 0 1px rgba(255,255,255,.02),0 0 18px ${commandStatusColor}12`}}>
                             <div className="bc9" style={{
                               fontSize:cd.d>0?"clamp(2.4rem,8vw,4rem)":"clamp(2.8rem,10vw,5rem)",
-                              color:"#00E5FF",lineHeight:1,
-                              textShadow:"0 0 24px rgba(0,229,255,.5),0 0 48px rgba(0,229,255,.2)",
+                              color:commandStatusColor,lineHeight:1,
+                              textShadow:`0 0 24px ${commandStatusColor}66,0 0 48px ${commandStatusColor}22`,
                               letterSpacing:"-.01em"}}>
                               {d.v}
                             </div>
                             <div className="bc7" style={{fontSize:".55rem",letterSpacing:".22em",
-                              color:"rgba(0,229,255,.45)",marginTop:5}}>{d.l}</div>
+                              color:`${commandStatusColor}88`,marginTop:5}}>{d.l}</div>
                           </div>
                         ))}
                       </div>
-                      <div className="bc7" style={{fontSize:".68rem",color:"var(--text3)",
-                        marginTop:10,letterSpacing:".08em",lineHeight:1.7}}>
-                        Mon-Sat · 5PM UTC · Hosted by {HOSTED_BY}
+                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".26em",
+                        color:`${commandStatusColor}88`,marginTop:14}}>
+                        MON-SAT · 5PM UTC · HOSTED BY {HOSTED_BY.toUpperCase()}
                       </div>
+                      <div className="bc7" style={{fontSize:".74rem",color:"var(--text2)",
+                        marginTop:10,letterSpacing:".045em",lineHeight:1.76}}>
+                        {adaptiveMissionBoard&&nextOpenMission
+                          ?`${nextOpenMission.label} is the sharpest live watch right now at ${nextOpenMission.progress}/${nextOpenMission.target}.`
+                          :nextOpenMission
+                          ?`${nextOpenMission.label} is closest to moving at ${nextOpenMission.progress}/${nextOpenMission.target}.`
+                          :"The board resets the moment the room opens."}
+                      </div>
+                      <div className="bc7" style={{fontSize:".74rem",color:"var(--text2)",
+                        marginTop:8,letterSpacing:".04em",lineHeight:1.78}}>
+                        {adaptiveMissionBoard
+                          ? missionBoard.supportLines[0]||"Core weekly goals are locked, but the live watches stay open until reset."
+                          : nextMissionRemaining===1&&nextOpenMission
+                            ?`One clean result locks ${nextOpenMission.label} and changes the board mood.`
+                          : nextOpenMission
+                            ?`${nextMissionRemainingLabel}. That is the closest swing still on the board.`
+                            :"Fresh results will set the next objective pressure."}
+                      </div>
+                      {adaptiveMissionBoard&&missionBoard.supportLines[1]&&(
+                        <div className="bc7" style={{fontSize:".74rem",color:"var(--text2)",
+                          marginTop:8,letterSpacing:".04em",lineHeight:1.78}}>
+                          {missionBoard.supportLines[1]}
+                        </div>
+                      )}
                     </div>
-                  )}
                 </div>
               </HomeStage>
             </>);
@@ -3065,7 +3497,7 @@ export default function GameNight(){
                       background:"rgba(0,0,0,.35)",borderRadius:10,padding:"10px 12px",cursor:"pointer"}}>
                       <div style={{fontSize:".62rem",color:"var(--text3)",fontWeight:700,marginBottom:5}}>{a.icon} {a.label}</div>
                       <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <Av p={a.p} size={26}/>
+                        <Avatar p={a.p} size={26}/>
                         <div>
                           <div style={{fontFamily:"Fredoka One",color:season.color,fontSize:".84rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:90}}>{a.p.username}</div>
                           <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem"}}>{a.val}</div>
@@ -3105,7 +3537,7 @@ export default function GameNight(){
                     </div>
                   )}
                   <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,marginTop:streak>=3?20:0}}>
-                    <Av p={player} size={52} glow/>
+                    <Avatar p={player} size={52} glow/>
                     <div>
                       <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.05rem"}}>{player.host?"👑 ":""}{dn(player.username)}</div>
                       <div style={{fontSize:".72rem",color:rank.color,fontWeight:700,marginTop:2}}>{rank.title}</div>
@@ -3210,7 +3642,7 @@ export default function GameNight(){
               </span>
               <span style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
                 letterSpacing:".2em",color:"rgba(255,255,255,.2)",textTransform:"uppercase"}}>
-                {sessions.length} LOBBIES ON RECORD
+                {arenaRangeMeta.summary.toUpperCase()}
               </span>
             </div>
             <div style={{textAlign:"center"}}>
@@ -3228,7 +3660,7 @@ export default function GameNight(){
               <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
                 fontSize:".8rem",letterSpacing:".3em",
                 color:"rgba(255,255,255,.2)",marginTop:6,textTransform:"uppercase"}}>
-                SEASON 2 · CAMPAIGN LIVE · TABLE OPEN
+                {arenaRangeMeta.strap}
               </div>
             </div>
             {foolsDay&&(
@@ -3239,33 +3671,31 @@ export default function GameNight(){
             )}
           </div>
 
-          {/* View tabs — All Time / Season 1 / Season 2 */}
+          {/* Arena range rail */}
           <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
-            {[
-              {id:"all",  l:"🌐 ALL TIME",  sub:"Every lobby ever",       c:"#C77DFF"},
-              {id:"s2",   l:"🚀 SEASON 2",  sub:"Apr 2026 · Active",      c:"#00E5FF"},
-              {id:"s1",   l:"🏆 SEASON 1",  sub:"Mar 2026 · Closed",      c:"#FFD700"},
-            ].map(t=>{
-              const active=lbSeason===t.id;
-              const sid=t.id==="all"?"all":t.id==="s2"?"s2":"s1";
+            {arenaRangeOptions.map((range)=>{
+              const active=arenaRangeKey===range.id;
               return(
-                <button key={t.id} onClick={()=>{setLbSeason(sid);setLbPeriod("all");}} style={{
+                <button key={range.id} onClick={()=>{
+                  setLbSeason(range.seasonId);
+                  setLbPeriod(range.period);
+                }} style={{
                   padding:"8px 16px",cursor:"pointer",outline:"none",
-                  background:active?`${t.c}18`:"rgba(255,255,255,.03)",
-                  border:active?`1px solid ${t.c}55`:"1px solid rgba(255,255,255,.08)",
-                  borderBottom:active?`2px solid ${t.c}`:"2px solid transparent",
+                  background:active?`${range.color}18`:"rgba(255,255,255,.03)",
+                  border:active?`1px solid ${range.color}55`:"1px solid rgba(255,255,255,.08)",
+                  borderBottom:active?`2px solid ${range.color}`:"2px solid transparent",
                   borderRadius:"4px 4px 0 0",
                   fontFamily:"Barlow Condensed",fontWeight:900,
                   fontSize:".72rem",letterSpacing:".15em",
-                  color:active?t.c:"var(--text3)",transition:"all .12s"}}>
-                  <div>{t.l}</div>
+                  color:active?range.color:"var(--text3)",transition:"all .12s"}}>
+                  <div>{range.label}</div>
                   <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                    fontSize:".55rem",letterSpacing:".12em",opacity:.6,marginTop:2}}>{t.sub}</div>
+                    fontSize:".55rem",letterSpacing:".12em",opacity:.6,marginTop:2}}>{range.sub}</div>
                 </button>
               );
             })}
             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <span className="bc7" style={{fontSize:".6rem",letterSpacing:".2em",color:"var(--text3)"}}>SORT</span>
+              <span className="bc7" style={{fontSize:".6rem",letterSpacing:".2em",color:"var(--text3)"}}>RANGE</span>
               <span className="bc7" style={{
                 fontSize:".62rem",
                 letterSpacing:".12em",
@@ -3275,7 +3705,7 @@ export default function GameNight(){
                 borderRadius:999,
                 padding:"5px 10px",
               }}>
-                {SORT_LABELS[sortBy].toUpperCase()} · {filteredLB.length} IN VIEW{lbSearch.trim()?` · FILTER ${lbSearch.trim().toUpperCase()}`:""}
+                {arenaRangeMeta.scopeLabel.toUpperCase()} · {SORT_LABELS[sortBy].toUpperCase()} · {filteredLB.length} IN VIEW{lbSearch.trim()?` · FILTER ${lbSearch.trim().toUpperCase()}`:""}
               </span>
             </div>
           </div>
@@ -3304,13 +3734,27 @@ export default function GameNight(){
             const leaderPlayer=players.find((player)=>player.id===boardLeader.id);
             const chasePlayer=boardChaser?players.find((player)=>player.id===boardChaser.id):null;
             if(!leaderPlayer)return null;
-            const scopeLabel=lbSeason==="s1"
-              ?"Season 1 archive"
-              :lbSeason==="s2"
-                ?"Season 2 live board"
-                :"All-time board";
+            const scopeLabel=arenaRangeMeta.scopeLabel;
+            const climbPlayer=leaderboardShiftData.biggestRise?.player||null;
+            const slidePlayer=leaderboardShiftData.biggestSlide?.player||null;
+            const liveArenaHeat=selectGetLiveStreaks(arenaScopeSessions,players)[0]||null;
+            const liveArenaHeatPlayer=liveArenaHeat?players.find((player)=>player.id===liveArenaHeat.id):null;
+            const arenaOnDeck=getOnDeckPressure({seasonId:lbSeason,period:lbPeriod,limit:3});
+            const arenaOnDeckLead=arenaOnDeck.topItem?.shortText||"Nothing is sitting one room away yet.";
+            const arenaOnDeckTrail=arenaOnDeck.summary.slice(1,3);
+            const arenaOnDeckNote=arenaOnDeckTrail.length
+              ? arenaOnDeckTrail.join(" · ")
+              : liveArenaHeatPlayer
+                ? `${dn(liveArenaHeatPlayer.username)} is still carrying a ${liveArenaHeat.streak}W run into the next room.`
+                : "The next room has not put a clean flip on deck yet.";
             const pressureText=(()=>{
               if(!boardChaser||!chasePlayer){
+                if(arenaRangeKey==="today"){
+                  return `${dn(leaderPlayer.username)} owned the last session day without anyone else getting a clean second line on them.`;
+                }
+                if(arenaRangeKey==="week"){
+                  return `${dn(leaderPlayer.username)} is setting the pace this week with nobody close enough yet to call it safe.`;
+                }
                 return `${dn(leaderPlayer.username)} owns this board for now.`;
               }
               if(sortBy==="kills"){
@@ -3354,28 +3798,119 @@ export default function GameNight(){
                 ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are tied on wins.`
                 :`${dn(leaderPlayer.username)} is ${gap} win${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
             })();
+            const leadValue=(()=>{
+              if(arenaRangeKey==="today"){
+                return boardChaser&&chasePlayer
+                  ?`${dn(leaderPlayer.username)} owned the last session day over ${dn(chasePlayer.username)}`
+                  :`${dn(leaderPlayer.username)} owned the last session day`;
+              }
+              if(arenaRangeKey==="week"){
+                return boardChaser&&chasePlayer
+                  ?`${dn(leaderPlayer.username)} is setting this week over ${dn(chasePlayer.username)}`
+                  :`${dn(leaderPlayer.username)} is setting the week alone`;
+              }
+              if(arenaRangeKey==="season"){
+                return boardChaser&&chasePlayer
+                  ?`${dn(leaderPlayer.username)} has to hold off ${dn(chasePlayer.username)}`
+                  :`${dn(leaderPlayer.username)} is alone on the season front line`;
+              }
+              return boardChaser&&chasePlayer
+                ?`${dn(leaderPlayer.username)} has to hold off ${dn(chasePlayer.username)}`
+                :`${dn(leaderPlayer.username)} is alone on the front line`;
+            })();
+            const moveValue=climbPlayer
+              ?leaderboardShiftData.biggestRise?.label==="NEW"
+                ? arenaRangeKey==="week"
+                  ?`${dn(climbPlayer.username)} forced onto this week's board`
+                  :arenaRangeKey==="today"
+                    ?`${dn(climbPlayer.username)} forced onto the latest-day board`
+                    :`${dn(climbPlayer.username)} forced onto the board`
+                : arenaRangeKey==="week"
+                  ?`${dn(climbPlayer.username)} jumped ${leaderboardShiftData.biggestRise?.label} on this week's board`
+                  :arenaRangeKey==="today"
+                    ?`${dn(climbPlayer.username)} climbed ${leaderboardShiftData.biggestRise?.label} on the latest-day board`
+                    :`${dn(climbPlayer.username)} climbed ${leaderboardShiftData.biggestRise?.label}`
+              :arenaRangeKey==="today"
+                ?"The last day held its order"
+                :arenaRangeKey==="week"
+                  ?"This week has not broken open yet"
+                  :"No fresh jump on the latest session day";
+            const moveNote=climbPlayer
+              ?arenaRangeKey==="week"
+                ?`${dn(climbPlayer.username)} made the sharpest weekly move since ${new Date(leaderboardShiftData.latestScopeDate+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})}.`
+                :arenaRangeKey==="today"
+                  ?`${dn(climbPlayer.username)} made the sharpest move inside the latest session day.`
+                  :`${dn(climbPlayer.username)} made the sharpest push since ${new Date(leaderboardShiftData.latestScopeDate+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})}.`
+              :arenaRangeKey==="today"
+                ?"The last day closed without a surprise climb, so the pressure stayed on the same shoulders."
+                :arenaRangeKey==="week"
+                  ?"The week's order is still stable enough for one heavy room to redraw it."
+                  :"The order held through the latest file.";
+            const pulseCards=[
+              {
+                label:"FRONT SPOT",
+                color:leaderPlayer.color,
+                value:leadValue,
+                note:pressureText,
+              },
+              {
+                label:arenaRangeKey==="today"?"LAST DAY SWING":"BIGGEST MOVE",
+                color:climbPlayer?.color||"#00E5FF",
+                value:moveValue,
+                note:moveNote,
+              },
+              {
+                label:"ON DECK",
+                color:arenaOnDeck.topItem?.color||liveArenaHeatPlayer?.color||slidePlayer?.color||"#FF6B35",
+                value:arenaOnDeckLead,
+                note:arenaOnDeckNote,
+              },
+            ];
             return(
-              <div style={{
-                marginBottom:16,
-                background:`linear-gradient(135deg,${leaderPlayer.color}12,rgba(0,0,0,.4))`,
-                border:`1px solid ${leaderPlayer.color}33`,
-                borderLeft:`3px solid ${leaderPlayer.color}`,
-                borderRadius:"0 10px 10px 0",
-                padding:"14px 16px",
-              }}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:6}}>
-                  <span className="bc9" style={{fontSize:".64rem",letterSpacing:".24em",color:`${leaderPlayer.color}bb`}}>
-                    PRESSURE BOARD
-                  </span>
-                  <span className="bc7" style={{fontSize:".6rem",letterSpacing:".14em",color:"var(--text3)"}}>
-                    {scopeLabel.toUpperCase()} · SORTED BY {SORT_LABELS[sortBy].toUpperCase()}
-                  </span>
+              <div style={{marginBottom:16}}>
+                <div style={{
+                  marginBottom:8,
+                  background:`linear-gradient(135deg,${leaderPlayer.color}12,rgba(0,0,0,.4))`,
+                  border:`1px solid ${leaderPlayer.color}33`,
+                  borderLeft:`3px solid ${leaderPlayer.color}`,
+                  borderRadius:"0 10px 10px 0",
+                  padding:"14px 16px",
+                }}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:6}}>
+                    <span className="bc9" style={{fontSize:".64rem",letterSpacing:".24em",color:`${leaderPlayer.color}bb`}}>
+                      PRESSURE BOARD
+                    </span>
+                    <span className="bc7" style={{fontSize:".6rem",letterSpacing:".14em",color:"var(--text3)"}}>
+                      {scopeLabel.toUpperCase()} · SORTED BY {SORT_LABELS[sortBy].toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="bc9" style={{fontSize:"clamp(1rem,3vw,1.2rem)",color:leaderPlayer.color,marginBottom:4}}>
+                    {leaderPlayer.host?"👑 ":""}{dn(leaderPlayer.username)} has the front spot.
+                  </div>
+                  <div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",lineHeight:1.6}}>
+                    {pressureText}
+                  </div>
                 </div>
-                <div className="bc9" style={{fontSize:"clamp(1rem,3vw,1.2rem)",color:leaderPlayer.color,marginBottom:4}}>
-                  {leaderPlayer.host?"👑 ":""}{dn(leaderPlayer.username)} has the front spot.
-                </div>
-                <div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",lineHeight:1.6}}>
-                  {pressureText}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8}}>
+                  {pulseCards.map((card)=>(
+                    <div key={card.label} style={{
+                      background:`linear-gradient(135deg,${card.color}10,rgba(255,255,255,.03))`,
+                      border:`1px solid ${card.color}2f`,
+                      borderLeft:`3px solid ${card.color}`,
+                      borderRadius:"0 8px 8px 0",
+                      padding:"12px 14px",
+                    }}>
+                      <div className="bc7" style={{fontSize:".56rem",letterSpacing:".2em",color:`${card.color}bb`,marginBottom:7}}>
+                        {card.label}
+                      </div>
+                      <div className="bc9" style={{fontSize:".92rem",color:card.color,lineHeight:1.2,marginBottom:6}}>
+                        {card.value}
+                      </div>
+                      <div className="bc7" style={{fontSize:".7rem",color:"var(--text2)",lineHeight:1.55}}>
+                        {card.note}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -3384,15 +3919,15 @@ export default function GameNight(){
           {/* Spotlight card */}
           {spotlight&&(()=>{
             const p=players.find(x=>x.id===spotlight);if(!p)return null;
-            const st=getStats(p.id,getPeriodSessions());
+            const st=getArenaStats(p.id);
             const rank=getRank(p.id);
             const badges=getBadges(p.id);
-            const streak=getStreak(p.id);
+            const streak=getArenaStreak(p.id);
             return(
               <div style={{...card({border:`2px solid ${p.color}`,background:`linear-gradient(135deg,${p.color}16,var(--card))`}),
                 padding:22,marginBottom:18,animation:"popIn .3s ease both"}}>
                 <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,flexWrap:"wrap"}}>
-                  <Av p={p} size={60} glow/>
+                  <Avatar p={p} size={60} glow/>
                   <div>
                     <div style={{fontFamily:"Fredoka One",fontSize:"1.5rem",color:p.color}}>{p.host?"👑 ":""}{dn(p.username)}</div>
                     <div style={{fontSize:".82rem",color:rank.color,fontWeight:700}}>{rank.title}</div>
@@ -3406,8 +3941,8 @@ export default function GameNight(){
                     {l:"K/G",      v:st.kd,             c:"#00E5FF",i:"⚡"},
                     {l:"Win Rate", v:st.winRate+"%",    c:"#00FF94",i:"🎯"},
                     {l:"Lobbies",  v:st.appearances,    c:"#FFAB40",i:"📅"},
-                    {l:"Carry",    v:getCarryScore(p.id),c:"#FF6B35",i:"🎖️"},
-                    {l:"Consistency",v:getConsistency(p.id)+"%",c:"#00FF94",i:"🧱"},
+                    {l:"Carry",    v:getArenaCarry(p.id),c:"#FF6B35",i:"🎖️"},
+                    {l:"Consistency",v:getArenaConsistency(p.id)+"%",c:"#00FF94",i:"🧱"},
                   ].map((s,i)=>(
                     <div key={i} style={{background:"rgba(0,0,0,.35)",borderRadius:9,padding:"8px 12px"}}>
                       <div style={{fontSize:".62rem",color:"var(--text3)",fontWeight:700,marginBottom:1}}>{s.i} {s.l}</div>
@@ -3467,9 +4002,10 @@ export default function GameNight(){
               const globalRank=sortedLB.findIndex(p=>p.id===player.id);
               const medals=["🥇","🥈","🥉"];
               const rank=getRank(player.id);
+              const shift=leaderboardShiftData.map[player.id];
               const isHL=spotlight===player.id;
               const isFirst=globalRank===0&&sessions.length>0&&!foolsDay;
-              const streak=getStreak(player.id);
+              const streak=getArenaStreak(player.id);
               const lvl=getPlayerLevel(player.id);
               return(
                 <div key={player.id}
@@ -3496,7 +4032,7 @@ export default function GameNight(){
                   {/* Player info */}
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
                     <div style={{position:"relative"}}>
-                      <Av p={player} size={34} glow={isHL||isFirst} intel/>
+                      <Avatar p={player} size={34} glow={isHL||isFirst} intel={renderPlayerIntel(player)}/>
                       {isFirst&&<div style={{
                         position:"absolute",inset:-2,borderRadius:"50%",
                         border:"1.5px solid rgba(255,215,0,.5)",
@@ -3506,15 +4042,30 @@ export default function GameNight(){
                       }}/>}
                     </div>
                     <div>
-                      <div style={{
-                        fontFamily:isFirst?"Barlow Condensed":"Fredoka One",
-                        fontWeight:isFirst?900:400,
-                        letterSpacing:isFirst?".04em":0,
-                        color:isFirst?"#FFD700":"#fff",
-                        fontSize:".9rem",
-                        maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
-                      }}>
-                        {player.host?"👑 ":""}{dn(player.username)}
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                        <div style={{
+                          fontFamily:isFirst?"Barlow Condensed":"Fredoka One",
+                          fontWeight:isFirst?900:400,
+                          letterSpacing:isFirst?".04em":0,
+                          color:isFirst?"#FFD700":"#fff",
+                          fontSize:".9rem",
+                          maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
+                        }}>
+                          {player.host?"👑 ":""}{dn(player.username)}
+                        </div>
+                        {shift&&shift.label!=="HOLD"&&(
+                          <span className="bc7" style={{
+                            fontSize:".52rem",
+                            letterSpacing:".14em",
+                            color:shift.tone==="up"?"#00FF94":shift.tone==="down"?"#FF6B35":"#00E5FF",
+                            background:shift.tone==="up"?"rgba(0,255,148,.12)":shift.tone==="down"?"rgba(255,107,53,.12)":"rgba(0,229,255,.12)",
+                            border:`1px solid ${shift.tone==="up"?"rgba(0,255,148,.35)":shift.tone==="down"?"rgba(255,107,53,.35)":"rgba(0,229,255,.35)"}`,
+                            borderRadius:999,
+                            padding:"2px 6px",
+                          }}>
+                            {shift.label}
+                          </span>
+                        )}
                       </div>
                       <div style={{fontSize:".63rem",color:rank.color,fontWeight:700,letterSpacing:".02em"}}>
                         {rank.title}{streak>=2?` 🔥×${streak}`:""}
@@ -3526,7 +4077,7 @@ export default function GameNight(){
                       )}
                       {/* Form dots */}
                       {(()=>{
-                        const form=getFormGuide(player.id,5);
+                        const form=getArenaFormGuide(player.id,5);
                         if(!form.length)return null;
                         return(
                           <div style={{display:"flex",gap:3,marginTop:4}}>
@@ -3542,7 +4093,7 @@ export default function GameNight(){
                       })()}
                       {/* Benchmark */}
                       {(()=>{
-                        const bm=getBenchmark(player.id);
+                        const bm=getArenaBenchmark(player.id);
                         if(!bm)return null;
                         return(
                           <div style={{fontSize:".57rem",color:"var(--text3)",fontWeight:700,
@@ -3594,9 +4145,10 @@ export default function GameNight(){
               const globalRank=sortedLB.findIndex(p=>p.id===player.id);
               const medals=["🥇","🥈","🥉"];
               const rank=getRank(player.id);
+              const shift=leaderboardShiftData.map[player.id];
               const isHL=spotlight===player.id;
               const isFirst=globalRank===0&&!foolsDay;
-              const streak=getStreak(player.id);
+              const streak=getArenaStreak(player.id);
               return(
                 <div key={player.id} onClick={()=>goProfile(player.id)} style={{...card({border:isHL?`2px solid ${player.color}`:isFirst?"1.5px solid rgba(255,215,0,.55)":`1.5px solid ${player.color}2a`}),
                   padding:"12px 14px",display:"flex",alignItems:"center",gap:11,cursor:"pointer",
@@ -3606,10 +4158,25 @@ export default function GameNight(){
                     color:globalRank<3?"#fff":"var(--text3)",minWidth:26,textAlign:"center"}}>
                     {globalRank<3?medals[globalRank]:globalRank+1}
                   </span>
-                  <Av p={player} size={36} glow={isHL}/>
+                  <Avatar p={player} size={36} glow={isHL}/>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                      {player.host?"👑 ":""}{dn(player.username)}
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {player.host?"👑 ":""}{dn(player.username)}
+                      </div>
+                      {shift&&shift.label!=="HOLD"&&(
+                        <span className="bc7" style={{
+                          fontSize:".5rem",
+                          letterSpacing:".14em",
+                          color:shift.tone==="up"?"#00FF94":shift.tone==="down"?"#FF6B35":"#00E5FF",
+                          background:shift.tone==="up"?"rgba(0,255,148,.12)":shift.tone==="down"?"rgba(255,107,53,.12)":"rgba(0,229,255,.12)",
+                          border:`1px solid ${shift.tone==="up"?"rgba(0,255,148,.35)":shift.tone==="down"?"rgba(255,107,53,.35)":"rgba(0,229,255,.35)"}`,
+                          borderRadius:999,
+                          padding:"2px 6px",
+                        }}>
+                          {shift.label}
+                        </span>
+                      )}
                     </div>
                     <div style={{fontSize:".65rem",color:rank.color,fontWeight:700}}>
                       {rank.title}{streak>=2?` 🔥×${streak}`:""}
@@ -3617,7 +4184,7 @@ export default function GameNight(){
                     {isFirst&&<div className="bc7" style={{fontSize:".52rem",color:"#FFD700",letterSpacing:".18em",marginTop:3}}>CURRENT LEADER</div>}
                     {/* Form guide dots */}
                     {(()=>{
-                      const form=getFormGuide(player.id,5);
+                      const form=getArenaFormGuide(player.id,5);
                       if(!form.length)return null;
                       return(
                         <div style={{display:"flex",gap:3,marginTop:4}}>
@@ -3651,13 +4218,13 @@ export default function GameNight(){
             })}
           </div>
 
-          {getPeriodSessions().length===0&&(
+          {arenaScopeSessions.length===0&&(
             <div style={{textAlign:"center",padding:"48px 0"}}>
               <div style={{fontSize:"2.2rem",marginBottom:10}}>📊</div>
               <p style={{fontWeight:700,color:"var(--text2)"}}>
-                {lbPeriod==="today"?"The room has not opened today yet.":`No lobby has landed this ${lbPeriod==="week"?"week":"run"}`}
+                {arenaRangeMeta.emptyTitle}
               </p>
-              <p style={{fontSize:".82rem",color:"var(--text3)",marginTop:5}}>Check back after the next drop into the room.</p>
+              <p style={{fontSize:".82rem",color:"var(--text3)",marginTop:5}}>{arenaRangeMeta.emptyNote}</p>
             </div>
           )}
         </div>
@@ -3677,6 +4244,27 @@ export default function GameNight(){
               Head-to-head when they finished 1st & 2nd in the same lobby · {sessions.length} lobbies tracked
             </p>
           </div>
+
+          {rivalOpsTeaser&&(
+            <div style={{
+              marginBottom:18,
+              padding:"12px 16px",
+              background:"linear-gradient(135deg,rgba(255,77,143,.07),rgba(0,0,0,.32))",
+              border:"1px solid rgba(255,77,143,.18)",
+              borderLeft:"3px solid rgba(255,77,143,.45)",
+              borderRadius:"0 8px 8px 0",
+            }}>
+              <div className="bc7" style={{fontSize:".56rem",letterSpacing:".24em",color:"rgba(255,77,143,.72)",marginBottom:7}}>
+                {rivalOpsTeaser.eyebrow}
+              </div>
+              <div className="bc9" style={{fontSize:"clamp(.92rem,2.6vw,1.02rem)",color:"#FF4D8F",letterSpacing:".04em",marginBottom:5}}>
+                {rivalOpsTeaser.title}
+              </div>
+              <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.65}}>
+                {rivalOpsTeaser.note}
+              </div>
+            </div>
+          )}
 
           <div style={{position:"relative",marginBottom:18}}>
             <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
@@ -3710,7 +4298,7 @@ export default function GameNight(){
                 <div style={{animation:"popIn .25s ease"}}>
                   <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:12,alignItems:"center",marginBottom:14}}>
                     <div style={{textAlign:"center"}}>
-                      <Av p={pA} size={52} glow/>
+                      <Avatar p={pA} size={52} glow/>
                       <div style={{fontFamily:"Fredoka One",color:pA.color,fontSize:"1rem",marginTop:6}}>{pA.username}</div>
                       <div style={{fontSize:".72rem",color:getRank(h2hA).color,fontWeight:700}}>{getRank(h2hA).title}</div>
                     </div>
@@ -3719,7 +4307,7 @@ export default function GameNight(){
                       <div style={{fontSize:".68rem",color:"var(--text3)",fontWeight:700,marginTop:4}}>{h.shared} shared lobbies</div>
                     </div>
                     <div style={{textAlign:"center"}}>
-                      <Av p={pB} size={52} glow/>
+                      <Avatar p={pB} size={52} glow/>
                       <div style={{fontFamily:"Fredoka One",color:pB.color,fontSize:"1rem",marginTop:6}}>{pB.username}</div>
                       <div style={{fontSize:".72rem",color:getRank(h2hB).color,fontWeight:700}}>{getRank(h2hB).title}</div>
                     </div>
@@ -3779,7 +4367,7 @@ export default function GameNight(){
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
                   <div style={{textAlign:"center",flexShrink:0}}>
-                    <Av p={p1} size={50} glow={p1Leading}/>
+                    <Avatar p={p1} size={50} glow={p1Leading}/>
                     <div style={{fontFamily:"Fredoka One",color:p1.color,fontSize:".88rem",marginTop:5,maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p1.username}</div>
                   </div>
                   <div style={{flex:1}}>
@@ -3799,7 +4387,7 @@ export default function GameNight(){
                     </div>
                   </div>
                   <div style={{textAlign:"center",flexShrink:0}}>
-                    <Av p={p2} size={50} glow={!p1Leading}/>
+                    <Avatar p={p2} size={50} glow={!p1Leading}/>
                     <div style={{fontFamily:"Fredoka One",color:p2.color,fontSize:".88rem",marginTop:5,maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p2.username}</div>
                   </div>
                 </div>
@@ -3825,7 +4413,7 @@ export default function GameNight(){
                 <div key={r.p1+r.p2} style={{...card(),padding:"14px 16px",
                   animation:`fadeUp .32s ease ${Math.min(i,.6)*.04}s both`}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <Av p={p1} size={36} glow={p1Leading}/>
+                    <Avatar p={p1} size={36} glow={p1Leading}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
                         <span style={{fontFamily:"Fredoka One",color:p1.color,fontSize:".88rem",
@@ -3846,7 +4434,7 @@ export default function GameNight(){
                         {r.total} games · {tied?"Tied 🤝":p1Leading?p1.username+" leads":p2.username+" leads"}
                       </div>
                     </div>
-                    <Av p={p2} size={36} glow={!p1Leading&&!tied}/>
+                    <Avatar p={p2} size={36} glow={!p1Leading&&!tied}/>
                   </div>
                 </div>
               );
@@ -3861,6 +4449,9 @@ export default function GameNight(){
           {(()=>{
             const archiveSessions=[...sessions].sort(compareSessionsDesc);
             const latestLobby=archiveSessions[0]||null;
+            const latestArchiveDate=getLatestSessionDate();
+            const latestConsequences=getLatestDayConsequences(latestArchiveDate);
+            const latestConsequenceLines=(latestConsequences?.summary||[]).slice(0,2);
             const latestWinner=latestLobby?getPlayer(latestLobby.winner):null;
             const liveHeat=getLiveStreaks()[0]||null;
             const heatPlayer=liveHeat?getPlayer(liveHeat.id):null;
@@ -3878,10 +4469,13 @@ export default function GameNight(){
             const archiveNights=new Set(filtered.map((s)=>s.date)).size;
             const daySummary=filtered.reduce((acc,session)=>{
               if(!acc[session.date]){
-                acc[session.date]={count:0,kills:0};
+                acc[session.date]={count:0,kills:0,wins:{}};
               }
               acc[session.date].count+=1;
               acc[session.date].kills+=getLobbyTotalKills(session);
+              if(session.winner){
+                acc[session.date].wins[session.winner]=(acc[session.date].wins[session.winner]||0)+1;
+              }
               return acc;
             },{});
             const activeTrail=[
@@ -3901,7 +4495,7 @@ export default function GameNight(){
               <div style={{position:"absolute",inset:0,pointerEvents:"none",
                 background:"radial-gradient(circle at top right,rgba(255,77,143,.18),transparent 42%)"}}/>
               <div className="bc7" style={{fontSize:".65rem",letterSpacing:".22em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:8}}>
-                Battle report archive
+                Battle reports with consequences
               </div>
               <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
                 background:"linear-gradient(135deg,#FF4D8F,#C77DFF)",
@@ -3918,7 +4512,7 @@ export default function GameNight(){
                     {latestWinner?dn(latestWinner.username):"Archive waiting"}
                   </div>
                   <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
-                    {latestLobby?`${latestLobby.id.toUpperCase()} filed on ${formatLobbyDate(latestLobby.date,{day:"numeric",month:"short"})}`:"No room has landed yet"}
+                    {latestLobby?`${latestLobby.id.toUpperCase()} closed on ${formatLobbyDate(latestLobby.date,{day:"numeric",month:"short"})}`:"No room has landed yet"}
                   </div>
                 </div>
                 <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
@@ -3939,6 +4533,22 @@ export default function GameNight(){
                     {loudestLobby?`${formatLobbyDate(loudestLobby.date,{day:"numeric",month:"short"})} still stands as the heaviest room on file.`:"The archive wakes up once the first room is logged."}
                   </div>
                 </div>
+                <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:6}}>Latest consequences</div>
+                  <div style={{display:"grid",gap:6}}>
+                    {latestConsequenceLines.length
+                      ?latestConsequenceLines.map((line)=>(
+                        <div key={line} className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.55}}>
+                          <span style={{color:"#00FF94",marginRight:7}}>▸</span>{line}
+                        </div>
+                      ))
+                      :(
+                        <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",lineHeight:1.55}}>
+                          The last session day moved the totals, but no clear consequence line held long enough to pin here.
+                        </div>
+                      )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -3946,7 +4556,7 @@ export default function GameNight(){
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
                 <div>
                   <div className="bc7" style={{fontSize:".62rem",letterSpacing:".18em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:6}}>
-                    Archive sweep
+                    Sweep the room
                   </div>
                   <div className="bc7" style={{fontSize:".78rem",color:"var(--text2)",lineHeight:1.6,maxWidth:680}}>
                     Pull one operative, lock a date, or sweep the archive for a room ID, winner, or field note. Reports stay filed newest first.
@@ -3961,7 +4571,7 @@ export default function GameNight(){
                   <label style={{...lbl,marginBottom:6,fontSize:".64rem"}}>Pull operative</label>
                   <div style={{position:"relative"}}>
                     <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:".9rem",pointerEvents:"none"}}>👤</span>
-                    <select value={lobbyFilter} onChange={e=>setLobbyFilter(e.target.value)}
+                    <select value={lobbyFilter} onChange={e=>updateLobbyFilter(e.target.value)}
                       style={{...inp({width:"100%",padding:"9px 12px 9px 34px",fontSize:".86rem"})}}>
                       <option value="">Any operative</option>
                       {players.map(p=><option key={p.id} value={p.id}>{p.username}</option>)}
@@ -3970,14 +4580,14 @@ export default function GameNight(){
                 </div>
                 <div>
                   <label style={{...lbl,marginBottom:6,fontSize:".64rem"}}>Lock date</label>
-                  <input type="date" value={lobbyDate} onChange={e=>setLobbyDate(e.target.value)}
+                  <input type="date" value={lobbyDate} onChange={e=>updateLobbyDate(e.target.value)}
                     style={{...inp({width:"100%",padding:"9px 12px",fontSize:".86rem"})}}/>
                 </div>
                 <div>
                   <label style={{...lbl,marginBottom:6,fontSize:".64rem"}}>Search the file</label>
                   <div style={{position:"relative"}}>
                     <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:".9rem",pointerEvents:"none"}}>🔎</span>
-                    <input value={lobbySearch} onChange={e=>setLobbySearch(e.target.value)}
+                    <input value={lobbySearch} onChange={e=>updateLobbySearch(e.target.value)}
                       placeholder="Room, closer, note"
                       style={{...inp({width:"100%",padding:"9px 12px 9px 36px",fontSize:".86rem"})}}/>
                   </div>
@@ -3994,7 +4604,7 @@ export default function GameNight(){
                       </div>
                     ))}
                   </div>
-                  <button onClick={()=>{setLobbyFilter("");setLobbyDate("");setLobbySearch("");}} style={{
+                  <button onClick={clearLobbyFilters} style={{
                     padding:"8px 14px",borderRadius:10,border:"1.5px solid var(--border)",
                     background:"rgba(255,255,255,.07)",color:"var(--text2)",cursor:"pointer",fontWeight:700,fontSize:".8rem"}}>
                     Reset trail
@@ -4026,7 +4636,7 @@ export default function GameNight(){
               </div>
             )}
 
-            {visible.map((s,idx)=>{
+              {visible.map((s,idx)=>{
               const winner=players.find(p=>p.id===s.winner);
               const {player:tkP,kills:tkK}=getLobbyTopDamage(s);
               const totalLobbyKills=getLobbyTotalKills(s);
@@ -4036,6 +4646,10 @@ export default function GameNight(){
               const showNightBreak=idx===0||visible[idx-1].date!==s.date;
               const marker=getLobbyDateMarker(s.date);
               const nightSummary=daySummary[s.date];
+              const nightLeaderEntry=nightSummary
+                ?Object.entries(nightSummary.wins).sort((left,right)=>right[1]-left[1])[0]
+                :null;
+              const nightLeader=nightLeaderEntry?getPlayer(nightLeaderEntry[0]):null;
               return(
                 <div key={s.id} style={{display:"flex",flexDirection:"column",gap:10}}>
                   {showNightBreak&&(
@@ -4044,7 +4658,7 @@ export default function GameNight(){
                       <div className="bc7" style={{padding:"6px 12px",borderRadius:999,
                         background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",
                         fontSize:".62rem",letterSpacing:".14em",color:"var(--text3)",textTransform:"uppercase",textAlign:"center"}}>
-                        {idx===0?"Latest night on file":"Night file"} · {formatLobbyDate(s.date,{weekday:"long",day:"numeric",month:"short"})} · {nightSummary.count} report{nightSummary.count!==1?"s":""} · {nightSummary.kills} kills
+                        {idx===0?"Latest night on file":"Night file"} · {formatLobbyDate(s.date,{weekday:"long",day:"numeric",month:"short"})} · {nightSummary.count} report{nightSummary.count!==1?"s":""} · {nightSummary.kills} kills{nightLeader&&nightLeaderEntry?` · ${dn(nightLeader.username)} closed ${nightLeaderEntry[1]}`:""}
                       </div>
                       <div style={{height:1,flex:1,background:"linear-gradient(90deg,transparent,rgba(199,125,255,.3))"}}/>
                     </div>
@@ -4114,7 +4728,7 @@ export default function GameNight(){
                               background:`${p.color}14`,border:`1px solid ${p.color}44`,
                               borderRadius:8,padding:"4px 9px"}}>
                               <span style={{fontSize:".78rem"}}>{pi<3?medals[pi]:`${pi+1}.`}</span>
-                              <Av p={p} size={22}/>
+                              <Avatar p={p} size={22}/>
                               <span style={{fontFamily:"Fredoka One",color:p.color,fontSize:".8rem"}}>{p.username}</span>
                               {k>0&&<span style={{color:"#FF4D8F",fontSize:".72rem",fontWeight:700}}>{k}k</span>}
                             </div>
@@ -4133,7 +4747,7 @@ export default function GameNight(){
                         <div style={{background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.25)",
                           borderRadius:8,padding:"5px 11px",display:"flex",alignItems:"center",gap:7}}>
                           <span style={{fontSize:".7rem",color:"var(--text3)"}}>🏆 Closed the room</span>
-                          <Av p={winner} size={22}/>
+                          <Avatar p={winner} size={22}/>
                           <span style={{fontFamily:"Fredoka One",color:winner.color,fontSize:".86rem"}}>{winner.username}</span>
                         </div>
                       )}
@@ -4141,7 +4755,7 @@ export default function GameNight(){
                         <div style={{background:"rgba(255,77,143,.08)",border:"1px solid rgba(255,77,143,.25)",
                           borderRadius:8,padding:"5px 11px",display:"flex",alignItems:"center",gap:7}}>
                           <span style={{fontSize:".7rem",color:"var(--text3)"}}>💀 Damage lead</span>
-                          <Av p={tkP} size={22}/>
+                          <Avatar p={tkP} size={22}/>
                           <span style={{fontFamily:"Fredoka One",color:tkP.color,fontSize:".86rem"}}>{tkP.username} ({tkK}k)</span>
                         </div>
                       )}
@@ -4163,7 +4777,7 @@ export default function GameNight(){
                                 border:`1px solid ${isWin?"rgba(255,215,0,.3)":`${p.color}22`}`,
                                 borderRadius:9,padding:"7px 12px",cursor:"pointer"}}>
                                 <span style={{fontFamily:"Fredoka One",fontSize:pi<3?"1.1rem":".9rem",minWidth:26,textAlign:"center",color:pi<3?"#fff":"var(--text3)"}}>{pi<3?medals[pi]:`${pi+1}`}</span>
-                                <Av p={p} size={28}/>
+                                <Avatar p={p} size={28}/>
                                 <span style={{fontFamily:"Fredoka One",color:p.color,fontSize:".88rem",flex:1}}>{p.username}</span>
                                 <span style={{fontFamily:"Fredoka One",color:k>0?"#FF4D8F":"var(--text3)",fontSize:".9rem"}}>{`${k}K`}</span>
                               </div>
@@ -4362,7 +4976,7 @@ export default function GameNight(){
                 </div>
               </div>
               <div style={{background:"rgba(0,0,0,.35)",borderRadius:11,padding:12,marginBottom:18,display:"flex",alignItems:"center",gap:10}}>
-                <Av p={{username:np.username||"?",color:np.color}} size={38}/>
+                <Avatar p={{username:np.username||"?",color:np.color}} size={38}/>
                 <div>
                   <div style={{fontFamily:"Fredoka One",color:"#fff"}}>{np.username||"Preview"}</div>
                   <div style={{fontSize:".68rem",color:"var(--text3)"}}>🎮 Rookie</div>
@@ -4384,7 +4998,7 @@ export default function GameNight(){
                     <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,
                       background:"rgba(0,0,0,.32)",borderRadius:9,padding:"9px 12px",
                       animation:`fadeUp .28s ease ${i*.025}s both`}}>
-                      <Av p={p} size={30}/>
+                      <Avatar p={p} size={30}/>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".88rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {p.host?"👑 ":""}{dn(p.username)}
@@ -4417,7 +5031,7 @@ export default function GameNight(){
         const rank=getRank(p.id);
         const badges=getBadges(p.id);
         const streak=getStreak(p.id);
-        const s2Sess=sessions.filter(s=>s.date>="2026-04-01");
+        const s2Sess=filterSessionsBySeason(sessions,SEASON_TWO_ID);
         const s2St=getStats(p.id,s2Sess);
         const form=getFormGuide(p.id,5);
         const drought=getDrought(p.id);
@@ -4433,6 +5047,8 @@ export default function GameNight(){
         const rivalSt=rivalP?getStats(rivalP.id):null;
         const rivalWins=topRival?(topRival.p1===p.id?topRival.p1wins:topRival.p2wins):0;
         const rivalLoss=topRival?(topRival.p1===p.id?topRival.p2wins:topRival.p1wins):0;
+        const benchmark=getBenchmark(p.id);
+        const dailyOrders=getDailyOrdersForPlayer(p.id);
         // Career milestones
         const milestones=[
           {l:"1W",  done:st.wins>=1},
@@ -4442,58 +5058,120 @@ export default function GameNight(){
           {l:"50W", done:st.wins>=50},
           {l:"100W",done:st.wins>=100},
         ];
-        // ── Per-player bios — human, direct, no filler ──
-        const getBio=(pid)=>{
-          const s=st;
-          const kpg=s.appearances>0?parseFloat((s.kills/s.appearances).toFixed(1)):0;
-          const dr=drought;
-          const sk=streak;
-          const droughtNote=dr>5?` ${dr} games without a win right now.`:dr>2?` A few dry games lately.`:"";
-          const streakNote=sk>=3?` Coming in on a ${sk}-game streak.`:"";
-          const s2Note=s2St.wins>0?` ${s2St.wins}W in Season 2 so far.`:"";
-
-          const bios={
-            p01:`Mekula runs the room and still sits on top of the all-time kill board. ${s.kills} kills is not admin privilege, it is repeated work. Every night he is in the middle of the chaos, pressing fights and making the lobby move. The wins swing. The damage rarely does.${s2Note}${streakNote}`,
-            p02:`${s.wins} wins on the file. Teriqstp set the tone for what winning here looks like, especially in Season 1 where the race never really opened up. Calm, consistent, and hard to shake once they settle into a session.${s2Note}`,
-            p03:`Sanctus has ${s.appearances} lobbies on record and one win to prove the room can crack open when the timing is right. The ceiling is there. The trick is getting that version to stay for a full night.${droughtNote}`,
-            p04:`DjxHunter has the kind of game that can swallow a lobby whole when it clicks. ${s.wins} wins, a 6-kill ceiling, and a Season 1 podium run say the threat is real. The mystery is which version shows up on a given night.${droughtNote}${streakNote}`,
-            p05:`Bohdanmain is quiet until the scoreboard forces everybody to notice. ${s.wins} wins from ${s.appearances} games, plus that four-win streak that still hangs in the air. The calm ones are the ones that punish you for looking away.${s2Note}`,
-            p06:`One of the early names on the board. ${s.wins} wins from ${s.appearances} lobbies and part of the group that gave the room its first rhythm. The file is older than the spotlight, and it still carries weight.`,
-            p07:`${s.wins} wins and ${s.kills} kills make Dhemo one of the cleanest all-round files in the room. They win enough, frag enough, and show up enough that there is no easy angle against them on paper.${droughtNote}`,
-            p08:`${s.wins} wins across ${s.appearances} lobbies. Chugrud keeps stacking useful nights without asking for the spotlight. Not always the loudest player in the room, but the file keeps adding proof.${s2Note}`,
-            p09:`${s.appearances} lobbies, no win yet, and still SirHaazy99 keeps turning up. That matters more here than people admit. When the first one lands, the room is going to celebrate like it was overdue.`,
-            p10:`Izzyboi only stayed for ${s.appearances} games, but they left a footprint. Not every file gets thick before it earns a place in the archive.`,
-            p11:`Loudmouth has ${s.wins} wins from ${s.appearances} lobbies and a habit of being around when sessions get memorable. The win rate is one story. The nights they really catch fire are another.${droughtNote}`,
-            p12:`${s.wins}W and ${s.kills}K from ${s.appearances} games. Michkyle never feels like a free lobby. If the attendance ever settles, the file probably gets heavier in a hurry.`,
-            p13:`${s.wins} wins from ${s.appearances} lobbies. TheLostOG has not been here long, but the conversion rate already reads like somebody who understands timing and pressure.${s2Note} Less screen time, real impact.`,
-            p14:`${s.wins} wins and ${s.kills} kills. Hackqam has gone from occasional name on the roster to one of the sharper dangers in Season 2. More confident, more decisive, and clearly more comfortable in the room now.${s2Note}`,
-            p15:`${s.wins} wins and Nellywaz still feels mid-rise. Season 2 has been the strongest stretch of their run so far, and the file suggests there is still another level to unlock.${s2Note}${streakNote} Quiet presence, real threat.`,
-            p16:`${s.wins} wins from ${s.appearances} games. Zakipro does not log the same volume as the regulars, but the efficiency is hard to miss whenever they do show.${s2Note}`,
-            p17:`ZapGrupoBulletBR has ${s.appearances} games logged and the kind of tag nobody forgets after reading it once. Every appearance adds another line to a file that still feels early.`,
-            p18:`${s.appearances} lobbies and counting. CelesteHI5 has been around longer than people remember and the file shows it. ${s.wins} wins, ${s.kills} kills, steady appearances, quiet permanence.${s2Note}`,
-            p19:`Six games, one win, instant footprint. xLilithx did not need a long stay to prove they could bite, and the win rate still looks cleaner than plenty of longer files.`,
-            p20:`${s.wins}W from ${s.appearances} lobbies. DeadlySoaringSeagull6 does not clock in every night, but when they do the room has to take them seriously.`,
-            p21:`${s.appearances} lobbies in and the first win is still waiting. Beedee4PF keeps answering the call anyway. That kind of patience usually gets paid eventually.`,
-            p22:`Bxdguy is on the roster and waiting for the first real chapter. Right now the file is blank space and possibility.`,
-            p23:`One lobby. One kill. ReyzinhoPL touched the board once and made it count. That line stays in the archive whether the next one comes tomorrow or months from now.`,
-            p24:`${s.wins} wins, a 4-kill best game, ${s.appearances} lobbies. Web3guy tends to make sessions sharper when they are around. The room feels more competitive with that tag in it.`,
-            p25:`Twelve wins from 33 lobbies and one of the best win rates among the regulars. FKxKingLurius is less about chaos than control. They read rooms, manage tempo, and close when the opening appears.`,
-            p26:`Web3hustlre has a nameplate and an empty page waiting for ink. The first proper run writes the tone of the whole file.`,
-            p27:`FKxPhanteon is registered. The rest of the story still belongs to whatever happens the next time the lobby opens.`,
-            p28:`Lazerine is on the board and waiting for the room to meet them properly. Some files start quiet.`,
-            p29:`${s.wins} wins from ${s.appearances} lobbies at a 35% win rate. ElderRovingWorm81 walked into Season 2 like they had already studied the room. Efficient, dangerous, very little wasted motion.${s2Note}`,
-            p30:`Seven kills in a single lobby is still the all-time ceiling, and EZEDINEYoutube owns it. ${s.wins} wins, ${s.kills} kills, and the kind of upside that changes how people queue when they see the name.${s2Note}`,
-            p31:`${s.appearances} games logged. Ironlover keeps coming back and keeps thickening the record. Not every story jumps. Some grow by return visits.`,
-            p32:`KhingPilot touched one lobby and left a single entry in the archive. Short file, permanent mark.`,
-            p33:`iVimXGF has one lobby on record and that is enough to be part of the story now. The archive keeps even the brief visits.`,
-            p34:`${s.wins} wins and ${s.kills} kills from ${s.appearances} games. TMIyc does not play often, but the file says they do not waste appearances either.`,
-            p35:`${s.appearances} lobbies and still answering the call. Demejii55 is building the kind of file that only needs one breakthrough night to look very different.`,
-            p36:`${s.appearances} games logged. 0netwoo is laying the groundwork slowly. Quiet progress still counts as progress.`,
-            p37:`FKxVanBR has the first lobby on record. That is how every file starts. The question is what comes after the opener.`,
-          };
-          return bios[pid]||`${s.wins}W and ${s.kills}K across ${s.appearances} lobbies.`;
-        };
-        const bio=getBio(p.id);
+        const recentWins=form.filter((entry)=>entry.win).length;
+        const displayName=dn(p.username);
+        const identityLine=(()=>{
+          if(st.appearances===0){
+            return `${displayName} is still an unopened file. The room has not had a real look yet.`;
+          }
+          if(st.wins>=10&&st.winRate>=30){
+            return `${displayName} reads like a proven closer. ${st.wins} wins on file and a ${st.winRate}% close rate keep this name near the front of the room.`;
+          }
+          if(st.kd>=1.8&&st.kills>=30){
+            return `${displayName} is a damage-first problem. ${st.kd} kills per lobby keeps this file dangerous even before the crown shows up.`;
+          }
+          if(consistency>=60&&st.appearances>=8){
+            return `${displayName} is one of the steadier reads in the room. This file is built on repeat solid finishes, not one lucky spike.`;
+          }
+          if(st.appearances>=15){
+            return `${displayName} is part of the room's backbone. High attendance keeps this file involved in almost every shift the board remembers.`;
+          }
+          if(st.winRate>=25&&st.appearances>=4){
+            return `${displayName} looks like a live spoiler. The file is not huge yet, but the conversion rate is loud enough to matter.`;
+          }
+          return `${displayName} is still defining the file. There is enough signal here to matter, but the full shape is still settling.`;
+        })();
+        const currentStateLine=(()=>{
+          if(st.appearances===0){
+            return "Current state is unknown because the room has not logged them yet.";
+          }
+          if(streak>=3){
+            return `Running hot right now. ${streak} straight wins on the latest session day turned this file into live pressure.`;
+          }
+          if(drought===0&&st.wins>0){
+            return "Fresh off a win. The last room they touched ended with the crown in their hands.";
+          }
+          if(drought>=6){
+            return `Under pressure. ${drought} lobbies without a win is the loudest part of the file right now.`;
+          }
+          if(recentWins>=3){
+            return `Trending upward. ${recentWins} wins in the last five logged lobbies say the file is moving the right way.`;
+          }
+          if(recentWins===0&&form.length>=4){
+            return "Cold patch. The latest form line has gone quiet and everyone can see it.";
+          }
+          if(s2St.appearances>=3&&s2St.wins===0){
+            return `Season 2 has stayed open so far. ${s2St.appearances} lobbies in and the file is gathering pressure rather than relief.`;
+          }
+          return "Current form is unsettled. Enough signs to matter, not enough rhythm to relax.";
+        })();
+        const threatLine=(()=>{
+          if(st.appearances===0){
+            return "No threat profile yet because the file is still blank.";
+          }
+          if(carry>=3){
+            return `The main threat is clean takeover potential. ${carry} carry wins means the damage and the crown often land together.`;
+          }
+          if(st.biggestGame>=6){
+            return `${st.biggestGame} kills is the ceiling on file. If the early fights break their way, the room can disappear fast.`;
+          }
+          if(st.kd>=1.8&&st.kills>=20){
+            return `${st.kd} kills per lobby keeps the pressure constant. Even bad rooms still have to deal with their damage line.`;
+          }
+          if(st.winRate>=30&&st.appearances>=8){
+            return `Closing power is the threat. Once this file gets into the last stretch of a room, it tends to finish clean.`;
+          }
+          if(consistency>=60&&st.appearances>=8){
+            return `Stable finishes are the danger. This file does not hand out many easy rooms.`;
+          }
+          return "The threat is timing. Even a thin file can turn a whole room if the opening arrives at the right moment.";
+        })();
+        const weaknessLine=(()=>{
+          if(st.appearances===0){
+            return "Weakness is still unknown. The room has not seen enough to pin one down.";
+          }
+          if(st.wins===0){
+            return "The known weakness is the missing first close. Until that lands, every late room carries extra weight.";
+          }
+          if(drought>=5){
+            return `The drought is real. ${drought} lobbies without a win turns every quiet finish into a talking point.`;
+          }
+          if(consistency<45&&st.appearances>=8){
+            return "The floor still drops out too often. The highs are real, but the off nights leave too much room for punishment.";
+          }
+          if(s2St.appearances>=4&&s2St.wins===0){
+            return "This campaign has not paid off yet. The room will keep pressing until the Season 2 file answers back.";
+          }
+          if(topRival&&rivalP&&rivalLoss>rivalWins){
+            return `${dn(rivalP.username)} still has the read in the main duel at ${rivalLoss}-${rivalWins}. That matchup is not solved yet.`;
+          }
+          if(st.appearances<5){
+            return "The file is still thin. One good night lifts it fast, but one bad one can blur the read again.";
+          }
+          return "The weakness is drift. If the room drags long without an early swing, this file can lose control of the tempo.";
+        })();
+        const pressureLine=(()=>{
+          if(benchmark){
+            if(benchmark.sameWins){
+              return `${dn(benchmark.target.username)} is the next file above on kills. ${Math.max(benchmark.killGap,0)} more kill${Math.abs(benchmark.killGap)===1?"":"s"} changes that chase.`;
+            }
+            return `${dn(benchmark.target.username)} is the next file above on wins. ${benchmark.winGap} more win${benchmark.winGap===1?"":"s"} closes the gap.`;
+          }
+          if(topRival&&rivalP){
+            return `${dn(rivalP.username)} remains the duel that explains this file best at ${rivalWins}-${rivalLoss} in ${topRival.total} meetings.`;
+          }
+          if(s2St.wins>0){
+            return `${s2St.wins} of the wins on this file have come in Season 2, so the room still has a fresh reason to keep checking back.`;
+          }
+          return "There is no clean benchmark above them yet, so the next real jump writes a fresh target.";
+        })();
+        const bio=[identityLine,currentStateLine,pressureLine].join(" ");
+        const dossierCards=[
+          {label:"IDENTITY",text:identityLine,color:p.color},
+          {label:"CURRENT STATE",text:currentStateLine,color:streak>=3?"#FF6B35":drought>=5?"#FFD700":"#00E5FF"},
+          {label:"MAIN THREAT",text:threatLine,color:"#FF4D8F"},
+          {label:"KNOWN WEAKNESS",text:weaknessLine,color:"#FFAB40"},
+        ];
         const lvlData=getPlayerLevel(p.id);
         // Sparkline
         const pSess=[...sessions].filter(s=>s.attendees?.includes(p.id))
@@ -4509,7 +5187,8 @@ export default function GameNight(){
         const yPos=v=>PAD_T+Math.round(CH-(v/axisMax)*CH);
         const pts=spark.map((v,i)=>`${xPos(i)},${yPos(v)}`).join(" ");
         const diffDays=lastSeen?Math.floor((new Date()-new Date(lastSeen+"T12:00:00Z"))/(1000*60*60*24)):null;
-        const lastSeenLabel=diffDays===0?"Today":diffDays===1?"Yesterday":diffDays!=null?`${diffDays}d ago`:"Awaiting debut";
+        const lastSeenLabel=diffDays===0?"Today":diffDays===1?"Yesterday":diffDays!=null?`${diffDays} days ago`:"Awaiting debut";
+        const daysOnFileLabel=`${daysActive} ${daysActive===1?"day":"days"} on file`;
 
         return(
           <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
@@ -4559,7 +5238,7 @@ export default function GameNight(){
                 pointerEvents:"none"}}>{p.username[0]}</div>
               <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"nowrap",
                 position:"relative",zIndex:1}}>
-                <Av p={p} size={60} glow intel/>
+                <Avatar p={p} size={60} glow intel={renderPlayerIntel(p)}/>
                 <div style={{flex:1,minWidth:0}}>
                   {/* Rank + optional streak badge — inline, never overlaps */}
                   <div style={{display:"flex",alignItems:"center",gap:8,
@@ -4586,7 +5265,11 @@ export default function GameNight(){
                   <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
                     <div className="bc7" style={{fontSize:".65rem",color:"var(--text3)",
                       letterSpacing:".06em",whiteSpace:"nowrap"}}>
-                      LAST SEEN {lastSeenLabel} · {daysActive}D
+                      LAST SEEN {lastSeenLabel}
+                    </div>
+                    <div className="bc7" style={{fontSize:".65rem",color:"var(--text3)",
+                      letterSpacing:".06em",whiteSpace:"nowrap"}}>
+                      {daysOnFileLabel.toUpperCase()}
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:5}}>
                       <div className="bc9" style={{fontSize:".78rem",
@@ -4611,6 +5294,58 @@ export default function GameNight(){
 
             {/* Bio — proper typed animation via TypedBio component */}
             <TypedBio text={bio} color={p.color}/>
+
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:12}}>
+              {dossierCards.map((card)=>(
+                <div key={card.label} style={{
+                  background:`linear-gradient(135deg,${card.color}10,rgba(255,255,255,.025))`,
+                  border:`1px solid ${card.color}2c`,
+                  borderLeft:`3px solid ${card.color}`,
+                  borderRadius:"0 8px 8px 0",
+                  padding:"12px 14px",
+                }}>
+                  <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${card.color}bb`,marginBottom:8}}>
+                    {card.label}
+                  </div>
+                  <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.7}}>
+                    {card.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {dailyOrders.length>0&&(
+              <div style={{marginBottom:12}}>
+                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
+                  color:"var(--text3)",marginBottom:10}}>
+                  DAILY ORDERS
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
+                  {dailyOrders.map((order,idx)=>(
+                    <div key={`${order.label}-${idx}`} style={{
+                      background:`linear-gradient(135deg,${order.color}10,rgba(255,255,255,.025))`,
+                      border:`1px solid ${order.color}2c`,
+                      borderLeft:`3px solid ${order.color}`,
+                      borderRadius:"0 8px 8px 0",
+                      padding:"12px 14px",
+                    }}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                        <span style={{fontSize:"1rem",flexShrink:0}}>{order.icon}</span>
+                        <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${order.color}bb`}}>
+                          {order.label}
+                        </div>
+                      </div>
+                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.7,marginBottom:8}}>
+                        {order.text}
+                      </div>
+                      <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",lineHeight:1.65,letterSpacing:".03em"}}>
+                        {order.note}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Stat grid */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",
@@ -4680,7 +5415,7 @@ export default function GameNight(){
                   <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
                     color:"rgba(255,77,143,.6)",marginBottom:8}}>⚔️ PRIMARY RIVAL</div>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <Av p={rivalP} size={28} intel/>
+                    <Avatar p={rivalP} size={28} intel={renderPlayerIntel(rivalP)}/>
                     <div style={{minWidth:0}}>
                       <div className="bc9" style={{fontSize:".82rem",color:rivalP.color,
                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
@@ -4852,7 +5587,7 @@ export default function GameNight(){
             <div style={{height:1,background:"linear-gradient(90deg,rgba(199,125,255,.44),transparent)",
               marginBottom:8}}/>
             <div className="bc7" style={{fontSize:".72rem",letterSpacing:".12em",color:"var(--text3)"}}>
-              All-time records · stories the room keeps bringing back
+              All-time marks that still change how the room talks
             </div>
           </div>
           {(()=>{
@@ -4865,6 +5600,11 @@ export default function GameNight(){
             const streakP=players.find(p=>p.id===rec.bestStreak.pid);
             const firstWinP=players.find(p=>p.id===rec.first?.winner);
             const topDayKillP=players.find(p=>p.id===rec.topDayKill?.pid);
+            const legacyPulse=[
+              topWinP?`${dn(topWinP.username)} still owns the crown line at ${rec.topWinner[1]} wins`:null,
+              topKillP&&topKillP.id!==topWinP?.id?`${dn(topKillP.username)} still drives the damage board at ${rec.topKiller[1]} kills`:null,
+              streakP?`${dn(streakP.username)} still holds the longest clean run at ${rec.bestStreak.streak} in a row`:null,
+            ].filter(Boolean).join(". ")+".";
             const records=[
               {icon:"🏆",color:"#FFD700",title:"Most Wins All Time",  player:topWinP,  stat:`${rec.topWinner[1]} wins`,    sub:"Still the crown every closer is chasing"},
               {icon:"💀",color:"#FF4D8F",title:"Most Kills All Time",  player:topKillP, stat:`${rec.topKiller[1]} kills`,   sub:"The room's all-time damage line still runs through this file"},
@@ -4877,6 +5617,18 @@ export default function GameNight(){
             ];
             return(
               <div>
+                <div style={{padding:"16px 18px",marginBottom:18,
+                  background:"linear-gradient(135deg,rgba(199,125,255,.12),rgba(0,0,0,.38))",
+                  border:"1px solid rgba(199,125,255,.28)",
+                  borderLeft:"3px solid rgba(199,125,255,.55)",
+                  borderRadius:"0 8px 8px 0"}}>
+                  <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:"rgba(199,125,255,.75)",marginBottom:8}}>
+                    LEGACY PULSE
+                  </div>
+                  <div className="bc7" style={{fontSize:".78rem",color:"var(--text2)",lineHeight:1.7}}>
+                    {legacyPulse}
+                  </div>
+                </div>
                 <div className="vault-grid" style={{marginBottom:28}}>
                   {records.map((r,i)=>(
                     <div key={i} className="vault-card" style={{
@@ -4891,7 +5643,7 @@ export default function GameNight(){
                       </div>
                       {r.player&&(
                         <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:8}}>
-                          <Av p={r.player} size={28} intel/>
+                          <Avatar p={r.player} size={28} intel={renderPlayerIntel(r.player)}/>
                           <div className="bc9" style={{fontSize:".85rem",color:r.player.color,
                             letterSpacing:".04em",overflow:"hidden",textOverflow:"ellipsis",
                             whiteSpace:"nowrap"}}>
@@ -4917,10 +5669,10 @@ export default function GameNight(){
                   borderLeft:"3px solid rgba(255,77,143,.5)",
                   borderRadius:"0 8px 8px 0"}}>
                   <div className="bc9" style={{fontSize:".88rem",color:"#FF4D8F",
-                    letterSpacing:".06em",marginBottom:4}}>💀 KILL KING BY SESSION DAY</div>
+                    letterSpacing:".06em",marginBottom:4}}>💀 NIGHTS THE ROOM STILL BRINGS UP</div>
                   <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)",
                     marginBottom:16,letterSpacing:".06em"}}>
-                    The loudest kill spike from each session night
+                    The loudest single-lobby spike from every session night on file
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:3}}>
                     {(()=>{
@@ -4937,7 +5689,7 @@ export default function GameNight(){
                         const kkP=kkPid?players.find(x=>x.id===kkPid):null;
                         const dd=new Date(date+"T12:00:00Z");
                         const dayLabel=dd.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
-                        const specialTag=date==="2026-04-01"?"🃏 ":date==="2026-04-03"?"🌅 ":date==="2026-04-04"?"🥚 ":"";
+                        const specialTag=getLobbyDateMarker(date)?.icon?`${getLobbyDateMarker(date).icon} `:"";
                         const isLatest=i===0;
                         return(
                           <div key={date} style={{
@@ -4957,7 +5709,7 @@ export default function GameNight(){
                               </div>
                             </div>
                             {/* Kill King */}
-                            {kkP&&<Av p={kkP} size={26} intel/>}
+                            {kkP&&<Avatar p={kkP} size={26} intel={renderPlayerIntel(kkP)}/>}
                             <div style={{flex:1,minWidth:0}}>
                               <div className="bc9" style={{fontSize:".84rem",lineHeight:1.2,
                                 color:kkP?.color||"var(--text3)",
@@ -5179,12 +5931,12 @@ export default function GameNight(){
               🏆 Season 1 Wrap
             </h2>
             <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600}}>
-              The full story of Bullet League's first season
+              The first campaign file, from the opening shot to the final lock
             </p>
           </div>
 
           {/* ── FINAL stamp — shows after March 31 ── */}
-          {todayStr()>="2026-04-01"&&(
+          {todayStr()>=SEASON_TWO_LAUNCH_DATE&&(
             <div style={{
               display:"flex",alignItems:"center",justifyContent:"center",
               background:"linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,107,53,.06))",
@@ -5221,6 +5973,115 @@ export default function GameNight(){
           {(()=>{
             const w=getS1Wrap();
             if(!w)return <p style={{textAlign:"center",color:"var(--text3)"}}>Season 1 data loading…</p>;
+            const s1Sessions=getSeasonSessions("s1");
+            const s1Campaign=buildSeasonCampaignFile(s1Sessions);
+            const s1Ordered=[...s1Sessions].sort(compareSessionsAsc);
+            const s1Opener=s1Ordered[0]||null;
+            const s1OpenerWinner=s1Opener?players.find((player)=>player.id===s1Opener.winner):null;
+            const s1RunnerUp=w.podium[1]?players.find((player)=>player.id===w.podium[1].id):null;
+            const s1Gap=w.podium[0]&&w.podium[1]?w.podium[0].wins-w.podium[1].wins:0;
+            const s1LoudestDay=s1Campaign?.loudestDay||null;
+            const s1TurningNight=s1Campaign?.turningNight||null;
+            const s1TurningNightChampion=s1Campaign?.leader||null;
+            const s1TurningNightRunner=s1Campaign?.chaser||null;
+            const s1LockNight=s1Campaign?.lockNight||null;
+            const s1BestRun=s1Campaign?.bestRun||null;
+            const s1CrowdDay=s1Campaign?.biggestCrowd||null;
+            const s1SpreadDay=s1Campaign?.widestWinnerDay||null;
+            const s1ChampionPlayer=w.champion?players.find((player)=>player.id===w.champion.id):null;
+            const s1ReaperPlayer=w.topKiller?players.find((player)=>player.id===w.topKiller.id):null;
+            const s1TopGameLobby=w.topGame?.sid?`Lobby ${parseSessionIdNumber(w.topGame.sid)||w.topGame.sid}`:"";
+            const s1NumberMarkers=[
+              s1ChampionPlayer&&w.champion
+                ?{
+                  label:"Top winner",
+                  value:`${dn(s1ChampionPlayer.username)} · ${w.champion.wins}W`,
+                  note:"closed the crown line",
+                  color:"#FFD700",
+                }
+                :null,
+              s1ReaperPlayer&&w.topKiller
+                ?{
+                  label:"Top reaper",
+                  value:`${dn(s1ReaperPlayer.username)} · ${w.topKiller.kills}K`,
+                  note:"held the damage pace",
+                  color:"#FF4D8F",
+                }
+                :null,
+              s1BestRun?.player&&s1BestRun.streak>0
+                ?{
+                  label:"Longest streak",
+                  value:`${dn(s1BestRun.player.username)} · ${s1BestRun.streak} straight`,
+                  note:s1BestRun.start?formatLobbyDate(s1BestRun.start.date,{weekday:"short",day:"numeric",month:"short"}):"season peak run",
+                  color:"#00E5FF",
+                }
+                :null,
+              s1LoudestDay
+                ?{
+                  label:"Loudest night",
+                  value:`${s1LoudestDay.totalKills}K on ${formatLobbyDate(s1LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}`,
+                  note:`${s1LoudestDay.lobbies} lobbies on file`,
+                  color:"#FF6B35",
+                }
+                :null,
+              s1CrowdDay
+                ?{
+                  label:"Biggest crowd",
+                  value:`${s1CrowdDay.uniquePlayers} players on ${formatLobbyDate(s1CrowdDay.date,{weekday:"short",day:"numeric",month:"short"})}`,
+                  note:`${s1CrowdDay.lobbies} lobbies kept the room full`,
+                  color:"#00FF94",
+                }
+                :null,
+              s1SpreadDay&&s1SpreadDay.winnerSpread>1
+                ?{
+                  label:"Widest winner spread",
+                  value:`${s1SpreadDay.winnerSpread} winners on ${formatLobbyDate(s1SpreadDay.date,{weekday:"short",day:"numeric",month:"short"})}`,
+                  note:"the room refused one clean owner",
+                  color:"#C77DFF",
+                }
+                :null,
+            ].filter(Boolean).slice(0,5);
+            const s1CampaignDossier=s1Campaign?.openerWinner&&s1TurningNight&&w.champion&&s1RunnerUp
+              ?`${dn(s1Campaign.openerWinner.username)} opened the file on ${formatLobbyDate(s1Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${dn(s1TurningNightChampion?.username||"")} bent the table on ${formatLobbyDate(s1TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}. ${s1LockNight?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} never gave the lead back after ${formatLobbyDate(s1LockNight.date,{weekday:"short",day:"numeric",month:"short"})}.`: `${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} still closed the crown ${s1Gap} win${s1Gap===1?"":"s"} clear of ${dn(s1RunnerUp.username)}.`}`
+              :`${w.uniqueWins} different winners left fingerprints on the first campaign file.`;
+            const s1MemoryCards=[
+              {
+                label:"OPENING SHOT",
+                color:"#FFD700",
+                value:s1OpenerWinner?`${dn(s1OpenerWinner.username)} took the first crown on file`:"Season opener is still sealed",
+                note:s1Opener
+                  ?s1BestRun?.player&&s1BestRun.streak>=2&&s1BestRun.start&&s1BestRun.end
+                    ?`${formatLobbyDate(s1Opener.date,{weekday:"short",day:"numeric",month:"short"})} opened the campaign. ${dn(s1BestRun.player.username)} later stacked ${s1BestRun.streak} straight wins from Lobby ${parseSessionIdNumber(s1BestRun.start.id)||s1BestRun.start.id} to Lobby ${parseSessionIdNumber(s1BestRun.end.id)||s1BestRun.end.id}.`
+                    :`${formatLobbyDate(s1Opener.date,{weekday:"short",day:"numeric",month:"short"})} opened the campaign and the room never really calmed down after that.`
+                  :"",
+              },
+              {
+                label:"TURNING NIGHT",
+                color:"#FF4D8F",
+                value:s1TurningNight&&s1TurningNightChampion&&s1TurningNightRunner
+                  ?`${dn(s1TurningNightChampion.username)} blew the crown gap open on ${formatLobbyDate(s1TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}`
+                  :"The archive never settled on one swing night",
+                note:s1TurningNight&&s1TurningNightChampion&&s1TurningNightRunner
+                  ?`${dn(s1TurningNightChampion.username)} won ${s1TurningNight.championDayWins} lobbies while ${dn(s1TurningNightRunner.username)} took ${s1TurningNight.runnerUpDayWins}. The crown gap jumped to ${s1TurningNight.gap} wins. ${s1LoudestDay&&s1LoudestDay.date!==s1TurningNight.date?`${formatLobbyDate(s1LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} was still the loudest night on raw damage.`:""}`
+                  :s1LoudestDay?.topKiller?.player
+                    ?`${dn(s1LoudestDay.topKiller.player.username)} owned the loudest night on ${formatLobbyDate(s1LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} with ${s1LoudestDay.totalKills} total kills on file.`
+                    :"The middle of the campaign stayed noisy enough to keep the board moving.",
+              },
+              {
+                label:"SIGNATURE RUN",
+                color:"#00E5FF",
+                value:s1BestRun?.player&&s1BestRun.streak>=2
+                  ?`${dn(s1BestRun.player.username)} authored the cleanest run in the file`
+                  :w.champion?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} still finished Season 1 on top`:"The crown line never sealed",
+                note:s1BestRun?.player&&s1BestRun.start&&s1BestRun.end
+                  ?`${s1BestRun.streak} straight wins from ${formatLobbyDate(s1BestRun.start.date,{weekday:"short",day:"numeric",month:"short"})}. ${s1LockNight?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} locked the crown for good on ${formatLobbyDate(s1LockNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s1TopGameLobby?`${s1TopGameLobby} still stands as the single room people point to first.`:""}`
+                  :s1RunnerUp
+                    ?s1Gap===0
+                      ?`${dn(s1RunnerUp.username)} finished level on wins and the tiebreak came from the wider file.`
+                      :`${dn(s1RunnerUp.username)} finished ${s1Gap} win${s1Gap===1?"":"s"} back when the archive locked. ${s1TopGameLobby?`${s1TopGameLobby} still stands as the single room people point to first.`:""}`
+                    :"No runner-up line was needed once the campaign closed.",
+              },
+            ];
             return(
               <div>
                 {/* Season totals banner */}
@@ -5237,6 +6098,8 @@ export default function GameNight(){
                       {l:"Total Kills",v:w.totalKills,c:"var(--pink)",i:"💀"},
                       {l:"Days Played",v:w.days,c:"var(--cyan)",i:"📅"},
                       {l:"Unique Winners",v:w.uniqueWins,c:"var(--green)",i:"🏆"},
+                      {l:"Longest Streak",v:s1BestRun?.streak?`${s1BestRun.streak}W`:"0W",c:"#C77DFF",i:"🔥"},
+                      {l:"Loudest Night",v:s1LoudestDay?`${s1LoudestDay.totalKills}K`:"0K",c:"#FF6B35",i:"🌋"},
                     ].map((s,i)=>(
                       <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"12px 10px"}}>
                         <div style={{fontSize:"1.4rem",marginBottom:4}}>{s.i}</div>
@@ -5245,6 +6108,60 @@ export default function GameNight(){
                       </div>
                     ))}
                   </div>
+                  <div style={{
+                    marginTop:14,paddingTop:14,borderTop:"1px solid rgba(255,255,255,.08)",
+                    display:"grid",gap:8,textAlign:"left"}}>
+                    <div style={{fontSize:".6rem",color:"rgba(255,215,0,.62)",fontWeight:800,
+                      letterSpacing:".26em",textTransform:"uppercase"}}>Campaign dossier</div>
+                    <div style={{fontSize:".8rem",color:"var(--text2)",fontWeight:700,lineHeight:1.7}}>
+                      {s1CampaignDossier}
+                    </div>
+                    {s1NumberMarkers.length>0&&(
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:8,marginTop:4}}>
+                        {s1NumberMarkers.map((marker)=>(
+                          <div key={marker.label} style={{
+                            background:`linear-gradient(135deg,${marker.color}10,rgba(0,0,0,.26))`,
+                            border:`1px solid ${marker.color}26`,
+                            borderLeft:`3px solid ${marker.color}`,
+                            borderRadius:"0 8px 8px 0",
+                            padding:"11px 12px",
+                          }}>
+                            <div className="bc7" style={{fontSize:".55rem",letterSpacing:".18em",color:`${marker.color}bb`,marginBottom:5,textTransform:"uppercase"}}>
+                              {marker.label}
+                            </div>
+                            <div className="bc9" style={{fontSize:".84rem",lineHeight:1.2,color:marker.color,marginBottom:4}}>
+                              {marker.value}
+                            </div>
+                            <div className="bc7" style={{fontSize:".64rem",lineHeight:1.55,color:"var(--text3)"}}>
+                              {marker.note}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
+                  {s1MemoryCards.map((card)=>(
+                    <div key={card.label} style={{
+                      background:`linear-gradient(135deg,${card.color}10,rgba(0,0,0,.32))`,
+                      border:`1px solid ${card.color}30`,
+                      borderLeft:`3px solid ${card.color}`,
+                      borderRadius:"0 8px 8px 0",
+                      padding:"14px 16px",
+                    }}>
+                      <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${card.color}bb`,marginBottom:8}}>
+                        {card.label}
+                      </div>
+                      <div className="bc9" style={{fontSize:".94rem",color:card.color,lineHeight:1.2,marginBottom:7}}>
+                        {card.value}
+                      </div>
+                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.65}}>
+                        {card.note}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Season Podium */}
@@ -5298,13 +6215,21 @@ export default function GameNight(){
                 {/* Award cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:14,marginBottom:28}}>
                   {[
-                    {icon:"👑",color:"#FFD700",title:"Season Champion",player:w.champion,stat:`${w.champion?.wins}W · ${w.champion?.kills}K`,desc:"Most wins in Season 1"},
-                    {icon:"💀",color:"#FF4D8F",title:"Season Reaper",player:w.topKiller,stat:`${w.topKiller?.kills} total kills`,desc:"Most kills across all lobbies"},
-                    {icon:"🎯",color:"#00E5FF",title:"Most Efficient",player:w.sharpshooter,stat:`${w.sharpshooter?.kd} K/G ratio`,desc:"Best kills per game (5+ lobbies)"},
-                    {icon:"🎮",color:"#FFAB40",title:"Most Loyal",player:w.loyalist,stat:`${w.loyalist?.appearances} lobbies`,desc:"Showed up more than anyone"},
-                    ...(w.mostImproved?[{icon:"📈",color:"#00FF94",title:"Most Improved",player:w.mostImproved.player,stat:`${w.mostImproved.earlyWR}% → ${w.mostImproved.lateWR}% WR`,desc:`+${w.mostImproved.gain}% win rate gain`}]:[]),
-                    {icon:"☄️",color:"#FF6B35",title:"Best Single Game",player:w.topGamePlayer,stat:`${w.topGame.k} kills in ${w.topGame.sid}`,desc:w.topGame.date},
-                    ...(w.topDayKillPlayer?[{icon:"🌋",color:"#FF4D8F",title:"Most Kills in a Day",player:w.topDayKillPlayer,stat:`${w.topDayKill.k} kills`,desc:new Date(w.topDayKill.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}]:[]),
+                    {icon:"👑",color:"#FFD700",title:"Season Champion",player:w.champion,stat:`${w.champion?.wins}W · ${w.champion?.kills}K`,desc:s1RunnerUp
+                      ?s1Gap===0
+                        ?`Finished level on wins with ${dn(s1RunnerUp.username)} and took the file on the deeper body of work.`
+                        :`Closed the archive ${s1Gap} win${s1Gap===1?"":"s"} clear of ${dn(s1RunnerUp.username)}.`
+                      :"Most wins in Season 1"},
+                    {icon:"💀",color:"#FF4D8F",title:"Season Reaper",player:w.topKiller,stat:`${w.topKiller?.kills} total kills`,desc:w.champion&&w.topKiller
+                      ?w.champion.id===w.topKiller.id
+                        ?"Held both the crown line and the deadliest file from the first campaign."
+                        :`Kept the heaviest damage line even while ${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} closed the crown.`
+                      :"Most kills across all lobbies"},
+                    {icon:"🎯",color:"#00E5FF",title:"Most Efficient",player:w.sharpshooter,stat:`${w.sharpshooter?.kd} K/G ratio`,desc:"Best kills per lobby once the season had enough tape to trust the rate."},
+                    {icon:"🎮",color:"#FFAB40",title:"Most Loyal",player:w.loyalist,stat:`${w.loyalist?.appearances} lobbies`,desc:"Showed up more than anyone and kept the first campaign moving every week."},
+                    ...(w.mostImproved?[{icon:"📈",color:"#00FF94",title:"Most Improved",player:w.mostImproved.player,stat:`${w.mostImproved.earlyWR}% → ${w.mostImproved.lateWR}% WR`,desc:`The sharpest late-season climb in the file at +${w.mostImproved.gain}% win rate.`}]:[]),
+                    {icon:"☄️",color:"#FF6B35",title:"Best Single Game",player:w.topGamePlayer,stat:`${w.topGame.k} kills in ${s1TopGameLobby}`,desc:`${formatLobbyDate(w.topGame.date,{weekday:"short",day:"numeric",month:"short"})} · the single room people still mention first.`},
+                    ...(w.topDayKillPlayer?[{icon:"🌋",color:"#FF4D8F",title:"Most Kills in a Day",player:w.topDayKillPlayer,stat:`${w.topDayKill.k} kills`,desc:`${formatLobbyDate(w.topDayKill.date,{weekday:"short",day:"numeric",month:"short"})} · the day the campaign stopped pretending to be calm.`}]:[]),
                   ].map((a,i)=>{
                     if(!a.player)return null;
                     const pl=a.player.id?a.player:players.find(p=>p.id===a.player?.id)||a.player;
@@ -5407,12 +6332,13 @@ export default function GameNight(){
                     background:"linear-gradient(135deg,#C77DFF,#00E5FF)",
                     WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
                     marginBottom:8}}>
-                    Season 2 starts April 1st ⚔️
+                    {todayStr()<SEASON_TWO_LAUNCH_DATE?"Season 2 starts April 1st ⚔️":"Season 2 is live ⚔️"}
                   </div>
                   <p style={{color:"var(--text2)",fontSize:".85rem",fontWeight:600,
                     maxWidth:460,margin:"0 auto",lineHeight:1.6}}>
-                    The grind resets. Rankings are wiped. Every player starts at zero.
-                    Who rises in Season 2?
+                    {todayStr()<SEASON_TWO_LAUNCH_DATE
+                      ? "The grind resets. Rankings are wiped. Every player starts at zero. Who rises in Season 2?"
+                      : "Season 1 is sealed. The next campaign is already live, and the room is chasing a new crown now."}
                   </p>
                 </div>
               </div>
@@ -5436,13 +6362,13 @@ export default function GameNight(){
               🚀 Season 2
             </h2>
             <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600}}>
-              {todayStr()<"2026-04-01"
-                ? "Season 2 hasn't started yet. Check back April 1st."
-                : "Fresh season, same arena. Rankings reset. Who owns April?"}
+              {todayStr()<SEASON_TWO_LAUNCH_DATE
+                ? "Season 2 is on deck. The board stays sealed until opening night."
+                : "The live campaign file. Opening shots, swing nights, and pressure points are still being written."}
             </p>
           </div>
           {(()=>{
-            const s2=SEASONS.find(x=>x.id==="s2");
+            const s2=SEASONS.find(x=>x.id===SEASON_TWO_ID);
             const s2Sessions=sessions.filter(s=>s.date>=s2.start&&s.date<=s2.end);
             const today=todayStr();
             // Hoist all data before any early return so esbuild stays in JS mode
@@ -5454,6 +6380,22 @@ export default function GameNight(){
             const uniqueWins=[...new Set(s2Sessions.filter(s=>s.winner).map(s=>s.winner))].length;
             const days=[...new Set(s2Sessions.map(s=>s.date))].length;
             const podium=byWins.slice(0,3);
+            const seasonLeader=byWins[0]||null;
+            const seasonChaser=byWins[1]||null;
+            const killLeader=byKills[0]||null;
+            const attendanceLeader=byApp[0]||null;
+            const seasonLeaderPlayer=seasonLeader?players.find(p=>p.id===seasonLeader.id):null;
+            const seasonChaserPlayer=seasonChaser?players.find(p=>p.id===seasonChaser.id):null;
+            const killLeaderPlayer=killLeader?players.find(p=>p.id===killLeader.id):null;
+            const attendanceLeaderPlayer=attendanceLeader?players.find(p=>p.id===attendanceLeader.id):null;
+            const winsGap=seasonLeader&&seasonChaser?seasonLeader.wins-seasonChaser.wins:0;
+            const attendanceTieCount=attendanceLeader
+              ?byApp.filter((player)=>player.appearances===attendanceLeader.appearances).length
+              :0;
+            const quietWatchPlayer=[...s2Stats]
+              .filter((player)=>player.wins===0)
+              .sort((left,right)=>right.appearances-left.appearances||right.kills-left.kills)[0]||null;
+            const quietWatchProfile=quietWatchPlayer?players.find((player)=>player.id===quietWatchPlayer.id):null;
             let topGame={pid:"",k:0,sid:"",date:""};
             s2Sessions.forEach(s=>{
               if(!s.kills)return;
@@ -5463,6 +6405,142 @@ export default function GameNight(){
                 if(k>topGame.k){topGame.k=k;topGame.pid=pid;topGame.sid=s.id;topGame.date=s.date;}
               }
             });
+            const topGameLobby=topGame.sid?`Lobby ${parseSessionIdNumber(topGame.sid)||topGame.sid}`:"";
+            const s2Ordered=[...s2Sessions].sort(compareSessionsAsc);
+            const s2Opener=s2Ordered[0]||null;
+            const s2OpenerWinner=s2Opener?players.find((player)=>player.id===s2Opener.winner):null;
+            const s2Campaign=buildSeasonCampaignFile(s2Sessions);
+            const s2LoudestDay=s2Campaign?.loudestDay||null;
+            const s2DayLeaders=s2LoudestDay?.topWinners?.length
+              ?joinHumanList(s2LoudestDay.topWinners.map((entry)=>dn(entry.player?.username||"")))
+              :"";
+            const s2LatestDate=getLatestSessionDate(s2Sessions);
+            const s2LatestFallout=s2LatestDate?getLatestDayConsequences(s2LatestDate):null;
+            const s2LatestSplitLeaders=s2LatestFallout?.topWinners.length
+              ?joinHumanList(s2LatestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")))
+              :"";
+            const s2TurningNight=s2Campaign?.turningNight||null;
+            const s2BestRun=s2Campaign?.bestRun||null;
+            const s2LockNight=s2Campaign?.lockNight||null;
+            const s2CrowdDay=s2Campaign?.biggestCrowd||null;
+            const s2SpreadDay=s2Campaign?.widestWinnerDay||null;
+            const seasonPulse=s2LoudestDay&&s2BestRun?.player
+              ?`${uniqueWins} winners have already touched the file. ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} was the loudest night at ${s2LoudestDay.totalKills} kills, and ${dn(s2BestRun.player.username)} still owns the cleanest run at ${s2BestRun.streak} straight.`
+              :seasonLeaderPlayer&&seasonChaserPlayer
+                ?winsGap===0
+                  ?`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} are level on wins, and the file still has room to turn.`
+                  :`${dn(seasonLeaderPlayer.username)} has the front for now, but only ${winsGap} win${winsGap===1?"":"s"} separate the top two files.`
+                : `${uniqueWins} different winners have already left fingerprints on the season file.`;
+            const quietPulse=quietWatchProfile&&quietWatchPlayer
+              ? `${dn(quietWatchProfile.username)} is still chasing the first Season 2 win, so the support pack is still open.`
+              : attendanceLeaderPlayer&&attendanceLeader
+                ? attendanceTieCount>1
+                  ? `${attendanceTieCount} players are tied at the attendance ceiling. Even the loyalty line is still crowded.`
+                  : `${dn(attendanceLeaderPlayer.username)} has answered the call ${attendanceLeader.appearances} times already and keeps the season file moving.`
+                : "The season file is still taking shape.";
+            const s2NumberMarkers=[
+              seasonLeaderPlayer&&seasonLeader
+                ?{
+                  label:"Top winner",
+                  value:`${dn(seasonLeaderPlayer.username)} · ${seasonLeader.wins}W`,
+                  note:winsGap>0&&seasonChaserPlayer
+                    ?`${winsGap} win${winsGap===1?"":"s"} clear of ${dn(seasonChaserPlayer.username)}`
+                    :"front line still tight",
+                  color:"#FFD700",
+                }
+                :null,
+              killLeaderPlayer&&killLeader
+                ?{
+                  label:"Top reaper",
+                  value:`${dn(killLeaderPlayer.username)} · ${killLeader.kills}K`,
+                  note:"still carrying the damage pace",
+                  color:"#FF4D8F",
+                }
+                :null,
+              s2BestRun?.player&&s2BestRun.streak>0
+                ?{
+                  label:"Longest streak",
+                  value:`${dn(s2BestRun.player.username)} · ${s2BestRun.streak} straight`,
+                  note:s2BestRun.end?`holds from ${formatLobbyDate(s2BestRun.end.date,{weekday:"short",day:"numeric",month:"short"})}`:"best run so far",
+                  color:"#00E5FF",
+                }
+                :null,
+              s2LoudestDay
+                ?{
+                  label:"Loudest night",
+                  value:`${s2LoudestDay.totalKills}K on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}`,
+                  note:`${s2LoudestDay.lobbies} lobbies moved that night`,
+                  color:"#FF6B35",
+                }
+                :null,
+              s2CrowdDay
+                ?{
+                  label:"Biggest crowd",
+                  value:`${s2CrowdDay.uniquePlayers} players on ${formatLobbyDate(s2CrowdDay.date,{weekday:"short",day:"numeric",month:"short"})}`,
+                  note:"the fullest room the season has pulled so far",
+                  color:"#00FF94",
+                }
+                :null,
+              s2SpreadDay&&s2SpreadDay.winnerSpread>1
+                ?{
+                  label:"Widest winner spread",
+                  value:`${s2SpreadDay.winnerSpread} winners on ${formatLobbyDate(s2SpreadDay.date,{weekday:"short",day:"numeric",month:"short"})}`,
+                  note:"the room opened up instead of settling",
+                  color:"#C77DFF",
+                }
+                :null,
+            ].filter(Boolean).slice(0,5);
+            const seasonDossier=s2Campaign?.openerWinner&&seasonLeaderPlayer
+              ?`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} landed the sharpest table swing on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on one clean swing night."} ${s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:`${dn(seasonLeaderPlayer.username)} is carrying the crown line with ${seasonLeader.wins} wins, but the file is still moving under it.`}`
+              :`${uniqueWins} different winners have already left fingerprints on the Season 2 file.`;
+            const seasonMemoryCards=[
+              {
+                label:"OPENING SHOT",
+                color:"#00E5FF",
+                value:s2OpenerWinner
+                  ?`${dn(s2OpenerWinner.username)} opened the live file with the first crown`
+                  :"Opening night is still waiting on its first winner",
+                note:s2BestRun?.player&&s2BestRun.streak>=2&&s2BestRun.start&&s2BestRun.end
+                  ?`${formatLobbyDate(s2Opener?.date||s2.start,{weekday:"short",day:"numeric",month:"short"})} started the campaign. ${dn(s2BestRun.player.username)} still owns the cleanest run so far with ${s2BestRun.streak} straight wins from Lobby ${parseSessionIdNumber(s2BestRun.start.id)||s2BestRun.start.id} to Lobby ${parseSessionIdNumber(s2BestRun.end.id)||s2BestRun.end.id}.`
+                  :seasonPulse,
+              },
+              {
+                label:"SWING NIGHT",
+                color:"#C77DFF",
+                value:s2TurningNight&&s2Campaign?.leader&&s2Campaign?.chaser
+                  ?`${dn(s2Campaign.leader.username)} bent the table on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}`
+                  :s2LoudestDay?.topKiller?.player
+                    ?`${dn(s2LoudestDay.topKiller.player.username)} turned ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} into the loudest night so far`
+                    :topGame.pid&&players.find((player)=>player.id===topGame.pid)
+                      ?`${dn(players.find((player)=>player.id===topGame.pid).username)} owns the season spike at ${topGame.k} kills`
+                      :"The season is still waiting on one night everybody remembers",
+                note:s2TurningNight&&s2Campaign?.leader&&s2Campaign?.chaser
+                  ?`${dn(s2Campaign.leader.username)} won ${s2TurningNight.championDayWins} lobbies while ${dn(s2Campaign.chaser.username)} took ${s2TurningNight.runnerUpDayWins}. ${s2LoudestDay&&s2LoudestDay.date!==s2TurningNight.date?`${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} was still the loudest night on raw damage.`:`The top gap jumped to ${s2TurningNight.gap} wins by lights out.`}`
+                  :s2LoudestDay
+                  ?`${s2LoudestDay.totalKills} total kills across ${s2LoudestDay.lobbies} lobbies. ${s2DayLeaders?`${s2DayLeaders} carried the wins line that night.`:"That was the night the whole board jumped."}`
+                  :topGame.pid&&players.find((player)=>player.id===topGame.pid)
+                    ?`${topGameLobby} on ${formatLobbyDate(topGame.date,{weekday:"short",day:"numeric",month:"short"})} is still the loudest single-room burst in the file.`
+                    :"The biggest room of the campaign has not landed yet.",
+              },
+              {
+                label:"LIVE PRESSURE",
+                color:"#00FF94",
+                value:s2LatestFallout?.topWinners.length>=2&&s2LatestFallout.topKiller?.player
+                  ?`${s2LatestSplitLeaders} split the latest session day`
+                  :seasonLeaderPlayer&&seasonChaserPlayer
+                    ?winsGap===0
+                      ?`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} are level at the top`
+                      :`${dn(seasonLeaderPlayer.username)} is ${winsGap}W clear of ${dn(seasonChaserPlayer.username)}`
+                    :attendanceLeaderPlayer
+                      ?`${dn(attendanceLeaderPlayer.username)} keeps the file moving through attendance`
+                      :"This campaign is still writing its first pressure point",
+                note:s2LatestFallout?.topWinners.length>=2&&s2LatestFallout.topKiller?.player
+                  ?`${dn(s2LatestFallout.topKiller.player.username)} still hauled out ${s2LatestFallout.topKiller.kills} kills, so the latest split did not calm the room.`
+                  :s2LockNight&&seasonLeaderPlayer
+                    ?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase still has enough room to make a night matter.`
+                  :quietPulse,
+              },
+            ];
 
             // Pre-season state
             if(today<s2.start) return(
@@ -5490,13 +6568,13 @@ export default function GameNight(){
                   </div>
                   <p style={{color:"var(--text2)",fontSize:".86rem",fontWeight:600,
                     maxWidth:420,margin:"0 auto 20px",lineHeight:1.6}}>
-                    All rankings reset. Every player starts at zero.<br/>Be there on night one.
+                    Every old crown gets stripped, every quiet file opens again, and opening night writes the first real line.
                   </p>
                   <button onClick={()=>go("season1")} style={{
                     background:"rgba(0,229,255,.12)",border:"1.5px solid rgba(0,229,255,.35)",
                     borderRadius:12,padding:"9px 22px",color:"#00E5FF",fontWeight:800,
                     fontSize:".84rem",cursor:"pointer"}}>
-                    Review Season 1
+                    Open Season 1 file
                   </button>
                 </div>
               </div>
@@ -5509,17 +6587,17 @@ export default function GameNight(){
                 borderRadius:20,padding:"40px 24px",textAlign:"center"}}>
                 <div style={{fontSize:"2.5rem",marginBottom:12}}>🎮</div>
                 <div style={{fontFamily:"Fredoka One",fontSize:"1.3rem",color:"#00E5FF",marginBottom:8}}>
-                  Season 2 has not logged its opener yet
+                  Season 2 is live, but the opener has not been filed yet
                 </div>
                 <p style={{color:"var(--text3)",fontSize:".85rem",fontWeight:600}}>
-                  Once the first lobby is filed, the whole season board wakes up here.
+                  The room is waiting on that first finished lobby. Once it lands, this whole board stops feeling sealed and starts feeling hunted.
                 </p>
               </div>
             );
 
             return(
               <div>
-                <VotePanel players={players} allStats={allStats} s2Prediction={s2Prediction} setS2Prediction={setS2Prediction} store={store} showToast={showToast} dn={dn} Av={Av}/>
+                <VotePanel players={players} allStats={allStats} s2Prediction={s2Prediction} setS2Prediction={setS2Prediction} store={store} showToast={showToast} dn={dn}/>
                 {/* ── Prediction tracker — how's your pick doing? ── */}
                 {s2Prediction&&(()=>{
                   const pick=players.find(p=>p.id===s2Prediction);
@@ -5536,10 +6614,10 @@ export default function GameNight(){
                         ?"linear-gradient(135deg,rgba(0,255,148,.12),rgba(0,229,255,.08))"
                         :"linear-gradient(135deg,rgba(199,125,255,.1),rgba(0,229,255,.06))",
                       border:`2px solid ${isLeading?"rgba(0,255,148,.4)":"rgba(199,125,255,.35)"}`,
-                      borderRadius:18,padding:"18px 20px",marginBottom:24,
+                      borderRadius:18,padding:"14px 18px",marginBottom:18,
                       animation:"popIn .4s ease"}}>
                       <div style={{fontSize:".66rem",color:"var(--text3)",fontWeight:800,
-                        letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>
+                        letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>
                         🔮 Your Season 2 Prediction
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
@@ -5556,14 +6634,14 @@ export default function GameNight(){
                               {pick.host?"👑 ":""}{pick.username}
                             </div>
                             <div style={{fontSize:".7rem",color:"var(--text3)",fontWeight:700,marginTop:2}}>
-                              {pickStats?`${pickStats.wins}W · ${pickStats.appearances} lobbies played`:"Yet to drop into S2"}
+                              {pickStats?`${pickStats.wins}W · ${pickStats.appearances} lobbies on the S2 file`:"Still waiting on the first real S2 drop"}
                             </div>
                           </div>
                         </div>
                         <div style={{flex:1,minWidth:120}}>
                           {isLeading?(
-                            <div style={{fontFamily:"Fredoka One",color:"#00FF94",fontSize:"1rem"}}>
-                              🔥 Currently leading S2. Good call.
+                            <div style={{fontFamily:"Fredoka One",color:"#00FF94",fontSize:".96rem",lineHeight:1.25}}>
+                              🔥 Currently leading S2. Your call is holding the front line.
                             </div>
                           ):pickRank>0&&leaderPlayer?(
                             <div>
@@ -5571,13 +6649,15 @@ export default function GameNight(){
                                 color:"var(--text2)",fontSize:".9rem",marginBottom:2}}>
                                 #{pickRank} right now
                               </div>
-                              <div style={{fontSize:".74rem",color:"var(--text3)",fontWeight:700}}>
-                                {gapToFirst>0?`${gapToFirst}W behind ${leaderPlayer.username}`:"Tied for the lead"}
+                              <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:700,lineHeight:1.55}}>
+                                {gapToFirst>0
+                                  ?`${gapToFirst}W behind ${leaderPlayer.username}. One heavy night changes that picture.`
+                                  :"Tied for the lead. One clean lobby decides the next swing."}
                               </div>
                             </div>
                           ):(
                             <div style={{fontFamily:"Fredoka One",color:"var(--text3)",fontSize:".9rem"}}>
-                              Waiting on their first drop into the season
+                              Their Season 2 file is still waiting on first contact.
                             </div>
                           )}
                         </div>
@@ -5600,6 +6680,8 @@ export default function GameNight(){
                       {l:"Total Kills",v:totalKills,c:"#FF4D8F",i:"💀"},
                       {l:"Days Played",v:days,c:"#00FF94",i:"📅"},
                       {l:"Unique Winners",v:uniqueWins,c:"#C77DFF",i:"🏆"},
+                      {l:"Longest Streak",v:s2BestRun?.streak?`${s2BestRun.streak}W`:"0W",c:"#FFD700",i:"🔥"},
+                      {l:"Loudest Night",v:s2LoudestDay?`${s2LoudestDay.totalKills}K`:"0K",c:"#FF6B35",i:"🌋"},
                     ].map((s,i)=>(
                       <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"12px 10px"}}>
                         <div style={{fontSize:"1.4rem",marginBottom:4}}>{s.i}</div>
@@ -5609,6 +6691,68 @@ export default function GameNight(){
                       </div>
                     ))}
                   </div>
+                  <div style={{
+                    marginTop:14,paddingTop:14,borderTop:"1px solid rgba(255,255,255,.08)",
+                    display:"grid",gap:8,textAlign:"left"}}>
+                    <div style={{fontSize:".6rem",color:"rgba(0,229,255,.6)",fontWeight:800,
+                      letterSpacing:".26em",textTransform:"uppercase"}}>Season pulse</div>
+                    <div style={{fontSize:".8rem",color:"var(--text2)",fontWeight:700,lineHeight:1.7}}>
+                      {seasonPulse}
+                    </div>
+                    <div style={{fontSize:".6rem",color:"rgba(199,125,255,.64)",fontWeight:800,
+                      letterSpacing:".26em",textTransform:"uppercase"}}>Campaign dossier</div>
+                    <div style={{fontSize:".78rem",color:"var(--text2)",fontWeight:700,lineHeight:1.7}}>
+                      {seasonDossier}
+                    </div>
+                    <div style={{fontSize:".78rem",color:"var(--text3)",fontWeight:700,lineHeight:1.7}}>
+                      {quietPulse}
+                    </div>
+                    {s2NumberMarkers.length>0&&(
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:8,marginTop:4}}>
+                        {s2NumberMarkers.map((marker)=>(
+                          <div key={marker.label} style={{
+                            background:`linear-gradient(135deg,${marker.color}10,rgba(0,0,0,.26))`,
+                            border:`1px solid ${marker.color}26`,
+                            borderLeft:`3px solid ${marker.color}`,
+                            borderRadius:"0 8px 8px 0",
+                            padding:"11px 12px",
+                          }}>
+                            <div className="bc7" style={{fontSize:".55rem",letterSpacing:".18em",color:`${marker.color}bb`,marginBottom:5,textTransform:"uppercase"}}>
+                              {marker.label}
+                            </div>
+                            <div className="bc9" style={{fontSize:".84rem",lineHeight:1.2,color:marker.color,marginBottom:4}}>
+                              {marker.value}
+                            </div>
+                            <div className="bc7" style={{fontSize:".64rem",lineHeight:1.55,color:"var(--text3)"}}>
+                              {marker.note}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
+                  {seasonMemoryCards.map((card)=>(
+                    <div key={card.label} style={{
+                      background:`linear-gradient(135deg,${card.color}10,rgba(0,0,0,.32))`,
+                      border:`1px solid ${card.color}30`,
+                      borderLeft:`3px solid ${card.color}`,
+                      borderRadius:"0 8px 8px 0",
+                      padding:"14px 16px",
+                    }}>
+                      <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${card.color}bb`,marginBottom:8}}>
+                        {card.label}
+                      </div>
+                      <div className="bc9" style={{fontSize:".94rem",color:card.color,lineHeight:1.2,marginBottom:7}}>
+                        {card.value}
+                      </div>
+                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.65}}>
+                        {card.note}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* S2 Podium */}
@@ -5664,10 +6808,22 @@ export default function GameNight(){
                 {/* S2 Award cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:14,marginBottom:28}}>
                   {[
-                    {icon:"👑",color:"#00E5FF",title:"S2 Champion",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Race still open",desc:"Currently carrying the season crown"},
-                    {icon:"💀",color:"#FF4D8F",title:"S2 Reaper",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:"Board still open",desc:"Setting the damage line for the season"},
-                    {icon:"🎮",color:"#00FF94",title:"Most Loyal",player:byApp[0],stat:byApp[0]?`${byApp[0].appearances} lobbies`:"Attendance still forming",desc:"Keeps answering the call and thickening the season file"},
-                    ...(topGame.pid?[{icon:"☄️",color:"#C77DFF",title:"Best Single Game",player:players.find(p=>p.id===topGame.pid),stat:`${topGame.k} kills in ${topGame.sid}`,desc:topGame.date}]:[]),
+                    {icon:"👑",color:"#00E5FF",title:"S2 Champion",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Crown line still open",desc:seasonLeaderPlayer&&seasonChaserPlayer
+                      ?winsGap===0
+                        ?`The live crown is dead even with ${dn(seasonChaserPlayer.username)}. The next clean finish changes the page.`
+                        :winsGap===1
+                          ?`${dn(seasonChaserPlayer.username)} is only one win behind and still within one loud night of the lead.`
+                          :`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} while the chase still has teeth.`
+                      :"Currently carrying the season crown"},
+                    {icon:"💀",color:"#FF4D8F",title:"S2 Reaper",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:"Damage board still open",desc:killLeaderPlayer&&seasonLeaderPlayer
+                      ?killLeaderPlayer.id===seasonLeaderPlayer.id
+                        ?"Holding both the crown line and the damage pace while the rest of the file tries to catch up."
+                        :`Still driving the damage board even while ${dn(seasonLeaderPlayer.username)} controls the wins race.`
+                      :"Setting the damage line for the season"},
+                    {icon:"🎮",color:"#00FF94",title:"Most Loyal",player:byApp[0],stat:byApp[0]?`${byApp[0].appearances} lobbies`:"Attendance file still forming",desc:attendanceTieCount>1
+                      ?`Sharing the attendance ceiling with ${attendanceTieCount-1} other regular${attendanceTieCount-1===1?"":"s"} and keeping the campaign loud through presence alone.`
+                      :"Keeps answering the call and making sure the live file never goes quiet."},
+                    ...(topGame.pid?[{icon:"☄️",color:"#C77DFF",title:"Best Single Game",player:players.find(p=>p.id===topGame.pid),stat:`${topGame.k} kills in ${topGameLobby}`,desc:`${formatLobbyDate(topGame.date,{weekday:"short",day:"numeric",month:"short"})} · still the room every damage spike gets measured against.`}]:[]),
                   ].map((a,i)=>{
                     if(!a.player)return null;
                     const playerObj=a.player.username?a.player:players.find(p=>p.id===a.player?.id);
@@ -5719,7 +6875,7 @@ export default function GameNight(){
                             width:22,textAlign:"center",flexShrink:0}}>
                             {i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`}
                           </div>
-                          <Av p={player} size={34}/>
+                          <Avatar p={player} size={34}/>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontFamily:"Fredoka One",color:player.color,fontSize:".92rem",
                               overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
@@ -5932,10 +7088,10 @@ export default function GameNight(){
       // ── Day Recap Card ──
       if(isDayCard){
         const recap=getDayRecap(shareCard.date);
+        const recapStorylines=getDayStorylines(shareCard.date).slice(0,3);
         if(!recap)return null;
         const dd=new Date(shareCard.date+"T12:00:00Z");
         const dateLabel=dd.toLocaleDateString("en",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
-        const topWinner=recap.winnersList[0];
         return(
           <div onClick={()=>setShareCard(null)} style={{
             position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,
@@ -6024,6 +7180,24 @@ export default function GameNight(){
                           : recap.killKing.player?.username+" · "+recap.killKing.k+"K in one lobby"
                         }
                       </div>
+                    </div>
+                  </div>
+                )}
+                {recapStorylines.length>0&&(
+                  <div style={{marginTop:12}}>
+                    <div style={{fontSize:".62rem",color:"rgba(255,255,255,.3)",fontWeight:800,
+                      letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Storylines</div>
+                    <div style={{display:"grid",gap:7}}>
+                      {recapStorylines.map((line,i)=>(
+                        <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",
+                          background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.14)",
+                          borderRadius:10,padding:"8px 10px"}}>
+                          <span style={{color:"#FFD700",fontSize:".8rem",lineHeight:1.4}}>◆</span>
+                          <div style={{fontSize:".76rem",color:"rgba(255,255,255,.82)",lineHeight:1.6,fontWeight:700}}>
+                            {line}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

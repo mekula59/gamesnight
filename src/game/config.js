@@ -9,7 +9,7 @@ export const SEASONAL_EVENT = {
   endHour: 16,
 };
 
-export const STORAGE_VERSION = "gn-v88";
+export const STORAGE_VERSION = "gn-v98";
 export const SITE_TITLE = "Games Night";
 export const HOSTED_BY = "Mekula";
 export const FEATURED_GAME = "Bullet League";
