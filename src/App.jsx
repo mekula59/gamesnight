@@ -1085,7 +1085,10 @@ function BriefingFeed({stories}){
             gridTemplateColumns:"20px minmax(0,1fr)",
             gap:12,
             alignItems:"flex-start",
-            padding:index===0?"4px 0 12px":"12px 0 13px",
+            padding:index===0?"6px 10px 15px":"14px 10px 16px",
+            margin:index===0?"0 -6px":"0 -6px",
+            borderRadius:8,
+            background:index%2===0?"rgba(255,255,255,.02)":"rgba(0,0,0,.085)",
             borderBottom:index<stories.length-1?"1px solid rgba(255,255,255,.05)":"none",
             opacity:isVisible?1:0,
             transform:isVisible?"translateY(0)":"translateY(10px)",
@@ -1099,7 +1102,7 @@ function BriefingFeed({stories}){
                 letterSpacing:".02em",wordBreak:"break-word"}}>
                 {story.text}
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:9,marginTop:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
                 <div style={{height:2,flex:1,maxWidth:isVisible?"100%":"0%",
                   background:`linear-gradient(90deg,${story.color},transparent)`,
                   transition:"max-width .32s ease"}}/>
@@ -3122,18 +3125,18 @@ export default function GameNight(){
                       gridTemplateColumns:"repeat(4,1fr)",
                       gap:1,border:"1px solid rgba(255,255,255,.06)",
                       borderRadius:2,overflow:"hidden",marginBottom:18}}>
-                      {[
-                        {l:"LOBBIES", v:recap.lobbies,         c:"#00E5FF"},
-                        {l:"PLAYERS", v:recap.uniquePlayers,   c:"#C77DFF"},
-                        {l:"KILLS",   v:recap.totalKills,      c:"#FF4D8F"},
-                        {l:"WINNERS", v:recap.winnersList?.length||0,c:"#FFD700"},
-                      ].map((s,i)=>(
-                        <div key={i} style={{padding:"11px 8px 10px",textAlign:"center",
+                        {[
+                          {l:"LOBBIES", v:recap.lobbies,         c:"#00E5FF"},
+                          {l:"PLAYERS", v:recap.uniquePlayers,   c:"#C77DFF"},
+                          {l:"KILLS",   v:recap.totalKills,      c:"#FF4D8F"},
+                          {l:"WINNERS", v:recap.winnersList?.length||0,c:"#FFD700"},
+                        ].map((s,i)=>(
+                        <div key={i} style={{padding:"12px 9px 11px",textAlign:"center",
                           background:"rgba(255,255,255,.025)"}}>
                           <div className="bc9" style={{fontSize:"clamp(.9rem,3vw,1.3rem)",
                             color:s.c,lineHeight:1}}>{s.v}</div>
-                          <div className="bc7" style={{fontSize:".54rem",letterSpacing:".14em",
-                            color:"var(--text3)",marginTop:4,lineHeight:1.4}}>{s.l}</div>
+                          <div className="bc7" style={{fontSize:".55rem",letterSpacing:".13em",
+                            color:"rgba(200,186,255,.72)",marginTop:5,lineHeight:1.45}}>{s.l}</div>
                         </div>
                       ))}
                     </div>
@@ -3144,8 +3147,8 @@ export default function GameNight(){
                         borderTop:"1px solid rgba(255,255,255,.06)",
                         background:"linear-gradient(180deg,rgba(0,255,148,.035),transparent 78%)",
                         borderRadius:"6px 6px 0 0"}}>
-                        <div className="bc7" style={{fontSize:".6rem",letterSpacing:".22em",
-                          color:"rgba(0,255,148,.66)"}}>{recapNotesLabel}</div>
+                        <div className="bc7" style={{fontSize:".61rem",letterSpacing:".21em",
+                          color:"rgba(0,255,148,.7)"}}>{recapNotesLabel}</div>
                         {recapFieldNotes.map((note,i)=>(
                           <div key={i} className="bc7" style={{fontSize:".72rem",
                             color:"var(--text2)",lineHeight:1.75,letterSpacing:".035em"}}>
@@ -3161,8 +3164,8 @@ export default function GameNight(){
                         borderTop:"1px solid rgba(255,255,255,.06)",
                         background:"linear-gradient(180deg,rgba(255,215,0,.03),transparent 82%)",
                         borderRadius:"6px 6px 0 0"}}>
-                        <div className="bc7" style={{fontSize:".6rem",letterSpacing:".22em",
-                          color:"rgba(255,215,0,.72)"}}>STORYLINES</div>
+                        <div className="bc7" style={{fontSize:".61rem",letterSpacing:".21em",
+                          color:"rgba(255,215,0,.76)"}}>STORYLINES</div>
                         {recapStorylines.map((line,i)=>(
                           <div key={i} className="bc7" style={{fontSize:".74rem",
                             color:"var(--text2)",lineHeight:1.8,letterSpacing:".03em"}}>
@@ -3173,10 +3176,10 @@ export default function GameNight(){
                     )}
                     {mvpCards.length>0&&(
                       <div style={{display:"grid",
-                        gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:9}}>
+                        gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginTop:2}}>
                         {mvpCards.map((c,i)=>(
                           <div key={i} onClick={()=>goProfile(c.player.id)} style={{
-                            padding:"12px 14px 13px",cursor:"pointer",
+                            padding:"13px 14px 14px",cursor:"pointer",
                             background:`${c.c}08`,
                             border:`1px solid ${c.c}1a`,
                             borderLeft:`2px solid ${c.c}55`,
@@ -3184,9 +3187,9 @@ export default function GameNight(){
                             transition:"transform .1s"}}
                             onMouseEnter={e=>e.currentTarget.style.transform="translateX(2px)"}
                             onMouseLeave={e=>e.currentTarget.style.transform="translateX(0)"}>
-                            <div className="bc7" style={{fontSize:".56rem",letterSpacing:".18em",
-                              color:`${c.c}77`,marginBottom:7}}>{c.icon} {c.label}</div>
-                            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
+                            <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",
+                              color:`${c.c}96`,marginBottom:8}}>{c.icon} {c.label}</div>
+                            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
                               <Avatar p={c.player} size={24}/>
                               <div className="bc9" style={{fontSize:".78rem",
                                 color:c.player.color,overflow:"hidden",
@@ -3196,15 +3199,15 @@ export default function GameNight(){
                             </div>
                             <div className="bc9" style={{fontSize:"1.1rem",color:c.c,
                               lineHeight:1,textShadow:`0 0 10px ${c.c}44`}}>{c.stat}</div>
-                            {c.sub&&<div className="bc7" style={{fontSize:".58rem",
-                              color:"var(--text3)",marginTop:4,letterSpacing:".07em",lineHeight:1.45}}>{c.sub}</div>}
+                            {c.sub&&<div className="bc7" style={{fontSize:".6rem",
+                              color:"rgba(200,186,255,.7)",marginTop:6,letterSpacing:".055em",lineHeight:1.5}}>{c.sub}</div>}
                           </div>
                         ))}
                       </div>
                     )}
                     {recap.winnersList&&recap.winnersList.length>1&&(
-                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",
-                        lineHeight:1.95,marginTop:16,paddingTop:16,
+                      <div className="bc7" style={{fontSize:".74rem",color:"rgba(200,186,255,.74)",
+                        lineHeight:2.05,marginTop:20,paddingTop:20,
                         borderTop:"1px solid rgba(255,255,255,.06)"}}>
                         {recap.winnersList.slice(0,6).map((w,i)=>(
                           <span key={i}>
