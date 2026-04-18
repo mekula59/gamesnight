@@ -46,6 +46,21 @@ export const buildPlayerIndex = (players) =>
 export const getPlayerById = (playerIndex, playerId) =>
   playerId ? playerIndex[playerId] ?? null : null;
 
+const sortKillKingEntries = (entries, players) => {
+  const hostId = players.find((player) => player.host)?.id || "";
+  return [...entries].sort((left, right) => {
+    const leftId = left.id || left.pid || "";
+    const rightId = right.id || right.pid || "";
+    if (leftId === hostId && rightId !== hostId) {
+      return -1;
+    }
+    if (rightId === hostId && leftId !== hostId) {
+      return 1;
+    }
+    return 0;
+  });
+};
+
 export const getLatestSessionDate = (sessions) => {
   if (!sessions.length) {
     return todayStr();
@@ -545,6 +560,7 @@ export const getDailyMVP = (sessions, players) => {
       });
     });
   }
+  const sortedKillKings = sortKillKingEntries(killKings, players);
 
   return {
     date: latestDate,
@@ -557,8 +573,8 @@ export const getDailyMVP = (sessions, players) => {
     topAppear: [...stats].sort(
       (left, right) => right.appearances - left.appearances,
     )[0],
-    killKing: killKings[0] || null,
-    killKings,
+    killKing: sortedKillKings[0] || null,
+    killKings: sortedKillKings,
   };
 };
 
@@ -1060,7 +1076,8 @@ export const getDayRecap = (date, sessions, players) => {
     });
   });
 
-  const killKing = killKingsList[0] || { pid: "", k: 0, sid: "", player: null };
+  const sortedKillKingsList = sortKillKingEntries(killKingsList, players);
+  const killKing = sortedKillKingsList[0] || { pid: "", k: 0, sid: "", player: null };
   const winnersList = Object.entries(winMap)
     .sort((left, right) => right[1] - left[1])
     .map(([pid, wins]) => ({ pid, wins, player: players.find((player) => player.id === pid) }));
@@ -1078,7 +1095,7 @@ export const getDayRecap = (date, sessions, players) => {
         }
       : null,
     killKing: { ...killKing, player: killKing.player || null },
-    killKingsList,
+    killKingsList: sortedKillKingsList,
     lobbies: daySessions.length,
     winnersList,
   };
@@ -2839,27 +2856,67 @@ export const getDailyOrdersForPlayer = (
     const gap = Math.abs(playerWins - rivalWins);
     if (rival) {
       if (gap === 0) {
+        const rivalryVariant = getVariant("rivalry-answer", [
+          {
+            label: "TAKE THE RIVAL EDGE",
+            text: `Finish ahead of ${rival.username} today and move this dead level duel your way.`,
+            note: "The next clean result decides who walks in ahead.",
+          },
+          {
+            label: "BREAK THE DEADLOCK",
+            text: `Beat ${rival.username} today and turn this level duel into your lead.`,
+            note: "Right now the rivalry is waiting on one room to tilt it.",
+          },
+          {
+            label: "LAND THE NEXT SHOT",
+            text: `Take the next room over ${rival.username} today and own the first edge in this tied file.`,
+            note: "When a duel sits level this long, the next swing carries extra weight.",
+          },
+        ]);
         pushOrder({
           category: "rivalry-answer",
           priority: 97,
           icon: "⚔️",
           color: "#FF4D8F",
-          label: "TAKE THE RIVAL EDGE",
-          text: `Finish ahead of ${rival.username} today and move this dead level duel your way.`,
-          note: "The next clean result decides who walks in ahead.",
+          label: rivalryVariant.label,
+          text: rivalryVariant.text,
+          note: rivalryVariant.note,
         });
       } else if (playerWins < rivalWins && gap <= 2) {
+        const rivalryVariant = getVariant("rivalry-answer", [
+          {
+            label: "HIT BACK TODAY",
+            text: `Finish ahead of ${rival.username} today and cut the duel from ${rivalWins}-${playerWins}.`,
+            note:
+              gap === 1
+                ? "One room is enough to pull this rivalry level."
+                : "One good night cuts the edge and changes the tone fast.",
+          },
+          {
+            label: "CLOSE THE GAP",
+            text: `Beat ${rival.username} today and pull this rivalry tighter.`,
+            note:
+              gap === 1
+                ? "A single clean result wipes out the gap."
+                : `${rival.username} only has ${gap} result${gap === 1 ? "" : "s"} in hand, so this file is still live.`,
+          },
+          {
+            label: "ANSWER THE RIVALRY",
+            text: `Take a room over ${rival.username} today and stop this duel from drifting further away.`,
+            note:
+              gap === 1
+                ? "The edge is thin enough to flip tonight."
+                : "Another quiet night gives them too much room.",
+          },
+        ]);
         pushOrder({
           category: "rivalry-answer",
           priority: 96 - gap,
           icon: "⚔️",
           color: "#FF4D8F",
-          label: "HIT BACK TODAY",
-          text: `Finish ahead of ${rival.username} today and cut the duel from ${rivalWins}-${playerWins}.`,
-          note:
-            gap === 1
-              ? "One room is enough to pull this rivalry level."
-              : "One good night cuts the edge and changes the tone fast.",
+          label: rivalryVariant.label,
+          text: rivalryVariant.text,
+          note: rivalryVariant.note,
         });
       }
     }
@@ -2960,6 +3017,16 @@ export const getDailyOrdersForPlayer = (
         label: "STOP THE SLIDE",
         text: `Close a room today and stop the ${drought}-lobby slide.`,
         note: "The longer it sits there, the louder it gets.",
+      },
+      {
+        label: "BREAK THE HOLD",
+        text: `Take a win today and stop this ${drought}-lobby run from owning the file.`,
+        note: "When the dry run becomes the headline, one clean room matters twice as much.",
+      },
+      {
+        label: "TURN THE FILE",
+        text: `Win today and make the room talk about the response instead of the ${drought}-lobby wait.`,
+        note: "A file under this much quiet pressure changes fast when it finally answers back.",
       },
     ]);
     pushOrder({

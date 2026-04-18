@@ -6044,44 +6044,44 @@ export default function GameNight(){
                 }
                 :null,
             ].filter(Boolean).slice(0,5);
-            const s1CampaignDossier=s1Campaign?.openerWinner&&s1TurningNight&&w.champion&&s1RunnerUp
-              ?`${dn(s1Campaign.openerWinner.username)} opened the file on ${formatLobbyDate(s1Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${dn(s1TurningNightChampion?.username||"")} bent the table on ${formatLobbyDate(s1TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}. ${s1LockNight?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} never gave the lead back after ${formatLobbyDate(s1LockNight.date,{weekday:"short",day:"numeric",month:"short"})}.`: `${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} still closed the crown ${s1Gap} win${s1Gap===1?"":"s"} clear of ${dn(s1RunnerUp.username)}.`}`
+            const s1CampaignDossier=s1Campaign?.openerWinner&&w.champion&&s1RunnerUp
+              ?`${dn(s1Campaign.openerWinner.username)} fired the opener on ${formatLobbyDate(s1Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}, but the table did not really bend until ${s1TurningNight&&s1TurningNightChampion?`${dn(s1TurningNightChampion.username)} made ${formatLobbyDate(s1TurningNight.date,{weekday:"short",day:"numeric",month:"short"})} the swing night that changed the crown race.`:"the middle of the file broke open."} ${s1LockNight?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} then held the top line from ${formatLobbyDate(s1LockNight.date,{weekday:"short",day:"numeric",month:"short"})} to the close.`:`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} still closed the file ${s1Gap} win${s1Gap===1?"":"s"} clear of ${dn(s1RunnerUp.username)}.`}`
               :`${w.uniqueWins} different winners left fingerprints on the first campaign file.`;
             const s1MemoryCards=[
               {
                 label:"OPENING SHOT",
                 color:"#FFD700",
-                value:s1OpenerWinner?`${dn(s1OpenerWinner.username)} took the first crown on file`:"Season opener is still sealed",
+                value:s1OpenerWinner?`${dn(s1OpenerWinner.username)} landed the first real hit of Season 1`:"Season opener is still sealed",
                 note:s1Opener
                   ?s1BestRun?.player&&s1BestRun.streak>=2&&s1BestRun.start&&s1BestRun.end
-                    ?`${formatLobbyDate(s1Opener.date,{weekday:"short",day:"numeric",month:"short"})} opened the campaign. ${dn(s1BestRun.player.username)} later stacked ${s1BestRun.streak} straight wins from Lobby ${parseSessionIdNumber(s1BestRun.start.id)||s1BestRun.start.id} to Lobby ${parseSessionIdNumber(s1BestRun.end.id)||s1BestRun.end.id}.`
-                    :`${formatLobbyDate(s1Opener.date,{weekday:"short",day:"numeric",month:"short"})} opened the campaign and the room never really calmed down after that.`
+                    ?`${formatLobbyDate(s1Opener.date,{weekday:"short",day:"numeric",month:"short"})} opened the campaign, then ${dn(s1BestRun.player.username)} produced the first run the room had to take seriously with ${s1BestRun.streak} straight wins from Lobby ${parseSessionIdNumber(s1BestRun.start.id)||s1BestRun.start.id} to Lobby ${parseSessionIdNumber(s1BestRun.end.id)||s1BestRun.end.id}.`
+                    :`${formatLobbyDate(s1Opener.date,{weekday:"short",day:"numeric",month:"short"})} set the file in motion and the room never really got a quiet week after that.`
                   :"",
               },
               {
                 label:"TURNING NIGHT",
                 color:"#FF4D8F",
                 value:s1TurningNight&&s1TurningNightChampion&&s1TurningNightRunner
-                  ?`${dn(s1TurningNightChampion.username)} blew the crown gap open on ${formatLobbyDate(s1TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}`
+                  ?`${dn(s1TurningNightChampion.username)} turned ${formatLobbyDate(s1TurningNight.date,{weekday:"short",day:"numeric",month:"short"})} into the night the table moved`
                   :"The archive never settled on one swing night",
                 note:s1TurningNight&&s1TurningNightChampion&&s1TurningNightRunner
-                  ?`${dn(s1TurningNightChampion.username)} won ${s1TurningNight.championDayWins} lobbies while ${dn(s1TurningNightRunner.username)} took ${s1TurningNight.runnerUpDayWins}. The crown gap jumped to ${s1TurningNight.gap} wins. ${s1LoudestDay&&s1LoudestDay.date!==s1TurningNight.date?`${formatLobbyDate(s1LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} was still the loudest night on raw damage.`:""}`
+                  ?`${dn(s1TurningNightChampion.username)} won ${s1TurningNight.championDayWins} lobbies while ${dn(s1TurningNightRunner.username)} only managed ${s1TurningNight.runnerUpDayWins}. The crown gap left that night at ${s1TurningNight.gap} wins. ${s1LoudestDay&&s1LoudestDay.date!==s1TurningNight.date?`${formatLobbyDate(s1LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} still owns the raw-damage record, but this was the night that changed the race.`:""}`
                   :s1LoudestDay?.topKiller?.player
                     ?`${dn(s1LoudestDay.topKiller.player.username)} owned the loudest night on ${formatLobbyDate(s1LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} with ${s1LoudestDay.totalKills} total kills on file.`
-                    :"The middle of the campaign stayed noisy enough to keep the board moving.",
+                    :"The middle of the campaign stayed live long enough for every lead to feel temporary.",
               },
               {
                 label:"SIGNATURE RUN",
                 color:"#00E5FF",
                 value:s1BestRun?.player&&s1BestRun.streak>=2
-                  ?`${dn(s1BestRun.player.username)} authored the cleanest run in the file`
+                  ?`${dn(s1BestRun.player.username)} produced the run Season 1 still gets judged against`
                   :w.champion?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} still finished Season 1 on top`:"The crown line never sealed",
                 note:s1BestRun?.player&&s1BestRun.start&&s1BestRun.end
-                  ?`${s1BestRun.streak} straight wins from ${formatLobbyDate(s1BestRun.start.date,{weekday:"short",day:"numeric",month:"short"})}. ${s1LockNight?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} locked the crown for good on ${formatLobbyDate(s1LockNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s1TopGameLobby?`${s1TopGameLobby} still stands as the single room people point to first.`:""}`
+                  ?`${s1BestRun.streak} straight wins from ${formatLobbyDate(s1BestRun.start.date,{weekday:"short",day:"numeric",month:"short"})}. ${s1LockNight?`${dn(players.find((player)=>player.id===w.champion.id)?.username||"")} made the lead feel final on ${formatLobbyDate(s1LockNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s1TopGameLobby?`${s1TopGameLobby} is still the single room people point to first.`:""}`
                   :s1RunnerUp
                     ?s1Gap===0
                       ?`${dn(s1RunnerUp.username)} finished level on wins and the tiebreak came from the wider file.`
-                      :`${dn(s1RunnerUp.username)} finished ${s1Gap} win${s1Gap===1?"":"s"} back when the archive locked. ${s1TopGameLobby?`${s1TopGameLobby} still stands as the single room people point to first.`:""}`
+                      :`${dn(s1RunnerUp.username)} finished ${s1Gap} win${s1Gap===1?"":"s"} back when the archive locked. ${s1TopGameLobby?`${s1TopGameLobby} is still the single room people point to first.`:""}`
                     :"No runner-up line was needed once the campaign closed.",
               },
             ];
@@ -6494,33 +6494,33 @@ export default function GameNight(){
                 :null,
             ].filter(Boolean).slice(0,5);
             const seasonDossier=s2Campaign?.openerWinner&&seasonLeaderPlayer
-              ?`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} landed the sharpest table swing on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on one clean swing night."} ${s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:`${dn(seasonLeaderPlayer.username)} is carrying the crown line with ${seasonLeader.wins} wins, but the file is still moving under it.`}`
+              ?`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on the night that changes how everybody reads it."} ${s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase has not gone quiet.`:`${dn(seasonLeaderPlayer.username)} has the front with ${seasonLeader.wins} wins, but the file is still loose enough for one good night to bend it again.`}`
               :`${uniqueWins} different winners have already left fingerprints on the Season 2 file.`;
             const seasonMemoryCards=[
               {
                 label:"OPENING SHOT",
                 color:"#00E5FF",
                 value:s2OpenerWinner
-                  ?`${dn(s2OpenerWinner.username)} opened the live file with the first crown`
+                  ?`${dn(s2OpenerWinner.username)} set the first live mark on the board`
                   :"Opening night is still waiting on its first winner",
                 note:s2BestRun?.player&&s2BestRun.streak>=2&&s2BestRun.start&&s2BestRun.end
-                  ?`${formatLobbyDate(s2Opener?.date||s2.start,{weekday:"short",day:"numeric",month:"short"})} started the campaign. ${dn(s2BestRun.player.username)} still owns the cleanest run so far with ${s2BestRun.streak} straight wins from Lobby ${parseSessionIdNumber(s2BestRun.start.id)||s2BestRun.start.id} to Lobby ${parseSessionIdNumber(s2BestRun.end.id)||s2BestRun.end.id}.`
+                  ?`${formatLobbyDate(s2Opener?.date||s2.start,{weekday:"short",day:"numeric",month:"short"})} started the campaign. ${dn(s2BestRun.player.username)} still owns the cleanest stretch on file with ${s2BestRun.streak} straight wins from Lobby ${parseSessionIdNumber(s2BestRun.start.id)||s2BestRun.start.id} to Lobby ${parseSessionIdNumber(s2BestRun.end.id)||s2BestRun.end.id}.`
                   :seasonPulse,
               },
               {
                 label:"SWING NIGHT",
                 color:"#C77DFF",
                 value:s2TurningNight&&s2Campaign?.leader&&s2Campaign?.chaser
-                  ?`${dn(s2Campaign.leader.username)} bent the table on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}`
+                  ?`${dn(s2Campaign.leader.username)} made ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})} the night the race turned`
                   :s2LoudestDay?.topKiller?.player
                     ?`${dn(s2LoudestDay.topKiller.player.username)} turned ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} into the loudest night so far`
                     :topGame.pid&&players.find((player)=>player.id===topGame.pid)
                       ?`${dn(players.find((player)=>player.id===topGame.pid).username)} owns the season spike at ${topGame.k} kills`
                       :"The season is still waiting on one night everybody remembers",
                 note:s2TurningNight&&s2Campaign?.leader&&s2Campaign?.chaser
-                  ?`${dn(s2Campaign.leader.username)} won ${s2TurningNight.championDayWins} lobbies while ${dn(s2Campaign.chaser.username)} took ${s2TurningNight.runnerUpDayWins}. ${s2LoudestDay&&s2LoudestDay.date!==s2TurningNight.date?`${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} was still the loudest night on raw damage.`:`The top gap jumped to ${s2TurningNight.gap} wins by lights out.`}`
+                  ?`${dn(s2Campaign.leader.username)} won ${s2TurningNight.championDayWins} lobbies while ${dn(s2Campaign.chaser.username)} only took ${s2TurningNight.runnerUpDayWins}. ${s2LoudestDay&&s2LoudestDay.date!==s2TurningNight.date?`${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} stayed the loudest night on raw damage, but this was the one that changed the top line.`:`The lead reached ${s2TurningNight.gap} wins by lights out.`}`
                   :s2LoudestDay
-                  ?`${s2LoudestDay.totalKills} total kills across ${s2LoudestDay.lobbies} lobbies. ${s2DayLeaders?`${s2DayLeaders} carried the wins line that night.`:"That was the night the whole board jumped."}`
+                  ?`${s2LoudestDay.totalKills} total kills across ${s2LoudestDay.lobbies} lobbies. ${s2DayLeaders?`${s2DayLeaders} carried the wins line while the whole board started talking.`:"That was the night the whole board jumped."}`
                   :topGame.pid&&players.find((player)=>player.id===topGame.pid)
                     ?`${topGameLobby} on ${formatLobbyDate(topGame.date,{weekday:"short",day:"numeric",month:"short"})} is still the loudest single-room burst in the file.`
                     :"The biggest room of the campaign has not landed yet.",
@@ -6538,9 +6538,9 @@ export default function GameNight(){
                       ?`${dn(attendanceLeaderPlayer.username)} keeps the file moving through attendance`
                       :"This campaign is still writing its first pressure point",
                 note:s2LatestFallout?.topWinners.length>=2&&s2LatestFallout.topKiller?.player
-                  ?`${dn(s2LatestFallout.topKiller.player.username)} still hauled out ${s2LatestFallout.topKiller.kills} kills, so the latest split did not calm the room.`
+                  ?`${dn(s2LatestFallout.topKiller.player.username)} still hauled out ${s2LatestFallout.topKiller.kills} kills, so the latest split did not settle anything.`
                   :s2LockNight&&seasonLeaderPlayer
-                    ?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase still has enough room to make a night matter.`
+                    ?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase is still close enough for one sharp night to matter.`
                   :quietPulse,
               },
             ];
