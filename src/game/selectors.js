@@ -2718,6 +2718,9 @@ export const getDailyOrdersScheduleState = (now = new Date()) => {
       dayKey: formatUtcDateKey(current),
       reopensAt: null,
       reopensLabel: "",
+      dormantTitle: "",
+      dormantLead: "",
+      dormantNote: "",
     };
   }
 
@@ -2731,6 +2734,10 @@ export const getDailyOrdersScheduleState = (now = new Date()) => {
     dayKey: formatUtcDateKey(nextOpen),
     reopensAt: nextOpen.toISOString(),
     reopensLabel: "Monday at 8:00 UTC",
+    dormantTitle: "NEXT ROOM WINDOW CLOSED",
+    dormantLead: "New orders open Monday at 8:00 UTC.",
+    dormantNote:
+      "The room is between cycles right now, so this file stays quiet until the next mission window opens.",
   };
 };
 

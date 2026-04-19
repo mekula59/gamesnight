@@ -269,17 +269,173 @@ const CSS = `
     .vault-grid{grid-template-columns:1fr!important;}
     .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow-x:hidden!important;}
     .card-h,.lb-card,.rival-card,.comm-card{min-width:0!important;width:100%!important;}
-    main{padding-left:8px!important;padding-right:8px!important;overflow-x:hidden!important;}
-    .combat-selector{gap:3px!important;}
-    .combat-selector button{font-size:.6rem!important;padding:4px 8px!important;}
+    main{padding-left:12px!important;padding-right:12px!important;overflow-x:hidden!important;}
+    .combat-picker-shell{
+      padding:12px!important;
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:10px;
+      background:rgba(255,255,255,.025);
+    }
+    .combat-selector{
+      display:grid!important;
+      grid-template-columns:1fr;
+      gap:10px!important;
+      max-height:248px;
+      overflow:auto;
+      align-content:start;
+      padding-right:2px;
+    }
+    .combat-selector button{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      text-align:left!important;
+      font-size:.76rem!important;
+      padding:11px 13px!important;
+      min-height:50px!important;
+      line-height:1.25!important;
+      letter-spacing:.03em!important;
+      border-radius:8px!important;
+    }
+    .combat-picker-label-mobile{
+      display:-webkit-box!important;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      white-space:normal;
+      overflow:hidden;
+      max-width:100%;
+      text-transform:none;
+      font-weight:800;
+      line-height:1.3;
+      word-break:break-word;
+    }
     .stat-strip-mob{grid-template-columns:repeat(2,1fr)!important;}
     .arena-row .mob-hide{display:none!important;}
     .badge-flip-wrap{width:calc(50% - 3px)!important;height:58px!important;}
     .records-grid{grid-template-columns:1fr!important;}
     .kill-king-grid{grid-template-columns:72px 1fr!important;}
+    .zone-rail{top:58px;padding:10px 12px 11px!important;align-items:flex-start!important;gap:10px!important;}
+    .zone-rail-chip{gap:8px!important;align-items:flex-start!important;}
+    .zone-rail-label{font-size:.68rem!important;letter-spacing:.16em!important;}
+    .zone-rail-brief{font-size:.68rem!important;line-height:1.5!important;white-space:normal!important;}
+    .mob-menu{padding:10px 0 14px!important;box-shadow:0 10px 28px rgba(0,0,0,.28);}
+    .mob-item{padding:14px 20px!important;font-size:.88rem!important;line-height:1.3!important;min-height:48px!important;}
+    .home-mobile-shell .home-status-row{margin-bottom:20px!important;gap:14px!important;}
+    .home-mobile-shell .home-hero-block{margin-bottom:28px!important;}
+    .home-mobile-shell .home-stat-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;border:none!important;overflow:visible!important;background:none!important;margin-bottom:26px!important;}
+    .home-mobile-shell .home-stat-strip>div{border:1px solid rgba(255,255,255,.07)!important;border-radius:8px!important;background:rgba(255,255,255,.03)!important;padding:14px 10px 13px!important;}
+    .home-mobile-shell .home-pulse-grid{gap:12px!important;margin-bottom:30px!important;}
+    .home-mobile-shell .home-pulse-grid>div{min-height:auto!important;padding:16px 16px 17px!important;}
+    .home-stage-shell{margin-bottom:34px!important;}
+    .home-stage-head{margin-bottom:18px!important;}
+    .home-stage-row{gap:10px!important;}
+    .home-stage-title{font-size:.78rem!important;line-height:1.72!important;max-width:none!important;}
+    .home-stage-sub{font-size:.58rem!important;letter-spacing:.18em!important;padding-bottom:0!important;}
+    .briefing-feed{padding:17px 14px 18px!important;}
+    .briefing-row{
+      grid-template-columns:18px minmax(0,1fr)!important;
+      gap:11px!important;
+      padding:12px 10px 18px!important;
+      margin:0!important;
+      border-radius:10px!important;
+      border:1px solid transparent;
+    }
+    .briefing-row:nth-child(odd){
+      background:rgba(255,255,255,.028)!important;
+      border-color:rgba(255,255,255,.045)!important;
+    }
+    .briefing-row:nth-child(even){
+      background:rgba(0,0,0,.12)!important;
+      border-color:rgba(255,255,255,.035)!important;
+    }
+    .briefing-row+.briefing-row{margin-top:6px!important;}
+    .briefing-copy{font-size:.77rem!important;line-height:1.92!important;}
+    .briefing-trace{margin-top:12px!important;}
+    .after-action-card{padding:17px 16px 18px!important;}
+    .after-action-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;border:none!important;overflow:visible!important;margin-bottom:20px!important;}
+    .after-action-stats>div{border:1px solid rgba(255,255,255,.07)!important;border-radius:8px!important;background:rgba(255,255,255,.03)!important;padding:12px 9px 11px!important;}
+    .after-action-group{gap:12px!important;padding:16px 14px 0!important;margin-left:0!important;margin-right:0!important;}
+    .after-action-mvp{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
+    .after-action-rollup{margin-top:18px!important;padding-top:18px!important;font-size:.7rem!important;line-height:1.9!important;}
+    .combat-file-page .combat-file-selector{margin-bottom:22px!important;}
+    .combat-file-page .combat-file-hero{padding:15px 14px!important;margin-bottom:14px!important;}
+    .combat-file-page .combat-file-summary{
+      display:grid!important;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px!important;
+      margin-top:10px!important;
+      align-items:stretch!important;
+    }
+    .combat-file-page .combat-file-summary-chip{
+      min-width:0;
+      padding:8px 10px!important;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:8px;
+      background:rgba(255,255,255,.03);
+      justify-content:flex-start!important;
+    }
+    .combat-file-page .combat-file-summary-chip.level{
+      grid-column:1 / -1;
+    }
+    .combat-file-page .combat-file-summary-chip .summary-copy{
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .combat-file-page .combat-file-dossier{grid-template-columns:1fr!important;gap:10px!important;margin-bottom:14px!important;}
+    .combat-file-page .combat-orders-grid{grid-template-columns:1fr!important;gap:10px!important;}
+    .combat-file-page .combat-file-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;border:none!important;overflow:visible!important;}
+    .combat-file-page .combat-file-stats>div{border:1px solid rgba(255,255,255,.07)!important;border-radius:8px!important;background:rgba(255,255,255,.03)!important;padding:11px 8px 10px!important;}
+    .combat-file-page .combat-file-duo{grid-template-columns:1fr!important;gap:10px!important;}
+    .warroom-hero{padding:18px 16px!important;}
+    .warroom-summary-grid{grid-template-columns:1fr!important;gap:8px!important;margin-top:16px!important;}
+    .warroom-filter-card{padding:16px!important;}
+    .warroom-filter-head{margin-bottom:14px!important;gap:10px!important;}
+    .warroom-filter-grid{grid-template-columns:1fr!important;gap:10px!important;}
+    .warroom-active-trail{margin-top:14px!important;gap:12px!important;}
+    .warroom-active-trail .trail-items{gap:6px!important;}
+    .warroom-results-row{gap:6px!important;margin-bottom:4px!important;}
+    .warroom-night-break{gap:6px!important;}
+    .warroom-night-pill{font-size:.58rem!important;letter-spacing:.12em!important;line-height:1.6!important;padding:7px 10px!important;}
+    .warroom-report-card{padding:16px!important;}
+    .warroom-report-top{gap:12px!important;padding-left:0!important;}
+    .warroom-room-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;width:100%!important;min-width:0!important;padding-left:0!important;}
+    .warroom-beat-tags{gap:6px!important;margin-top:12px!important;}
+    .warroom-beat-tags>div{padding:5px 8px!important;font-size:.54rem!important;}
+    .warroom-beat-tags>div:nth-child(n+4){display:none!important;}
+    .warroom-placements{padding-left:0!important;gap:6px!important;}
+    .warroom-endchips{padding-left:0!important;gap:6px!important;}
+    .season2-top-shell .vote-panel{padding:16px 15px!important;margin-bottom:18px!important;}
+    .season2-top-shell .vote-panel-top{grid-template-columns:1fr!important;gap:10px!important;margin-bottom:10px!important;}
+    .season2-top-shell .vote-panel-read{min-height:0!important;padding:11px 12px!important;}
+    .season2-top-shell .vote-panel-grid{display:grid!important;gap:12px!important;}
+    .season2-top-shell .vote-panel-tier-top{
+      display:grid!important;
+      grid-template-columns:1fr!important;
+      gap:8px!important;
+    }
+    .season2-top-shell .vote-panel-tier-field{
+      display:grid!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      gap:7px!important;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .season2-top-shell .vote-panel-choice{padding:10px 10px!important;align-items:flex-start!important;}
+    .season2-top-shell .vote-panel-choice.compact{padding:8px 9px!important;gap:7px!important;}
+    .season2-top-shell .vote-panel-choice.compact .vote-panel-note{display:none!important;}
+    .season2-top-shell .vote-panel-choice.compact .vote-panel-headline{margin-top:3px!important;}
+    .season2-top-shell .season2-banner{padding:20px 15px!important;margin-bottom:24px!important;}
+    .season2-top-shell .season2-banner-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
+    .season2-top-shell .season2-banner-copy{margin-top:16px!important;padding-top:16px!important;gap:9px!important;}
+    .season2-top-shell .season2-marker-grid{grid-template-columns:1fr!important;gap:8px!important;}
   }
   @media(max-width:400px){
     .bc9.hero-big{font-size:clamp(2.8rem,16vw,5rem)!important;}
+    .combat-selector{max-height:264px;}
+    .combat-file-page .combat-file-summary{grid-template-columns:1fr!important;}
+    .season2-top-shell .vote-panel-tier-field{grid-template-columns:1fr!important;}
   }
 
   .records-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
@@ -773,19 +929,19 @@ function LeaderSlideshow({slides}){
 
 function HomeStage({tag,title,sub,accent,children,marginBottom=30}){
   return(
-    <section style={{marginBottom}}>
-      <div style={{marginBottom:15}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",
+    <section className="home-stage-shell" style={{marginBottom}}>
+      <div className="home-stage-head" style={{marginBottom:15}}>
+        <div className="home-stage-row" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",
           gap:12,flexWrap:"wrap",marginBottom:10}}>
           <div>
             <div className="bc9" style={{fontSize:".62rem",letterSpacing:".3em",
               color:`${accent}bb`,marginBottom:6}}>
               ▸ {tag}
             </div>
-            {title&&<div className="bc7" style={{fontSize:".8rem",color:"var(--text2)",
+            {title&&<div className="bc7 home-stage-title" style={{fontSize:".8rem",color:"var(--text2)",
               letterSpacing:".04em",lineHeight:1.62,maxWidth:820}}>{title}</div>}
           </div>
-          {sub&&<div className="bc7" style={{fontSize:".64rem",letterSpacing:".16em",
+          {sub&&<div className="bc7 home-stage-sub" style={{fontSize:".64rem",letterSpacing:".16em",
             color:"var(--text3)",textTransform:"uppercase",paddingBottom:2}}>{sub}</div>}
         </div>
         <div style={{height:1,
@@ -879,6 +1035,8 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
     .slice(0,16)
     .map((row)=>players.find((player)=>player.id===row.id))
     .filter(Boolean);
+  const voteLeadPlayers=votePlayers.slice(0,3);
+  const voteFieldPlayers=votePlayers.slice(3);
   const voteKillsBoard=[...voteRows].sort((left,right)=>right.kills-left.kills||right.wins-left.wins);
   const voteStatsById=new Map(voteRows.map((row)=>[row.id,row]));
   const voteWinRankById=new Map(voteRows.map((row,index)=>[row.id,index+1]));
@@ -1011,12 +1169,12 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
   };
 
   return(
-    <div style={{
+    <div className="vote-panel" style={{
       background:"linear-gradient(135deg,rgba(199,125,255,.08),rgba(0,229,255,.035))",
       border:"1px solid rgba(199,125,255,.24)",
       borderLeft:"3px solid rgba(199,125,255,.6)",
       borderRadius:"0 12px 12px 0",padding:"17px 18px",marginBottom:14}}>
-      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(190px,260px)",gap:12,alignItems:"start",marginBottom:12}}>
+      <div className="vote-panel-top" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(190px,260px)",gap:12,alignItems:"start",marginBottom:12}}>
         <div>
           <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
             letterSpacing:".25em",color:"rgba(199,125,255,.8)",marginBottom:6}}>
@@ -1033,7 +1191,7 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
             {s2Prediction?" Your vote is locked in.":""}
           </div>
         </div>
-        <div style={{
+        <div className="vote-panel-read" style={{
           alignSelf:"stretch",
           background:"linear-gradient(135deg,rgba(0,0,0,.24),rgba(199,125,255,.08))",
           border:"1px solid rgba(199,125,255,.18)",
@@ -1093,14 +1251,15 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
         </div>
       )}
 
-      <div style={{display:"grid",
+      <div className="vote-panel-grid" style={{display:"grid",
         gridTemplateColumns:"repeat(auto-fill,minmax(145px,1fr))",gap:5}}>
-        {votePlayers.map(player=>{
+        <div className="vote-panel-tier-top">
+        {voteLeadPlayers.map(player=>{
           const isVoted=s2Prediction===player.id;
           const vcount=voteCounts[player.id]||0;
           const playerRead=getVotePlayerRead(player);
           return(
-            <button key={player.id} onClick={()=>castVote(player.id)}
+            <button className="vote-panel-choice" key={player.id} onClick={()=>castVote(player.id)}
               disabled={!!s2Prediction} style={{
                 display:"flex",alignItems:"center",gap:8,
                 background:isVoted?`${player.color}20`:`${player.color}08`,
@@ -1114,12 +1273,12 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
                   color:player.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {player.host?"👑 ":""}{dn(player.username)}{isVoted?" ✓":""}
                 </div>
-                <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                <div className="vote-panel-headline" style={{fontFamily:"Barlow Condensed",fontWeight:700,
                   fontSize:".58rem",color:isVoted?player.color:"var(--text2)",lineHeight:1.35,
                   marginTop:2}}>
                   {vcount>0?`${vcount} vote${vcount===1?"":"s"} on this file`:playerRead.headline}
                 </div>
-                <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                <div className="vote-panel-note" style={{fontFamily:"Barlow Condensed",fontWeight:700,
                   fontSize:".54rem",color:"var(--text3)",lineHeight:1.42,marginTop:2}}>
                   {vcount>0
                     ?playerRead.note
@@ -1129,6 +1288,41 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
             </button>
           );
         })}
+        </div>
+        <div className="vote-panel-tier-field">
+        {voteFieldPlayers.map(player=>{
+          const isVoted=s2Prediction===player.id;
+          const vcount=voteCounts[player.id]||0;
+          const playerRead=getVotePlayerRead(player);
+          return(
+            <button className="vote-panel-choice compact" key={player.id} onClick={()=>castVote(player.id)}
+              disabled={!!s2Prediction} style={{
+                display:"flex",alignItems:"center",gap:8,
+                background:isVoted?`${player.color}20`:`${player.color}08`,
+                border:isVoted?`1.5px solid ${player.color}66`:`1px solid ${player.color}1a`,
+                borderRadius:6,padding:"8px 10px",cursor:s2Prediction?"default":"pointer",
+                textAlign:"left",transition:"all .12s",outline:"none",
+                opacity:s2Prediction&&!isVoted?0.5:1}}>
+              <Avatar p={player} size={24}/>
+              <div style={{minWidth:0}}>
+                <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".7rem",
+                  color:player.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {player.host?"👑 ":""}{dn(player.username)}{isVoted?" ✓":""}
+                </div>
+                <div className="vote-panel-headline" style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                  fontSize:".57rem",color:isVoted?player.color:"var(--text2)",lineHeight:1.34,
+                  marginTop:2}}>
+                  {vcount>0?`${vcount} vote${vcount===1?"":"s"} on this file`:playerRead.headline}
+                </div>
+                <div className="vote-panel-note" style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                  fontSize:".54rem",color:"var(--text3)",lineHeight:1.42,marginTop:2}}>
+                  {playerRead.note}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+        </div>
       </div>
     </div>
   );
@@ -1195,7 +1389,7 @@ function BriefingFeed({stories}){
   }
 
   return(
-    <div style={{
+    <div className="briefing-feed" style={{
       background:"rgba(0,0,0,.45)",
       border:"1px solid rgba(255,255,255,.08)",
       borderTop:"2px solid rgba(0,255,148,.3)",
@@ -1209,7 +1403,7 @@ function BriefingFeed({stories}){
         const isVisible=index<visibleCount;
         const isFresh=isVisible&&index===visibleCount-1;
         return(
-          <div key={`${story.icon}-${index}-${story.text.slice(0,18)}`} style={{
+          <div className="briefing-row" key={`${story.icon}-${index}-${story.text.slice(0,18)}`} style={{
             display:"grid",
             gridTemplateColumns:"20px minmax(0,1fr)",
             gap:12,
@@ -1227,11 +1421,11 @@ function BriefingFeed({stories}){
               {story.icon}
             </span>
             <div style={{minWidth:0}}>
-              <div style={{fontSize:".8rem",lineHeight:1.8,color:"rgba(200,186,255,.92)",
+              <div className="briefing-copy" style={{fontSize:".8rem",lineHeight:1.8,color:"rgba(200,186,255,.92)",
                 letterSpacing:".02em",wordBreak:"break-word"}}>
                 {story.text}
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
+              <div className="briefing-trace" style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
                 <div style={{height:2,flex:1,maxWidth:isVisible?"100%":"0%",
                   background:`linear-gradient(90deg,${story.color},transparent)`,
                   transition:"max-width .32s ease"}}/>
@@ -2803,7 +2997,7 @@ export default function GameNight(){
 
       {/* ═══════════════ HOME ═══════════════ */}
       {view==="home"&&(
-        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
+        <div className="fade-up home-mobile-shell" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* ── April Fools floating jesters ── */}
           {foolsDay&&(
             <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:5}}>
@@ -3081,7 +3275,7 @@ export default function GameNight(){
             ];
             return(<>
               {/* Status row */}
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              <div className="home-status-row" style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                 marginBottom:18,flexWrap:"wrap",gap:10}}>
                 <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
                   color:`rgba(255,107,53,.7)`}}>
@@ -3115,7 +3309,7 @@ export default function GameNight(){
               </div>
 
               {/* Hero title — Easter / Fools / default */}
-              <div style={{marginBottom:34,position:"relative"}}>
+              <div className="home-hero-block" style={{marginBottom:34,position:"relative"}}>
                 {(()=>{
                   const isEaster=isEventActive();
                   if(isEaster) return(
@@ -3174,7 +3368,7 @@ export default function GameNight(){
               </div>
 
               {/* Season stat strip */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(76px,1fr))",
+              <div className="home-stat-strip" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(76px,1fr))",
                 gap:1,marginBottom:30,border:"1px solid rgba(255,215,0,.12)",borderRadius:2,overflow:"hidden"}}>
                 {[
                   {l:`${currentSeason.name.toUpperCase()} LOBBIES`,v:seasonSess.length,   c:"#00E5FF"},
@@ -3192,7 +3386,7 @@ export default function GameNight(){
                 ))}
               </div>
 
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:34}}>
+              <div className="home-pulse-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:34}}>
                 {homePulseCards.map((card,index)=>(
                   <div key={card.label} style={{
                     background:index===0
@@ -3240,12 +3434,12 @@ export default function GameNight(){
                   title={recapTitle}
                   sub={dateLabel.toUpperCase()}
                   accent="#FFD700">
-                  <div style={{
+                  <div className="after-action-card" style={{
                     background:"rgba(255,255,255,.02)",
                     border:"1px solid rgba(255,255,255,.07)",
                     borderLeft:"3px solid rgba(255,215,0,.4)",
                     borderRadius:"0 8px 8px 0",padding:"19px 20px 20px"}}>
-                    <div style={{display:"grid",
+                    <div className="after-action-stats" style={{display:"grid",
                       gridTemplateColumns:"repeat(4,1fr)",
                       gap:1,border:"1px solid rgba(255,255,255,.06)",
                       borderRadius:2,overflow:"hidden",marginBottom:18}}>
@@ -3265,7 +3459,7 @@ export default function GameNight(){
                       ))}
                     </div>
                     {recapFieldNotes.length>0&&(
-                      <div style={{
+                      <div className="after-action-group" style={{
                         display:"grid",gap:10,marginBottom:18,
                         padding:"15px 16px 0",marginLeft:-2,marginRight:-2,
                         borderTop:"1px solid rgba(255,255,255,.06)",
@@ -3282,7 +3476,7 @@ export default function GameNight(){
                       </div>
                     )}
                     {recapStorylines.length>0&&(
-                      <div style={{
+                      <div className="after-action-group" style={{
                         display:"grid",gap:11,marginBottom:18,
                         padding:"15px 16px 0",marginLeft:-2,marginRight:-2,
                         borderTop:"1px solid rgba(255,255,255,.06)",
@@ -3299,7 +3493,7 @@ export default function GameNight(){
                       </div>
                     )}
                     {mvpCards.length>0&&(
-                      <div style={{display:"grid",
+                      <div className="after-action-mvp" style={{display:"grid",
                         gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginTop:2}}>
                         {mvpCards.map((c,i)=>(
                           <div key={i} onClick={()=>goProfile(c.player.id)} style={{
@@ -3330,7 +3524,7 @@ export default function GameNight(){
                       </div>
                     )}
                     {recap.winnersList&&recap.winnersList.length>1&&(
-                      <div className="bc7" style={{fontSize:".74rem",color:"rgba(200,186,255,.74)",
+                      <div className="bc7 after-action-rollup" style={{fontSize:".74rem",color:"rgba(200,186,255,.74)",
                         lineHeight:2.05,marginTop:20,paddingTop:20,
                         borderTop:"1px solid rgba(255,255,255,.06)"}}>
                         {recap.winnersList.slice(0,6).map((w,i)=>(
@@ -4612,7 +4806,7 @@ export default function GameNight(){
             ].filter(Boolean);
             return(
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{...card({
+            <div className="warroom-hero" style={{...card({
               padding:"22px 20px",
               marginBottom:4,
               overflow:"hidden",
@@ -4632,7 +4826,7 @@ export default function GameNight(){
               <p style={{color:"var(--text2)",marginTop:8,fontSize:".86rem",maxWidth:720,lineHeight:1.7}}>
                 Battle reports, pressure swings, and the rooms that changed the board. Newest drops stay on top, and every file should feel worth opening.
               </p>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,marginTop:18}}>
+              <div className="warroom-summary-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,marginTop:18}}>
                 <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
                   <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:6}}>Latest close</div>
                   <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:latestWinner?latestWinner.color:"#FFD700"}}>
@@ -4679,8 +4873,8 @@ export default function GameNight(){
               </div>
             </div>
 
-            <div style={{...card({padding:18,marginBottom:2,border:"1.5px solid rgba(255,77,143,.18)"})}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
+            <div className="warroom-filter-card" style={{...card({padding:18,marginBottom:2,border:"1.5px solid rgba(255,77,143,.18)"})}}>
+              <div className="warroom-filter-head" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
                 <div>
                   <div className="bc7" style={{fontSize:".62rem",letterSpacing:".18em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:6}}>
                     Sweep the room
@@ -4693,7 +4887,7 @@ export default function GameNight(){
                   {archiveSessions.length} reports on file
                 </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+              <div className="warroom-filter-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
                 <div>
                   <label style={{...lbl,marginBottom:6,fontSize:".64rem"}}>Pull operative</label>
                   <div style={{position:"relative"}}>
@@ -4721,8 +4915,8 @@ export default function GameNight(){
                 </div>
               </div>
               {activeTrail.length>0&&(
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:12}}>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <div className="warroom-active-trail" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:12}}>
+                  <div className="trail-items" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                     {activeTrail.map((item)=>(
                       <div key={item} className="bc7" style={{padding:"5px 10px",borderRadius:999,
                         background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",
@@ -4740,7 +4934,7 @@ export default function GameNight(){
               )}
             </div>
 
-            <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:2}}>
+            <div className="warroom-results-row" style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:2}}>
               <p className="bc7" style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>
                 {filtered.length} report{filtered.length!==1?"s":""} across {archiveNights} archive night{archiveNights!==1?"s":""}
               </p>
@@ -4780,9 +4974,9 @@ export default function GameNight(){
               return(
                 <div key={s.id} style={{display:"flex",flexDirection:"column",gap:10}}>
                   {showNightBreak&&(
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginTop:idx===0?0:4}}>
+                    <div className="warroom-night-break" style={{display:"flex",alignItems:"center",gap:10,marginTop:idx===0?0:4}}>
                       <div style={{height:1,flex:1,background:"linear-gradient(90deg,rgba(255,77,143,.3),transparent)"}}/>
-                      <div className="bc7" style={{padding:"6px 12px",borderRadius:999,
+                      <div className="bc7 warroom-night-pill" style={{padding:"6px 12px",borderRadius:999,
                         background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",
                         fontSize:".62rem",letterSpacing:".14em",color:"var(--text3)",textTransform:"uppercase",textAlign:"center"}}>
                         {idx===0?"Latest night on file":"Night file"} · {formatLobbyDate(s.date,{weekday:"long",day:"numeric",month:"short"})} · {nightSummary.count} report{nightSummary.count!==1?"s":""} · {nightSummary.kills} kills{nightLeader&&nightLeaderEntry?` · ${dn(nightLeader.username)} closed ${nightLeaderEntry[1]}`:""}
@@ -4791,7 +4985,7 @@ export default function GameNight(){
                     </div>
                   )}
 
-                  <div style={{...card({
+                  <div className="warroom-report-card" style={{...card({
                     padding:20,
                     position:"relative",
                     cursor:"pointer",
@@ -4802,20 +4996,20 @@ export default function GameNight(){
                   })}}
                     onClick={e=>{if(e.target.tagName==="BUTTON")return;setExpandedSid(v=>v===s.id?null:s.id);}}>
                     <div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:primaryTag?.color||"#FF4D8F",opacity:.85}}/>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,marginBottom:12,paddingLeft:8}}>
+                    <div className="warroom-report-top" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,marginBottom:12,paddingLeft:8}}>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
                           <div style={{fontFamily:"Fredoka One",color:"#FFAB40",fontSize:".88rem"}}>
                             📅 {formatLobbyDate(s.date)}
                           </div>
                           {marker&&<span style={{fontSize:".78rem",color:"var(--text3)"}}>{marker.icon} {marker.label}</span>}
-                          <span style={{color:"var(--text3)",fontSize:".76rem",fontWeight:700}}>· {s.id.toUpperCase()}</span>
+                          <span className="hide-mob" style={{color:"var(--text3)",fontSize:".76rem",fontWeight:700}}>· {s.id.toUpperCase()}</span>
                         </div>
                         <p className="bc7" style={{color:"var(--text2)",fontSize:".76rem",
                           lineHeight:1.7,letterSpacing:".04em",maxWidth:660}}>
                           {getLobbyReport(s)}
                         </p>
-                        <div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:10}}>
+                        <div className="warroom-beat-tags" style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:10}}>
                           {beatTags.map((tag)=>(
                             <div key={tag.label} className="bc7" style={{display:"inline-flex",alignItems:"center",
                               gap:6,padding:"5px 10px",borderRadius:999,background:tag.background,
@@ -4832,7 +5026,7 @@ export default function GameNight(){
                           </div>}
                         </div>
                       </div>
-                      <div style={{display:"grid",gap:6,minWidth:122,flexShrink:0,paddingLeft:8}}>
+                      <div className="warroom-room-stats" style={{display:"grid",gap:6,minWidth:122,flexShrink:0,paddingLeft:8}}>
                         <div style={{padding:"8px 10px",borderRadius:10,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
                           <div className="bc7" style={{fontSize:".52rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:4}}>Room noise</div>
                           <div style={{fontFamily:"Fredoka One",fontSize:".9rem",color:"#FF4D8F"}}>{totalLobbyKills} kills</div>
@@ -4845,7 +5039,7 @@ export default function GameNight(){
                     </div>
 
                     {s.placements&&s.placements.length>0&&(
-                      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10,paddingLeft:8}}>
+                      <div className="warroom-placements" style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10,paddingLeft:8}}>
                         {s.placements.slice(0,5).map((pid,pi)=>{
                           const p=players.find(x=>x.id===pid);if(!p)return null;
                           const k=s.kills?.[pid]||0;
@@ -4869,7 +5063,7 @@ export default function GameNight(){
                         )}
                       </div>
                     )}
-                    <div style={{display:"flex",gap:7,flexWrap:"wrap",paddingLeft:8}}>
+                    <div className="warroom-endchips" style={{display:"flex",gap:7,flexWrap:"wrap",paddingLeft:8}}>
                       {winner&&(
                         <div style={{background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.25)",
                           borderRadius:8,padding:"5px 11px",display:"flex",alignItems:"center",gap:7}}>
@@ -5319,7 +5513,7 @@ export default function GameNight(){
         const daysOnFileLabel=`${daysActive} ${daysActive===1?"day":"days"} on file`;
 
         return(
-          <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
+          <div className="fade-up combat-file-page" style={{minHeight:"calc(100vh - 120px)"}}>
             {/* Zone header */}
             <div style={{marginBottom:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -5336,10 +5530,11 @@ export default function GameNight(){
             </div>
 
             {/* SELECT COMBATANT */}
-            <div style={{marginBottom:18}}>
+            <div className="combat-file-selector" style={{marginBottom:18}}>
               <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
                 color:"var(--text3)",marginBottom:10}}>OPEN A FILE</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              <div className="combat-picker-shell">
+              <div className="combat-selector" style={{display:"flex",flexWrap:"wrap",gap:5}}>
                 {players.map(pl=>(
                   <button key={pl.id} onClick={()=>{setProfileId(pl.id);}} style={{
                     background:p.id===pl.id?`${pl.color}18`:"rgba(255,255,255,.02)",
@@ -5349,14 +5544,16 @@ export default function GameNight(){
                     fontFamily:"Barlow Condensed",fontWeight:900,
                     fontSize:".67rem",letterSpacing:".1em",padding:"5px 11px",
                     cursor:"pointer",outline:"none",transition:"all .12s"}}>
-                    {dn(pl.username).slice(0,8).toUpperCase()}
+                    <span className="hide-mob">{dn(pl.username).slice(0,8).toUpperCase()}</span>
+                    <span className="show-mob combat-picker-label-mobile">{dn(pl.username)}</span>
                   </button>
                 ))}
+              </div>
               </div>
             </div>
 
             {/* Identity hero */}
-            <div style={{
+            <div className="combat-file-hero" style={{
               background:`linear-gradient(135deg,${p.color}0e,rgba(0,0,0,.5))`,
               border:`1px solid ${p.color}33`,borderLeft:`4px solid ${p.color}`,
               borderRadius:"0 8px 8px 0",padding:"16px 16px",marginBottom:12,
@@ -5390,28 +5587,28 @@ export default function GameNight(){
                     overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                     {p.host?"👑 ":""}{dn(p.username).toUpperCase()}
                   </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
-                    <div className="bc7" style={{fontSize:".65rem",color:"var(--text3)",
+                  <div className="combat-file-summary" style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+                    <div className="bc7 combat-file-summary-chip" style={{fontSize:".65rem",color:"var(--text3)",
                       letterSpacing:".06em",whiteSpace:"nowrap"}}>
-                      LAST SEEN {lastSeenLabel}
+                      <span className="summary-copy">LAST SEEN {lastSeenLabel}</span>
                     </div>
-                    <div className="bc7" style={{fontSize:".65rem",color:"var(--text3)",
+                    <div className="bc7 combat-file-summary-chip" style={{fontSize:".65rem",color:"var(--text3)",
                       letterSpacing:".06em",whiteSpace:"nowrap"}}>
-                      {daysOnFileLabel.toUpperCase()}
+                      <span className="summary-copy">{daysOnFileLabel.toUpperCase()}</span>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <div className="combat-file-summary-chip level" style={{display:"flex",alignItems:"center",gap:5}}>
                       <div className="bc9" style={{fontSize:".78rem",
-                        color:p.color,letterSpacing:".1em",whiteSpace:"nowrap"}}>
+                        color:p.color,letterSpacing:".1em",whiteSpace:"nowrap",flexShrink:0}}>
                         LVL {lvlData.lvl}
                       </div>
-                      <div style={{width:44,height:3,background:"rgba(255,255,255,.12)",
-                        borderRadius:2,overflow:"hidden",flexShrink:0}}>
+                      <div style={{flex:1,height:3,background:"rgba(255,255,255,.12)",
+                        borderRadius:2,overflow:"hidden",minWidth:44}}>
                         <div style={{height:"100%",background:p.color,
                           width:`${lvlData.progress}%`,borderRadius:2,
                           boxShadow:`0 0 6px ${p.color}88`,transition:"width .5s ease"}}/>
                       </div>
                       <div className="bc7" style={{fontSize:".58rem",color:"var(--text3)",
-                        whiteSpace:"nowrap"}}>
+                        whiteSpace:"nowrap",flexShrink:0}}>
                         {lvlData.xp}XP
                       </div>
                     </div>
@@ -5423,7 +5620,7 @@ export default function GameNight(){
             {/* Bio — proper typed animation via TypedBio component */}
             <TypedBio text={bio} color={p.color}/>
 
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:12}}>
+            <div className="combat-file-dossier" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:12}}>
               {dossierCards.map((card)=>(
                 <div key={card.label} style={{
                   background:`linear-gradient(135deg,${card.color}10,rgba(255,255,255,.025))`,
@@ -5449,7 +5646,7 @@ export default function GameNight(){
                   DAILY ORDERS
                 </div>
                 {dailyOrdersActive?(
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
+                  <div className="combat-orders-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
                     {dailyOrders.map((order,idx)=>(
                       <div key={`${order.label}-${idx}`} style={{
                         background:`linear-gradient(135deg,${order.color}10,rgba(255,255,255,.025))`,
@@ -5484,14 +5681,14 @@ export default function GameNight(){
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                       <span style={{fontSize:"1rem",flexShrink:0}}>🕘</span>
                       <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:"rgba(123,140,222,.9)"}}>
-                        NEXT ROOM WINDOW CLOSED
+                        {dailyOrdersSchedule.dormantTitle}
                       </div>
                     </div>
                     <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.7,marginBottom:8}}>
-                      New orders open {dailyOrdersSchedule.reopensLabel}.
+                      {dailyOrdersSchedule.dormantLead}
                     </div>
                     <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",lineHeight:1.65,letterSpacing:".03em"}}>
-                      The room is between cycles right now, so this file stays quiet until the next mission window opens.
+                      {dailyOrdersSchedule.dormantNote}
                     </div>
                   </div>
                 )}
@@ -5499,7 +5696,7 @@ export default function GameNight(){
             )}
 
             {/* Stat grid */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",
+            <div className="combat-file-stats" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",
               gap:1,border:`1px solid ${p.color}14`,borderRadius:2,overflow:"hidden",marginBottom:12}}>
               {(()=>{
                 // Max appearances in a single session day
@@ -5533,7 +5730,7 @@ export default function GameNight(){
             </div>
 
             {/* Form + Rival */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            <div className="combat-file-duo" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
               {/* Recent form */}
               <div style={{padding:"12px 14px",background:"rgba(255,255,255,.02)",
                 border:"1px solid rgba(255,255,255,.05)",borderRadius:"0 6px 6px 0",
@@ -6502,7 +6699,7 @@ export default function GameNight(){
           SEASON 2 VIEW
       ══════════════════════════════════════════════ */}
       {view==="season2"&&(
-        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
+        <div className="fade-up season2-top-shell" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:32}}>
             <p style={{color:"#00E5FF",fontWeight:800,fontSize:".7rem",letterSpacing:3,
               textTransform:"uppercase",marginBottom:8}}>April 2026</p>
@@ -6818,14 +7015,14 @@ export default function GameNight(){
                 })()}
 
                 {/* Season 2 totals */}
-                <div style={{
+                <div className="season2-banner" style={{
                   background:"linear-gradient(135deg,rgba(0,229,255,.12),rgba(0,255,148,.08),rgba(199,125,255,.1))",
                   border:"2px solid rgba(0,229,255,.35)",borderRadius:20,
                   padding:"24px 20px",marginBottom:28,textAlign:"center"}}>
                   <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#00E5FF",marginBottom:16}}>
                     Season 2 by the Numbers
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:12}}>
+                  <div className="season2-banner-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:12}}>
                     {[
                       {l:"Lobbies",v:s2Sessions.length,c:"#00E5FF",i:"🎮"},
                       {l:"Total Kills",v:totalKills,c:"#FF4D8F",i:"💀"},
@@ -6842,7 +7039,7 @@ export default function GameNight(){
                       </div>
                     ))}
                   </div>
-                  <div style={{
+                  <div className="season2-banner-copy" style={{
                     marginTop:14,paddingTop:14,borderTop:"1px solid rgba(255,255,255,.08)",
                     display:"grid",gap:8,textAlign:"left"}}>
                     <div style={{fontSize:".6rem",color:"rgba(0,229,255,.6)",fontWeight:800,
@@ -6859,7 +7056,7 @@ export default function GameNight(){
                       {quietPulse}
                     </div>
                     {s2NumberMarkers.length>0&&(
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:8,marginTop:4}}>
+                      <div className="season2-marker-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:8,marginTop:4}}>
                         {s2NumberMarkers.map((marker)=>(
                           <div key={marker.label} style={{
                             background:`linear-gradient(135deg,${marker.color}10,rgba(0,0,0,.26))`,
