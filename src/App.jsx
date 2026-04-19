@@ -26,6 +26,7 @@ import {
   getChartData as selectGetChartData,
   getConsistency as selectGetConsistency,
   getDailyMVP as selectGetDailyMVP,
+  getDailyOrdersScheduleState as selectGetDailyOrdersScheduleState,
   getDayRecap as selectGetDayRecap,
   getDayStorylines as selectGetDayStorylines,
   getDailyOrdersForPlayer as selectGetDailyOrdersForPlayer,
@@ -872,25 +873,142 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
     }
   };
 
-  const votePlayers=allStats().filter(p=>p.appearances>=3)
-    .sort((a,b)=>b.wins-a.wins||b.kills-a.kills)
+  const voteRows=allStats().filter((player)=>player.appearances>=3)
+    .sort((left,right)=>right.wins-left.wins||right.kills-left.kills);
+  const votePlayers=voteRows
     .slice(0,16)
-    .map(s=>players.find(p=>p.id===s.id))
+    .map((row)=>players.find((player)=>player.id===row.id))
     .filter(Boolean);
+  const voteKillsBoard=[...voteRows].sort((left,right)=>right.kills-left.kills||right.wins-left.wins);
+  const voteStatsById=new Map(voteRows.map((row)=>[row.id,row]));
+  const voteWinRankById=new Map(voteRows.map((row,index)=>[row.id,index+1]));
+  const voteKillRankById=new Map(voteKillsBoard.map((row,index)=>[row.id,index+1]));
 
   const totalVotes=Object.values(voteCounts).reduce((a,b)=>a+b,0);
   const sortedVotes=Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]);
   const topVotedId=sortedVotes[0]?.[0];
   const topVotedPlayer=topVotedId?players.find((player)=>player.id===topVotedId):null;
   const voteLeadGap=sortedVotes.length>1?(sortedVotes[0][1]-sortedVotes[1][1]):(sortedVotes[0]?.[1]||0);
+  const winsLeader=voteRows[0]||null;
+  const killsLeader=voteKillsBoard[0]||null;
+  const winsLeaderPlayer=winsLeader?players.find((player)=>player.id===winsLeader.id):null;
+  const killsLeaderPlayer=killsLeader?players.find((player)=>player.id===killsLeader.id):null;
   const voteSummary=totalVotes>0&&topVotedPlayer
     ?voteLeadGap<=1&&sortedVotes.length>1
-      ?`${dn(topVotedPlayer.username)} is only a vote ahead. The room has not settled.`
-      :`${dn(topVotedPlayer.username)} has the cleanest trust line so far.`
-    :"No favorite yet. The first calls still set the tone.";
+      ?`${dn(topVotedPlayer.username)} is only a vote ahead. The room is still split.`
+      :`${dn(topVotedPlayer.username)} has the strongest trust read on the board right now.`
+    :winsLeaderPlayer&&killsLeaderPlayer&&winsLeaderPlayer.id!==killsLeaderPlayer.id
+      ?`${dn(winsLeaderPlayer.username)} owns the wins lane, but ${dn(killsLeaderPlayer.username)} still carries the damage read.`
+      :winsLeaderPlayer
+        ?`${dn(winsLeaderPlayer.username)} has the strongest live file on wins, and the room has not named a favorite yet.`
+        :"No favorite yet. The first real pile-on will matter.";
   const voteSubSummary=totalVotes>0
-    ?`${totalVotes} vote${totalVotes===1?"":"s"} on file`
-    :"Ballot box open";
+    ?`${totalVotes} vote${totalVotes===1?"":"s"} on file · ${sortedVotes.length} file${sortedVotes.length===1?"":"s"} have drawn trust`
+    :winsLeaderPlayer&&winsLeader
+      ?`${dn(winsLeaderPlayer.username)} leads Season 2 on wins at ${winsLeader.wins}W. First calls are live.`
+      :"Ballot box open";
+  const votePressureLine=totalVotes>0
+    ?voteLeadGap<=1&&sortedVotes.length>1
+      ?"One extra vote still flips this read."
+      :"The room has a lean, not a lock."
+    :winsLeaderPlayer&&killsLeaderPlayer&&winsLeaderPlayer.id!==killsLeaderPlayer.id
+      ?`Wins and damage are still pulling the room in different directions.`
+      :"The first calls will decide what the room values first.";
+
+  const getVotePlayerRead=(player)=>{
+    const stats=voteStatsById.get(player.id);
+    const variantSeed=(player.id||"").split("").reduce((sum,char)=>sum+char.charCodeAt(0),0);
+    const pickVariant=(variants)=>variants[variantSeed%variants.length];
+    if(!stats){
+      return{
+        headline:"File still opening",
+        note:"Still waiting on enough Season 2 tape to read this file cleanly.",
+      };
+    }
+    const winsRank=voteWinRankById.get(player.id)||0;
+    const killRank=voteKillRankById.get(player.id)||0;
+    if(winsRank===1){
+      return{
+        headline:`Season leader · ${stats.wins}W`,
+        note:killRank===1
+          ?`Still owns both the crown line and the damage pace.`
+          :`Still setting the pace on wins, even with the damage race elsewhere.`,
+      };
+    }
+    if(killRank===1){
+      return{
+        headline:`Damage leader · ${stats.kills}K`,
+        note:winsRank===2
+          ?`Closest real push on the crown line and still the deadliest file on the board.`
+          :`The kills file is heavy enough to keep this read live even off the top win line.`,
+      };
+    }
+    if(winsRank===2){
+      return{
+        headline:`Closest on wins · ${stats.wins}W`,
+        note:`One sharp day is enough to drag the crown read back into a real argument.`,
+      };
+    }
+    if(winsRank<=5){
+      const topFiveLabel=winsRank===3
+        ?`Third line file · ${stats.wins}W`
+        :winsRank===4
+          ?`Fourth line file · ${stats.wins}W`
+          :winsRank===5
+            ?`Fifth line file · ${stats.wins}W`
+            :`Top five file · ${stats.wins}W`;
+      const topFiveVariants=winsRank===3
+        ?[
+          `A clean night here still pulls this file back into the main conversation.`,
+          `One sharp session still drags this file right back under the room lights.`,
+          `This file is still close enough to turn one good night into a real swing.`,
+          `One heavy session still puts this file back in the main argument.`,
+        ]
+        :winsRank===4
+          ?[
+            `One heavy session still puts this file back in the main argument.`,
+            `The room would have to take notice if this file lands one clean night.`,
+            `One strong day still changes who the room is tracking next.`,
+            `This file is still close enough to crash the main read in one swing.`,
+          ]
+          :[
+            `A clean night here still pulls this file back into the main conversation.`,
+            `The room would have to take notice if this file lands one clean night.`,
+            `This file is still close enough to crash the main read in one swing.`,
+            `One good stretch still changes how this file sits in the top pack.`,
+          ];
+      return{
+        headline:topFiveLabel,
+        note:pickVariant(topFiveVariants),
+      };
+    }
+    if(stats.wins===0){
+      return{
+        headline:`First win still open · ${stats.appearances}G`,
+        note:pickVariant([
+          `One crown changes how the whole room reads this file.`,
+          `The first win would change this file faster than any speech about form.`,
+          `That first crown is still the cleanest way back into the conversation.`,
+        ]),
+      };
+    }
+    return{
+      headline:`${stats.wins}W · ${stats.kills}K on file`,
+      note:pickVariant(stats.kills>=100
+        ?[
+          `The damage is already loud enough that one strong day changes the whole read.`,
+          `This file already carries enough damage to jump the conversation fast.`,
+          `One sharp session still turns this damage line into a bigger story.`,
+        ]
+        :[
+          `One clean session still changes how this file gets read.`,
+          `There is enough on file here for one strong day to move the room.`,
+          `This file is not parked yet. One sharp night changes the tone fast.`,
+          `The room would read this file differently after one strong day.`,
+          `A single sharp session still changes the shape of this file.`,
+        ]),
+    };
+  };
 
   return(
     <div style={{
@@ -910,8 +1028,8 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
           <div style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
             color:"var(--text3)",letterSpacing:".04em",lineHeight:1.55}}>
             {totalVotes>0
-              ?`${totalVotes} vote${totalVotes===1?"":"s"} in. The room is already showing where trust is landing.`
-              :"Ballot box is open. The first calls still shape the read."}
+              ?`${totalVotes} vote${totalVotes===1?"":"s"} are in. The room is already showing where trust is landing.`
+              :"Ballot box is open. The first calls will shape the read fast."}
             {s2Prediction?" Your vote is locked in.":""}
           </div>
         </div>
@@ -932,6 +1050,9 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
           </div>
           <div className="bc7" style={{fontSize:".62rem",lineHeight:1.55,color:"var(--text3)"}}>
             {voteSubSummary}
+          </div>
+          <div className="bc7" style={{fontSize:".62rem",lineHeight:1.58,color:"rgba(255,255,255,.7)",marginTop:6}}>
+            {votePressureLine}
           </div>
         </div>
       </div>
@@ -977,6 +1098,7 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
         {votePlayers.map(player=>{
           const isVoted=s2Prediction===player.id;
           const vcount=voteCounts[player.id]||0;
+          const playerRead=getVotePlayerRead(player);
           return(
             <button key={player.id} onClick={()=>castVote(player.id)}
               disabled={!!s2Prediction} style={{
@@ -993,8 +1115,15 @@ function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToas
                   {player.host?"👑 ":""}{dn(player.username)}{isVoted?" ✓":""}
                 </div>
                 <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                  fontSize:".58rem",color:"var(--text3)"}}>
-                  {vcount>0?`${vcount} vote${vcount===1?"":"s"}`:"first call still open"}
+                  fontSize:".58rem",color:isVoted?player.color:"var(--text2)",lineHeight:1.35,
+                  marginTop:2}}>
+                  {vcount>0?`${vcount} vote${vcount===1?"":"s"} on this file`:playerRead.headline}
+                </div>
+                <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
+                  fontSize:".54rem",color:"var(--text3)",lineHeight:1.42,marginTop:2}}>
+                  {vcount>0
+                    ?playerRead.note
+                    :playerRead.note}
                 </div>
               </div>
             </button>
@@ -1159,7 +1288,7 @@ export default function GameNight(){
   const [foolsToast,setFoolsToast]=useState(0); // 0=hidden 1=warning 2=reveal
   const [lvlCard,setLvlCard]=useState(null); // {label, icon, color, phase:'in'|'out'}
   const [bootPhase,setBootPhase]=useState(0); // 0=logo 1=bar 2=done
-  const [utcDayKey,setUtcDayKey]=useState(todayStr());
+  const [dailyOrdersSchedule,setDailyOrdersSchedule]=useState(()=>selectGetDailyOrdersScheduleState());
 
   // ── Dual storage: window.storage (artifact) + localStorage (Netlify) ──
   const store=gameStore;
@@ -1197,27 +1326,19 @@ export default function GameNight(){
   },[]);
 
   useEffect(()=>{
-    let timeoutId=null;
-    let intervalId=null;
-    const syncDayKey=()=>{
-      const nextKey=todayStr();
-      setUtcDayKey(prev=>prev===nextKey?prev:nextKey);
+    const syncSchedule=()=>{
+      const nextState=selectGetDailyOrdersScheduleState();
+      setDailyOrdersSchedule((prev)=>
+        prev.isActive===nextState.isActive&&
+        prev.dayKey===nextState.dayKey&&
+        prev.reopensLabel===nextState.reopensLabel
+          ? prev
+          : nextState,
+      );
     };
-    const scheduleMidnightRefresh=()=>{
-      const now=new Date();
-      const nextMidnight=new Date(now);
-      nextMidnight.setUTCHours(24,0,0,50);
-      timeoutId=setTimeout(()=>{
-        syncDayKey();
-        intervalId=setInterval(syncDayKey,24*60*60*1000);
-      },Math.max(nextMidnight-now,50));
-    };
-    syncDayKey();
-    scheduleMidnightRefresh();
-    return()=>{
-      clearTimeout(timeoutId);
-      clearInterval(intervalId);
-    };
+    syncSchedule();
+    const id=setInterval(syncSchedule,60*1000);
+    return()=>clearInterval(id);
   },[]);
 
   // ── S2 launch countdown ──
@@ -1393,7 +1514,10 @@ export default function GameNight(){
   const getDayRecap=date=>selectGetDayRecap(date,sessions,players);
   const getDayStorylines=date=>selectGetDayStorylines(date,sessions,players);
   const getDailyOrdersForPlayer=pid=>
-    selectGetDailyOrdersForPlayer(pid,players,sessions,{dayKey:utcDayKey});
+    selectGetDailyOrdersForPlayer(pid,players,sessions,{
+      dayKey:dailyOrdersSchedule.dayKey,
+      isActiveWindow:dailyOrdersSchedule.isActive,
+    });
   const getLatestDayConsequences=date=>selectGetLatestDayConsequences(sessions,players,date);
   const getLeaderboardShiftData=(seasonId="all",period=lbPeriod,sortKey=sortBy)=>
     selectGetLeaderboardShiftData(players,sessions,{seasonId,period,sortBy:sortKey});
@@ -5052,6 +5176,7 @@ export default function GameNight(){
         const rivalLoss=topRival?(topRival.p1===p.id?topRival.p2wins:topRival.p1wins):0;
         const benchmark=getBenchmark(p.id);
         const dailyOrders=getDailyOrdersForPlayer(p.id);
+        const dailyOrdersActive=dailyOrdersSchedule.isActive;
         // Career milestones
         const milestones=[
           {l:"1W",  done:st.wins>=1},
@@ -5317,36 +5442,59 @@ export default function GameNight(){
               ))}
             </div>
 
-            {dailyOrders.length>0&&(
+            {(dailyOrders.length>0||!dailyOrdersActive)&&(
               <div style={{marginBottom:12}}>
                 <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
                   color:"var(--text3)",marginBottom:10}}>
                   DAILY ORDERS
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
-                  {dailyOrders.map((order,idx)=>(
-                    <div key={`${order.label}-${idx}`} style={{
-                      background:`linear-gradient(135deg,${order.color}10,rgba(255,255,255,.025))`,
-                      border:`1px solid ${order.color}2c`,
-                      borderLeft:`3px solid ${order.color}`,
-                      borderRadius:"0 8px 8px 0",
-                      padding:"12px 14px",
-                    }}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                        <span style={{fontSize:"1rem",flexShrink:0}}>{order.icon}</span>
-                        <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${order.color}bb`}}>
-                          {order.label}
+                {dailyOrdersActive?(
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
+                    {dailyOrders.map((order,idx)=>(
+                      <div key={`${order.label}-${idx}`} style={{
+                        background:`linear-gradient(135deg,${order.color}10,rgba(255,255,255,.025))`,
+                        border:`1px solid ${order.color}2c`,
+                        borderLeft:`3px solid ${order.color}`,
+                        borderRadius:"0 8px 8px 0",
+                        padding:"12px 14px",
+                      }}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                          <span style={{fontSize:"1rem",flexShrink:0}}>{order.icon}</span>
+                          <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${order.color}bb`}}>
+                            {order.label}
+                          </div>
+                        </div>
+                        <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.7,marginBottom:8}}>
+                          {order.text}
+                        </div>
+                        <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",lineHeight:1.65,letterSpacing:".03em"}}>
+                          {order.note}
                         </div>
                       </div>
-                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.7,marginBottom:8}}>
-                        {order.text}
-                      </div>
-                      <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",lineHeight:1.65,letterSpacing:".03em"}}>
-                        {order.note}
+                    ))}
+                  </div>
+                ):(
+                  <div style={{
+                    background:"linear-gradient(135deg,rgba(123,140,222,.1),rgba(255,255,255,.02))",
+                    border:"1px solid rgba(123,140,222,.24)",
+                    borderLeft:"3px solid rgba(123,140,222,.54)",
+                    borderRadius:"0 8px 8px 0",
+                    padding:"12px 14px",
+                  }}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <span style={{fontSize:"1rem",flexShrink:0}}>🕘</span>
+                      <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:"rgba(123,140,222,.9)"}}>
+                        NEXT ROOM WINDOW CLOSED
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.7,marginBottom:8}}>
+                      New orders open {dailyOrdersSchedule.reopensLabel}.
+                    </div>
+                    <div className="bc7" style={{fontSize:".64rem",color:"var(--text3)",lineHeight:1.65,letterSpacing:".03em"}}>
+                      The room is between cycles right now, so this file stays quiet until the next mission window opens.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

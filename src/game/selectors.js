@@ -2701,6 +2701,39 @@ const getRankTier = (rank, seasonRank) => {
 
 const getRowRank = (rows, playerId) => rows.findIndex((row) => row.id === playerId) + 1;
 
+const formatUtcDateKey = (date) => date.toISOString().slice(0, 10);
+
+export const getDailyOrdersScheduleState = (now = new Date()) => {
+  const current = now instanceof Date ? now : new Date(now);
+  const day = current.getUTCDay();
+  const hour = current.getUTCHours();
+  const isSaturdayAfterClose = day === 6 && hour >= 19;
+  const isSunday = day === 0;
+  const isMondayBeforeOpen = day === 1 && hour < 8;
+  const isOffWindow = isSaturdayAfterClose || isSunday || isMondayBeforeOpen;
+
+  if (!isOffWindow) {
+    return {
+      isActive: true,
+      dayKey: formatUtcDateKey(current),
+      reopensAt: null,
+      reopensLabel: "",
+    };
+  }
+
+  const nextOpen = new Date(current);
+  const daysUntilMonday = day === 0 ? 1 : day === 6 ? 2 : 0;
+  nextOpen.setUTCDate(current.getUTCDate() + daysUntilMonday);
+  nextOpen.setUTCHours(8, 0, 0, 0);
+
+  return {
+    isActive: false,
+    dayKey: formatUtcDateKey(nextOpen),
+    reopensAt: nextOpen.toISOString(),
+    reopensLabel: "Monday at 8:00 UTC",
+  };
+};
+
 export const getDailyOrdersForPlayer = (
   playerId,
   players,
@@ -2709,9 +2742,10 @@ export const getDailyOrdersForPlayer = (
     minOrders = 2,
     maxOrders = 2,
     dayKey = todayStr(),
+    isActiveWindow = true,
   } = {},
 ) => {
-  if (!playerId || !players.length || !sessions.length) {
+  if (!isActiveWindow || !playerId || !players.length || !sessions.length) {
     return [];
   }
 
