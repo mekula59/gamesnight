@@ -46,17 +46,26 @@ import {
   getPlayerLevel as selectGetPlayerLevel,
   getRank as selectGetRank,
   getRecords as selectGetRecords,
+  getRivalOpsViewModel as selectGetRivalOpsViewModel,
+  reconcileRivalOpsState as selectReconcileRivalOpsState,
   getRivals as selectGetRivals,
   getSeasonCampaignFile as selectGetSeasonCampaignFile,
   getSeasonOneWrap as selectGetSeasonOneWrap,
   getSeasonSessions as selectGetSeasonSessions,
   getSortedLeaderboard as selectGetSortedLeaderboard,
+  sameRivalOpsState as selectSameRivalOpsState,
   getStats as selectGetStats,
   getStreak as selectGetStreak,
   formatOrdinal,
   parseSessionIdNumber,
 } from "./game/selectors";
-import { createStorageAdapter } from "./game/storage";
+import {
+  createStorageAdapter,
+  pruneInvalidRivalOps,
+  readRivalOpsState,
+  setSelectedRivalOpId,
+  writeRivalOpsState,
+} from "./game/storage";
 import {
   getNextSession,
   isEventActive,
@@ -108,6 +117,14 @@ const CSS = `
   @keyframes hudBlink{0%,100%{opacity:1}48%{opacity:1}50%{opacity:.15}52%{opacity:1}}
   @keyframes typeIn{from{max-width:0;opacity:1}to{max-width:100%;opacity:1}}
   @keyframes cursorPulse{0%,100%{border-color:var(--tw-color,#00E5FF)}49%{border-color:var(--tw-color,#00E5FF)}51%,99%{border-color:transparent}}
+  @keyframes zoneShellIn{from{opacity:0;transform:translateY(16px) scale(.988)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes zoneSliceIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes zoneReceiveAnchorIn{from{opacity:0;transform:translateY(12px) scale(.986)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes zoneReceiveFollowIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes dossierOpenIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes stateSweep{0%{transform:translateX(-130%);opacity:0}18%{opacity:.4}55%{opacity:.92}100%{transform:translateX(130%);opacity:0}}
+  @keyframes archiveCheckpointIn{from{opacity:0;transform:translateY(10px);filter:saturate(.9)}to{opacity:1;transform:translateY(0);filter:none}}
+  @keyframes archiveReportIn{from{opacity:0;transform:translateY(12px) scale(.992)}to{opacity:1;transform:translateY(0) scale(1)}}
   .typewriter-wrap{overflow:hidden;}
   .typewriter-text{
     display:block;overflow:hidden;max-width:0;
@@ -245,6 +262,89 @@ const CSS = `
   .easter-btag{border-radius:4px;padding:5px 12px;font-family:"Barlow Condensed",sans-serif;font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
   .easter-bt1{background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.4);color:#FFD700;}
   .easter-bt2{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3);color:#00E5FF;}
+
+  .zone-view-shell{
+    width:100%;
+    animation:zoneShellIn .34s cubic-bezier(.18,.84,.32,1) both;
+  }
+  .zone-arrival-slice{
+    opacity:0;
+    animation:zoneSliceIn .38s cubic-bezier(.2,.88,.32,1) forwards;
+    animation-delay:var(--arrive-delay,0ms);
+  }
+  .zone-receive-anchor{
+    opacity:0;
+    transform-origin:top left;
+    animation:zoneReceiveAnchorIn .34s cubic-bezier(.18,.88,.32,1) forwards;
+    animation-delay:var(--receive-delay,120ms);
+  }
+  .zone-receive-follow{
+    opacity:0;
+    animation:zoneReceiveFollowIn .3s cubic-bezier(.2,.88,.32,1) forwards;
+    animation-delay:var(--receive-delay,180ms);
+  }
+  .motion-reveal{
+    opacity:0;
+    transform:translate3d(0,var(--motion-shift,16px),0);
+    filter:saturate(.94);
+  }
+  .motion-reveal.is-visible{
+    opacity:1;
+    transform:translate3d(0,0,0);
+    filter:none;
+    transition:
+      opacity .34s cubic-bezier(.2,.88,.32,1),
+      transform .34s cubic-bezier(.2,.88,.32,1),
+      filter .28s ease;
+    transition-delay:var(--motion-delay,0ms);
+  }
+  .dossier-open-shell{
+    display:grid;
+    gap:0;
+  }
+  .dossier-open-step{
+    opacity:0;
+    animation:dossierOpenIn .28s cubic-bezier(.2,.9,.32,1) forwards;
+    animation-delay:var(--dossier-delay,0ms);
+  }
+  .state-react-card{
+    position:relative;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .state-react-card::after{
+    content:"";
+    position:absolute;
+    inset:-1px;
+    background:linear-gradient(110deg,transparent 0%,rgba(255,255,255,.05) 42%,rgba(255,255,255,.14) 50%,transparent 58%);
+    transform:translateX(-130%);
+    opacity:0;
+    pointer-events:none;
+    mix-blend-mode:screen;
+  }
+  .state-react-card.state-react-live::after{
+    animation:stateSweep .72s cubic-bezier(.18,.9,.26,1) .08s both;
+  }
+  .archive-rhythm-break{
+    position:relative;
+  }
+  .archive-rhythm-card{
+    transform-origin:top left;
+  }
+  .archive-entry-break{
+    opacity:0;
+    animation:archiveCheckpointIn .3s cubic-bezier(.2,.88,.32,1) forwards;
+    animation-delay:var(--archive-entry-delay,150ms);
+  }
+  .archive-entry-break .warroom-night-pill{
+    box-shadow:0 0 0 1px rgba(255,255,255,.04),0 0 18px rgba(255,77,143,.08);
+  }
+  .archive-entry-card{
+    opacity:0;
+    transform-origin:top left;
+    animation:archiveReportIn .32s cubic-bezier(.2,.88,.32,1) forwards;
+    animation-delay:var(--archive-card-delay,190ms);
+  }
 
   @media(max-width:640px){
     .hide-mob{display:none!important;} .show-mob{display:flex!important;}
@@ -929,7 +1029,7 @@ function LeaderSlideshow({slides}){
 
 function HomeStage({tag,title,sub,accent,children,marginBottom=30}){
   return(
-    <section className="home-stage-shell" style={{marginBottom}}>
+    <MotionReveal as="section" className="home-stage-shell" style={{marginBottom}}>
       <div className="home-stage-head" style={{marginBottom:15}}>
         <div className="home-stage-row" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",
           gap:12,flexWrap:"wrap",marginBottom:10}}>
@@ -948,7 +1048,7 @@ function HomeStage({tag,title,sub,accent,children,marginBottom=30}){
           background:`linear-gradient(90deg,${accent}66,rgba(255,255,255,.05),transparent)`}}/>
       </div>
       {children}
-    </section>
+    </MotionReveal>
   );
 }
 
@@ -1368,6 +1468,67 @@ function TypedBio({text,color}){
   );
 }
 
+function MotionReveal({
+  children,
+  className="",
+  style,
+  delay=0,
+  shift=16,
+  as:Tag="div",
+  threshold=0.18,
+  triggerOnce=true,
+  disabled=false,
+  revealKey="",
+}){
+  const ref=useRef(null);
+  const [visible,setVisible]=useState(disabled);
+
+  useEffect(()=>{
+    setVisible(disabled);
+  },[disabled,revealKey]);
+
+  useEffect(()=>{
+    if(disabled){
+      return undefined;
+    }
+    const node=ref.current;
+    if(!node||typeof window==="undefined"||!("IntersectionObserver" in window)){
+      setVisible(true);
+      return undefined;
+    }
+    const observer=new window.IntersectionObserver((entries)=>{
+      entries.forEach((entry)=>{
+        if(entry.isIntersecting){
+          setVisible(true);
+          if(triggerOnce){
+            observer.unobserve(entry.target);
+          }
+        }else if(!triggerOnce){
+          setVisible(false);
+        }
+      });
+    },{
+      threshold,
+      rootMargin:"0px 0px -10% 0px",
+    });
+    observer.observe(node);
+    return()=>observer.disconnect();
+  },[disabled,threshold,triggerOnce,revealKey]);
+
+  return(
+    <Tag
+      ref={ref}
+      className={`${className} motion-reveal ${visible?"is-visible":"is-hidden"}`.trim()}
+      style={{
+        ...style,
+        "--motion-delay":`${delay}ms`,
+        "--motion-shift":`${shift}px`,
+      }}>
+      {children}
+    </Tag>
+  );
+}
+
 function BriefingFeed({stories}){
   const [visibleCount,setVisibleCount]=useState(0);
   const storyCount=stories.length;
@@ -1483,6 +1644,8 @@ export default function GameNight(){
   const [lvlCard,setLvlCard]=useState(null); // {label, icon, color, phase:'in'|'out'}
   const [bootPhase,setBootPhase]=useState(0); // 0=logo 1=bar 2=done
   const [dailyOrdersSchedule,setDailyOrdersSchedule]=useState(()=>selectGetDailyOrdersScheduleState());
+  const [rivalOpsState,setRivalOpsState]=useState({ops:[],selectedOpId:null,lastResolvedOpId:null});
+  const [rivalOpsLoaded,setRivalOpsLoaded]=useState(false);
 
   // ── Dual storage: window.storage (artifact) + localStorage (Netlify) ──
   const store=gameStore;
@@ -1576,6 +1739,28 @@ export default function GameNight(){
     const h=()=>setShowScroll(window.scrollY>320);
     window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);
   },[]);
+
+  useEffect(()=>{
+    let active=true;
+    const bootRivalOps=async()=>{
+      const persisted=await readRivalOpsState(store);
+      if(!active)return;
+      setRivalOpsState(persisted);
+      setRivalOpsLoaded(true);
+    };
+    bootRivalOps();
+    return()=>{active=false;};
+  },[store]);
+
+  useEffect(()=>{
+    if(!loaded||!rivalOpsLoaded)return;
+    const cleaned=pruneInvalidRivalOps(rivalOpsState,{players,sessions},todayStr());
+    const nextState=selectReconcileRivalOpsState({players,sessions,rivalOpsState:cleaned},todayStr());
+    if(selectSameRivalOpsState(cleaned,nextState))return;
+    setRivalOpsState(nextState);
+    writeRivalOpsState(store,nextState);
+  },[loaded,rivalOpsLoaded,players,sessions,rivalOpsState,store]);
+
   const resetLobbyScope=()=>{
     setLobbyLimit(DEFAULT_LOBBY_LIMIT);
     setExpandedSid(null);
@@ -2690,38 +2875,7 @@ export default function GameNight(){
         return p1?.username.toLowerCase().includes(rivalSearch.toLowerCase())||p2?.username.toLowerCase().includes(rivalSearch.toLowerCase());
       })
     :rivals;
-  const rivalOpsTeaser=(()=>{
-    const liveFile=filteredRivals[0]||rivals[0];
-    if(!liveFile)return null;
-    const p1=players.find(x=>x.id===liveFile.p1);
-    const p2=players.find(x=>x.id===liveFile.p2);
-    if(!p1||!p2)return null;
-    const gap=Math.abs(liveFile.p1wins-liveFile.p2wins);
-    const lead=Math.max(liveFile.p1wins,liveFile.p2wins);
-    const trail=Math.min(liveFile.p1wins,liveFile.p2wins);
-    const pairLabel=`${dn(p1.username)} and ${dn(p2.username)}`;
-    if(gap===0){
-      return{
-        eyebrow:"RIVAL OPS",
-        title:`${pairLabel} are dead level at ${lead}-${trail}.`,
-        note:"That file is still quiet in public, but the next clean finish will not stay quiet for long.",
-      };
-    }
-    if(gap===1){
-      const leader=liveFile.p1wins>liveFile.p2wins?p1:p2;
-      const trailer=leader.id===p1.id?p2:p1;
-      return{
-        eyebrow:"RIVAL OPS",
-        title:`${dn(trailer.username)} is one result from leveling ${dn(leader.username)}.`,
-        note:`${lead}-${trail} is still close enough to turn fast once the room puts them back on top together.`,
-      };
-    }
-    return{
-      eyebrow:"RIVAL OPS",
-      title:`${pairLabel} still carry the hottest live duel file.`,
-      note:`${liveFile.total} shared top-two finishes are on record. The rivalry layer is not open yet, but that file is already humming.`,
-    };
-  })();
+  const rivalOpsViewModel=selectGetRivalOpsViewModel({players,sessions,rivalOpsState},todayStr());
   const activeNavView=queuedView||view;
   const activeZone=LEVEL_MAP[activeNavView]||LEVEL_MAP.home;
   const currentZone=LEVEL_MAP[view]||LEVEL_MAP.home;
@@ -2997,7 +3151,7 @@ export default function GameNight(){
 
       {/* ═══════════════ HOME ═══════════════ */}
       {view==="home"&&(
-        <div className="fade-up home-mobile-shell" style={{minHeight:"calc(100vh - 120px)"}}>
+        <div className="fade-up home-mobile-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* ── April Fools floating jesters ── */}
           {foolsDay&&(
             <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:5}}>
@@ -3275,7 +3429,7 @@ export default function GameNight(){
             ];
             return(<>
               {/* Status row */}
-              <div className="home-status-row" style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              <div className="home-status-row zone-receive-anchor" style={{"--receive-delay":"60ms",display:"flex",justifyContent:"space-between",alignItems:"center",
                 marginBottom:18,flexWrap:"wrap",gap:10}}>
                 <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
                   color:`rgba(255,107,53,.7)`}}>
@@ -3309,7 +3463,7 @@ export default function GameNight(){
               </div>
 
               {/* Hero title — Easter / Fools / default */}
-              <div className="home-hero-block" style={{marginBottom:34,position:"relative"}}>
+              <div className="home-hero-block zone-receive-follow" style={{"--receive-delay":"120ms",marginBottom:34,position:"relative"}}>
                 {(()=>{
                   const isEaster=isEventActive();
                   if(isEaster) return(
@@ -3368,7 +3522,7 @@ export default function GameNight(){
               </div>
 
               {/* Season stat strip */}
-              <div className="home-stat-strip" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(76px,1fr))",
+              <div className="home-stat-strip zone-receive-follow" style={{"--receive-delay":"170ms",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(76px,1fr))",
                 gap:1,marginBottom:30,border:"1px solid rgba(255,215,0,.12)",borderRadius:2,overflow:"hidden"}}>
                 {[
                   {l:`${currentSeason.name.toUpperCase()} LOBBIES`,v:seasonSess.length,   c:"#00E5FF"},
@@ -3386,9 +3540,9 @@ export default function GameNight(){
                 ))}
               </div>
 
-              <div className="home-pulse-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:34}}>
+              <div key={`pulse-${latestDate||currentSeason.id}`} className="home-pulse-grid zone-receive-follow" style={{"--receive-delay":"220ms",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:34}}>
                 {homePulseCards.map((card,index)=>(
-                  <div key={card.label} style={{
+                  <div key={card.label} className="state-react-card state-react-live" style={{
                     background:index===0
                       ?`linear-gradient(135deg,${card.color}14,rgba(0,0,0,.42))`
                       :`linear-gradient(135deg,${card.color}09,rgba(0,0,0,.34))`,
@@ -3434,7 +3588,7 @@ export default function GameNight(){
                   title={recapTitle}
                   sub={dateLabel.toUpperCase()}
                   accent="#FFD700">
-                  <div className="after-action-card" style={{
+                  <div key={`after-action-${latestDate}`} className="after-action-card state-react-card state-react-live" style={{
                     background:"rgba(255,255,255,.02)",
                     border:"1px solid rgba(255,255,255,.07)",
                     borderLeft:"3px solid rgba(255,215,0,.4)",
@@ -3459,7 +3613,7 @@ export default function GameNight(){
                       ))}
                     </div>
                     {recapFieldNotes.length>0&&(
-                      <div className="after-action-group" style={{
+                      <div className="after-action-group state-react-card state-react-live" style={{
                         display:"grid",gap:10,marginBottom:18,
                         padding:"15px 16px 0",marginLeft:-2,marginRight:-2,
                         borderTop:"1px solid rgba(255,255,255,.06)",
@@ -3476,7 +3630,7 @@ export default function GameNight(){
                       </div>
                     )}
                     {recapStorylines.length>0&&(
-                      <div className="after-action-group" style={{
+                      <div className="after-action-group state-react-card state-react-live" style={{
                         display:"grid",gap:11,marginBottom:18,
                         padding:"15px 16px 0",marginLeft:-2,marginRight:-2,
                         borderTop:"1px solid rgba(255,255,255,.06)",
@@ -3762,7 +3916,7 @@ export default function GameNight(){
 
       {/* ═══════════════ HALL OF FAME ═══════════════ */}
       {view==="hof"&&(
-        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
+        <div className="fade-up zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* Legends Wing header */}
           <div style={{marginBottom:28}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
@@ -3953,7 +4107,7 @@ export default function GameNight(){
       {view==="leaderboard"&&(
         <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* Arena header */}
-          <div style={{marginBottom:28,position:"relative"}}>
+          <div className="zone-arrival-slice" style={{"--arrive-delay":"50ms",marginBottom:28,position:"relative"}}>
             {/* Top coordinate bar */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               marginBottom:12,padding:"0 2px"}}>
@@ -4566,26 +4720,132 @@ export default function GameNight(){
             </p>
           </div>
 
-          {rivalOpsTeaser&&(
-            <div style={{
-              marginBottom:18,
-              padding:"12px 16px",
-              background:"linear-gradient(135deg,rgba(255,77,143,.07),rgba(0,0,0,.32))",
-              border:"1px solid rgba(255,77,143,.18)",
-              borderLeft:"3px solid rgba(255,77,143,.45)",
-              borderRadius:"0 8px 8px 0",
-            }}>
-              <div className="bc7" style={{fontSize:".56rem",letterSpacing:".24em",color:"rgba(255,77,143,.72)",marginBottom:7}}>
-                {rivalOpsTeaser.eyebrow}
-              </div>
-              <div className="bc9" style={{fontSize:"clamp(.92rem,2.6vw,1.02rem)",color:"#FF4D8F",letterSpacing:".04em",marginBottom:5}}>
-                {rivalOpsTeaser.title}
-              </div>
-              <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.65}}>
-                {rivalOpsTeaser.note}
-              </div>
+          <div style={{
+            marginBottom:18,
+            padding:"14px 16px 16px",
+            background:"linear-gradient(135deg,rgba(255,77,143,.07),rgba(0,0,0,.32))",
+            border:"1px solid rgba(255,77,143,.18)",
+            borderLeft:"3px solid rgba(255,77,143,.45)",
+            borderRadius:"0 8px 8px 0",
+          }}>
+            <div className="bc7" style={{fontSize:".56rem",letterSpacing:".24em",color:"rgba(255,77,143,.72)",marginBottom:7}}>
+              {rivalOpsViewModel.sectionLabel}
             </div>
-          )}
+            <div className="bc7" style={{fontSize:".74rem",color:"var(--text2)",lineHeight:1.6,marginBottom:12}}>
+              {rivalOpsViewModel.introLine}
+            </div>
+
+            {rivalOpsViewModel.cards.length>0?(
+              <>
+                {rivalOpsViewModel.cards.map((card)=>(
+                  <button
+                    key={card.id}
+                    onClick={async()=>{
+                      const nextState={...rivalOpsState,selectedOpId:card.id};
+                      setRivalOpsState(nextState);
+                      await setSelectedRivalOpId(store,card.id,nextState);
+                    }}
+                    style={{
+                      width:"100%",
+                      textAlign:"left",
+                      cursor:"pointer",
+                      marginBottom:rivalOpsViewModel.detail?12:0,
+                      padding:"13px 14px",
+                      borderRadius:12,
+                      border:card.state==="active"
+                        ?"1px solid rgba(255,77,143,.34)"
+                        :"1px solid rgba(255,255,255,.09)",
+                      background:card.state==="active"
+                        ?"linear-gradient(135deg,rgba(255,77,143,.12),rgba(0,0,0,.34))"
+                        :"rgba(255,255,255,.04)",
+                      color:"#fff",
+                    }}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+                      <div className="bc9" style={{fontSize:"clamp(.94rem,2.6vw,1.04rem)",color:"#FF4D8F",letterSpacing:".04em"}}>
+                        {dn(card.playerALabel)} vs {dn(card.playerBLabel)}
+                      </div>
+                      <span style={{
+                        fontSize:".62rem",
+                        letterSpacing:".18em",
+                        textTransform:"uppercase",
+                        fontWeight:800,
+                        color:card.state==="active"?"#FFD700":"var(--text2)",
+                      }}>
+                        {card.stateChip}
+                      </span>
+                    </div>
+                    <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:"rgba(255,77,143,.74)",marginBottom:6}}>
+                      {card.title}
+                    </div>
+                    <div className="bc7" style={{fontSize:".8rem",color:"var(--text)",lineHeight:1.55,marginBottom:4}}>
+                      {card.missionLine}
+                    </div>
+                    <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.55}}>
+                      {card.pressureLine}
+                    </div>
+                  </button>
+                ))}
+
+                {rivalOpsViewModel.detail&&(
+                  <div style={{
+                    padding:"12px 14px",
+                    borderRadius:10,
+                    background:"rgba(0,0,0,.28)",
+                    border:"1px solid rgba(255,255,255,.08)",
+                  }}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:7}}>
+                      <div className="bc9" style={{fontSize:".92rem",color:"#fff"}}>
+                        {dn(rivalOpsViewModel.detail.header)}
+                      </div>
+                      <span style={{fontSize:".62rem",letterSpacing:".18em",textTransform:"uppercase",fontWeight:800,color:"var(--text2)"}}>
+                        {rivalOpsViewModel.detail.stateChip}
+                      </span>
+                    </div>
+                    <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:"rgba(255,77,143,.74)",marginBottom:6}}>
+                      {rivalOpsViewModel.detail.title}
+                    </div>
+                    <div className="bc7" style={{fontSize:".76rem",lineHeight:1.55,color:"var(--text2)",marginBottom:8}}>
+                      {rivalOpsViewModel.detail.missionLine}
+                    </div>
+                    <div className="bc7" style={{fontSize:".72rem",lineHeight:1.55,color:"var(--text)",marginBottom:10}}>
+                      {rivalOpsViewModel.detail.pressureLine}
+                    </div>
+                    <div className="bc7" style={{fontSize:".56rem",letterSpacing:".2em",color:"var(--text3)",marginBottom:5}}>
+                      {rivalOpsViewModel.detail.ruleLabel}
+                    </div>
+                    <div className="bc7" style={{fontSize:".7rem",lineHeight:1.55,color:"var(--text2)"}}>
+                      {rivalOpsViewModel.detail.ruleLine}
+                    </div>
+                    {rivalOpsViewModel.detail.cooldownLine&&(
+                      <div className="bc7" style={{fontSize:".68rem",lineHeight:1.55,color:"var(--text3)",marginTop:8}}>
+                        {rivalOpsViewModel.detail.cooldownLine}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ):(
+              <div style={{
+                padding:"12px 14px",
+                borderRadius:10,
+                background:"rgba(255,255,255,.04)",
+                border:"1px solid rgba(255,255,255,.08)",
+              }}>
+                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:"rgba(255,77,143,.74)",marginBottom:6}}>
+                  {rivalOpsViewModel.emptyState?.title}
+                </div>
+                <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
+                  {rivalOpsViewModel.emptyState?.line}
+                </div>
+              </div>
+            )}
+
+            {rivalOpsViewModel.resolvedEcho&&(
+              <div className="bc7" style={{fontSize:".7rem",lineHeight:1.6,color:"var(--text3)",marginTop:10}}>
+                {rivalOpsViewModel.resolvedEcho.line}
+              </div>
+            )}
+          </div>
 
           <div style={{position:"relative",marginBottom:18}}>
             <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
@@ -4766,7 +5026,7 @@ export default function GameNight(){
 
       {/* ═══════════════ LOBBIES ═══════════════ */}
       {view==="lobbies"&&(
-        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
+        <div className="fade-up zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
           {(()=>{
             const archiveSessions=[...sessions].sort(compareSessionsDesc);
             const latestLobby=archiveSessions[0]||null;
@@ -4787,6 +5047,7 @@ export default function GameNight(){
             if(lobbyDate)filtered=filtered.filter(s=>s.date===lobbyDate);
             if(searchTerm)filtered=filtered.filter(s=>getLobbySearchHaystack(s).includes(searchTerm));
             const visible=filtered.slice(0,lobbyLimit);
+            const firstVisibleDate=visible[0]?.date||"";
             const archiveNights=new Set(filtered.map((s)=>s.date)).size;
             const daySummary=filtered.reduce((acc,session)=>{
               if(!acc[session.date]){
@@ -4806,7 +5067,7 @@ export default function GameNight(){
             ].filter(Boolean);
             return(
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div className="warroom-hero" style={{...card({
+            <MotionReveal className="warroom-hero zone-receive-anchor" style={{"--receive-delay":"70ms",...card({
               padding:"22px 20px",
               marginBottom:4,
               overflow:"hidden",
@@ -4827,7 +5088,7 @@ export default function GameNight(){
                 Battle reports, pressure swings, and the rooms that changed the board. Newest drops stay on top, and every file should feel worth opening.
               </p>
               <div className="warroom-summary-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,marginTop:18}}>
-                <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                <div className="state-react-card state-react-live" style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
                   <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:6}}>Latest close</div>
                   <div style={{fontFamily:"Fredoka One",fontSize:"1.05rem",color:latestWinner?latestWinner.color:"#FFD700"}}>
                     {latestWinner?dn(latestWinner.username):"Archive waiting"}
@@ -4854,7 +5115,7 @@ export default function GameNight(){
                     {loudestLobby?`${formatLobbyDate(loudestLobby.date,{day:"numeric",month:"short"})} still stands as the heaviest room on file.`:"The archive wakes up once the first room is logged."}
                   </div>
                 </div>
-                <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+                <div className="state-react-card state-react-live" style={{padding:"12px 14px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
                   <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase",marginBottom:6}}>Latest consequences</div>
                   <div style={{display:"grid",gap:6}}>
                     {latestConsequenceLines.length
@@ -4871,9 +5132,9 @@ export default function GameNight(){
                   </div>
                 </div>
               </div>
-            </div>
+            </MotionReveal>
 
-            <div className="warroom-filter-card" style={{...card({padding:18,marginBottom:2,border:"1.5px solid rgba(255,77,143,.18)"})}}>
+            <MotionReveal className="warroom-filter-card zone-receive-follow" delay={80} style={{"--receive-delay":"150ms",...card({padding:18,marginBottom:2,border:"1.5px solid rgba(255,77,143,.18)"})}}>
               <div className="warroom-filter-head" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
                 <div>
                   <div className="bc7" style={{fontSize:".62rem",letterSpacing:".18em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:6}}>
@@ -4932,16 +5193,16 @@ export default function GameNight(){
                   </button>
                 </div>
               )}
-            </div>
+            </MotionReveal>
 
-            <div className="warroom-results-row" style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:2}}>
+            <MotionReveal className="warroom-results-row zone-receive-follow" delay={120} style={{"--receive-delay":"210ms",display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:2}}>
               <p className="bc7" style={{color:"var(--text3)",fontSize:".78rem",fontWeight:700}}>
                 {filtered.length} report{filtered.length!==1?"s":""} across {archiveNights} archive night{archiveNights!==1?"s":""}
               </p>
               <p className="bc7" style={{color:"var(--text3)",fontSize:".74rem",letterSpacing:".08em",textTransform:"uppercase"}}>
                 Showing {visible.length} now · newest first
               </p>
-            </div>
+            </MotionReveal>
 
             {visible.length===0&&(
               <div style={{textAlign:"center",padding:"34px 18px",
@@ -4957,7 +5218,9 @@ export default function GameNight(){
               </div>
             )}
 
-              {visible.map((s,idx)=>{
+              {(()=>{
+              let firstNightOrder=0;
+              return visible.map((s,idx)=>{
               const winner=players.find(p=>p.id===s.winner);
               const {player:tkP,kills:tkK}=getLobbyTopDamage(s);
               const totalLobbyKills=getLobbyTotalKills(s);
@@ -4965,6 +5228,8 @@ export default function GameNight(){
               const beatTags=getLobbyBeatTags(s);
               const primaryTag=beatTags[0];
               const showNightBreak=idx===0||visible[idx-1].date!==s.date;
+              const isFirstVisibleNight=s.date===firstVisibleDate;
+              const firstNightCardIndex=isFirstVisibleNight?firstNightOrder++:-1;
               const marker=getLobbyDateMarker(s.date);
               const nightSummary=daySummary[s.date];
               const nightLeaderEntry=nightSummary
@@ -4972,9 +5237,15 @@ export default function GameNight(){
                 :null;
               const nightLeader=nightLeaderEntry?getPlayer(nightLeaderEntry[0]):null;
               return(
-                <div key={s.id} style={{display:"flex",flexDirection:"column",gap:10}}>
+                <MotionReveal
+                  key={s.id}
+                  className="archive-rhythm-card"
+                  delay={idx<8?Math.min(idx,7)*45:0}
+                  disabled={idx>=8}
+                  threshold={0.08}
+                  style={{display:"flex",flexDirection:"column",gap:10}}>
                   {showNightBreak&&(
-                    <div className="warroom-night-break" style={{display:"flex",alignItems:"center",gap:10,marginTop:idx===0?0:4}}>
+                    <div className={`warroom-night-break archive-rhythm-break${isFirstVisibleNight?" archive-entry-break":""}`} style={{"--archive-entry-delay":"180ms",display:"flex",alignItems:"center",gap:10,marginTop:idx===0?0:4}}>
                       <div style={{height:1,flex:1,background:"linear-gradient(90deg,rgba(255,77,143,.3),transparent)"}}/>
                       <div className="bc7 warroom-night-pill" style={{padding:"6px 12px",borderRadius:999,
                         background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",
@@ -4985,7 +5256,7 @@ export default function GameNight(){
                     </div>
                   )}
 
-                  <div className="warroom-report-card" style={{...card({
+                  <div className={`warroom-report-card${isFirstVisibleNight?" archive-entry-card":""}`} style={{"--archive-card-delay":`${220+(firstNightCardIndex*70)}ms`,...card({
                     padding:20,
                     position:"relative",
                     cursor:"pointer",
@@ -5144,9 +5415,10 @@ export default function GameNight(){
                       </div>
                     )}
                   </div>
-                </div>
+                </MotionReveal>
               );
-            })}
+            });
+            })()}
 
             {filtered.length>visible.length&&(
               <div style={{...card({padding:18,textAlign:"center",border:"1px dashed rgba(255,255,255,.14)"})}}>
@@ -5513,9 +5785,9 @@ export default function GameNight(){
         const daysOnFileLabel=`${daysActive} ${daysActive===1?"day":"days"} on file`;
 
         return(
-          <div className="fade-up combat-file-page" style={{minHeight:"calc(100vh - 120px)"}}>
+          <div className="fade-up combat-file-page zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
             {/* Zone header */}
-            <div style={{marginBottom:20}}>
+            <div className="zone-arrival-slice" style={{"--arrive-delay":"40ms",marginBottom:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                 marginBottom:8,flexWrap:"wrap",gap:8}}>
                 <span className="bc7" style={{fontSize:".62rem",letterSpacing:".3em",
@@ -5530,7 +5802,7 @@ export default function GameNight(){
             </div>
 
             {/* SELECT COMBATANT */}
-            <div className="combat-file-selector" style={{marginBottom:18}}>
+            <div className="combat-file-selector zone-receive-follow" style={{"--receive-delay":"100ms",marginBottom:18}}>
               <div className="bc7" style={{fontSize:".6rem",letterSpacing:".3em",
                 color:"var(--text3)",marginBottom:10}}>OPEN A FILE</div>
               <div className="combat-picker-shell">
@@ -5552,8 +5824,9 @@ export default function GameNight(){
               </div>
             </div>
 
+            <div key={`dossier-open-${p.id}-${dailyOrdersSchedule.dayKey}-${dailyOrdersActive?1:0}`} className="dossier-open-shell zone-receive-anchor" style={{"--receive-delay":"150ms"}}>
             {/* Identity hero */}
-            <div className="combat-file-hero" style={{
+            <div className="combat-file-hero dossier-open-step" style={{"--dossier-delay":"0ms",
               background:`linear-gradient(135deg,${p.color}0e,rgba(0,0,0,.5))`,
               border:`1px solid ${p.color}33`,borderLeft:`4px solid ${p.color}`,
               borderRadius:"0 8px 8px 0",padding:"16px 16px",marginBottom:12,
@@ -5618,9 +5891,11 @@ export default function GameNight(){
             </div>
 
             {/* Bio — proper typed animation via TypedBio component */}
-            <TypedBio text={bio} color={p.color}/>
+            <div className="dossier-open-step" style={{"--dossier-delay":"60ms"}}>
+              <TypedBio text={bio} color={p.color}/>
+            </div>
 
-            <div className="combat-file-dossier" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:12}}>
+            <div className="combat-file-dossier dossier-open-step" style={{"--dossier-delay":"110ms",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:12}}>
               {dossierCards.map((card)=>(
                 <div key={card.label} style={{
                   background:`linear-gradient(135deg,${card.color}10,rgba(255,255,255,.025))`,
@@ -5640,7 +5915,7 @@ export default function GameNight(){
             </div>
 
             {(dailyOrders.length>0||!dailyOrdersActive)&&(
-              <div style={{marginBottom:12}}>
+              <div className="dossier-open-step" style={{"--dossier-delay":"160ms",marginBottom:12}}>
                 <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",
                   color:"var(--text3)",marginBottom:10}}>
                   DAILY ORDERS
@@ -5912,6 +6187,7 @@ export default function GameNight(){
                 ⚔️ OPEN FULL H2H COMPARISON
               </button>
             )}
+            </div>
           </div>
         );
       })()}
@@ -6699,8 +6975,8 @@ export default function GameNight(){
           SEASON 2 VIEW
       ══════════════════════════════════════════════ */}
       {view==="season2"&&(
-        <div className="fade-up season2-top-shell" style={{minHeight:"calc(100vh - 120px)"}}>
-          <div style={{textAlign:"center",marginBottom:32}}>
+        <div className="fade-up season2-top-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
+          <div className="zone-arrival-slice" style={{"--arrive-delay":"50ms",textAlign:"center",marginBottom:32}}>
             <p style={{color:"#00E5FF",fontWeight:800,fontSize:".7rem",letterSpacing:3,
               textTransform:"uppercase",marginBottom:8}}>April 2026</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.4rem)",
@@ -6945,7 +7221,9 @@ export default function GameNight(){
 
             return(
               <div>
-                <VotePanel players={players} allStats={allStats} s2Prediction={s2Prediction} setS2Prediction={setS2Prediction} store={store} showToast={showToast} dn={dn}/>
+                <div className="zone-receive-anchor" style={{"--receive-delay":"110ms"}}>
+                  <VotePanel players={players} allStats={allStats} s2Prediction={s2Prediction} setS2Prediction={setS2Prediction} store={store} showToast={showToast} dn={dn}/>
+                </div>
                 {/* ── Prediction tracker — how's your pick doing? ── */}
                 {s2Prediction&&(()=>{
                   const pick=players.find(p=>p.id===s2Prediction);
@@ -7015,7 +7293,7 @@ export default function GameNight(){
                 })()}
 
                 {/* Season 2 totals */}
-                <div className="season2-banner" style={{
+                <MotionReveal className="season2-banner zone-receive-follow" delay={110} style={{"--receive-delay":"180ms",
                   background:"linear-gradient(135deg,rgba(0,229,255,.12),rgba(0,255,148,.08),rgba(199,125,255,.1))",
                   border:"2px solid rgba(0,229,255,.35)",borderRadius:20,
                   padding:"24px 20px",marginBottom:28,textAlign:"center"}}>
@@ -7079,7 +7357,7 @@ export default function GameNight(){
                       </div>
                     )}
                   </div>
-                </div>
+                </MotionReveal>
 
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
                   {seasonMemoryCards.map((card)=>(

@@ -4,6 +4,7 @@ import {
   EASTER_SATURDAY_DATE,
   GOOD_FRIDAY_DATE,
   filterSessionsBySeason,
+  getSeasonForDate,
 } from "./seasons";
 import { todayStr } from "./time";
 
@@ -3590,6 +3591,705 @@ export const getHeadToHead = (playerA, playerB, sessions) => {
     bDuels: duels.length - playerADuels,
   };
 };
+
+const RIVAL_OPS_MAX_SEASON_WINS_GAP = 3;
+const RIVAL_OPS_MAX_SEASON_KILLS_GAP = 12;
+const RIVAL_OPS_MIN_SHARED_SEASON_DAYS = 2;
+const RIVAL_OPS_MAX_SEASON_RANK = 16;
+const RIVAL_OPS_MAX_VISIBLE = 1;
+const RIVAL_OPS_COOLDOWN_DAYS = 7;
+const RIVAL_OPS_RESOLVED_HOLD_DAYS = 1;
+
+const emptyRivalOpsState = () => ({
+  ops: [],
+  selectedOpId: null,
+  lastResolvedOpId: null,
+});
+
+const addDaysUtc = (dateString, amount) => {
+  const date = new Date(`${dateString}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().split("T")[0];
+};
+
+const getUtcDateString = (value) => String(value || todayStr()).split("T")[0];
+
+const sameRivalOpsState = (left, right) =>
+  JSON.stringify(left || emptyRivalOpsState()) ===
+  JSON.stringify(right || emptyRivalOpsState());
+
+export const getRivalPairId = (playerAId, playerBId) =>
+  [playerAId, playerBId].sort().join(":");
+
+const getCurrentRivalOpsSeasonId = (nowUtc = todayStr()) =>
+  getSeasonForDate(getUtcDateString(nowUtc))?.id || null;
+
+const buildSeasonRankMap = (players, seasonSessions) => {
+  const sorted = allStats(players, seasonSessions)
+    .filter((player) => player.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+
+  return new Map(sorted.map((player, index) => [player.id, index + 1]));
+};
+
+const buildSharedSeasonDays = (seasonSessions, playerAId, playerBId) =>
+  [...new Set(
+    seasonSessions
+      .filter(
+        (session) =>
+          session.attendees?.includes(playerAId) &&
+          session.attendees?.includes(playerBId),
+      )
+      .map((session) => session.date),
+  )].sort();
+
+const isActiveThresholdPair = (pairPressure) =>
+  Boolean(pairPressure) &&
+  (
+    pairPressure.seasonWinsGap <= 1 ||
+    pairPressure.seasonKillsGap <= 6 ||
+    pairPressure.rivalryScore >= 14
+  );
+
+export const getRivalOpsPairPressure = (
+  state,
+  playerAId,
+  playerBId,
+  nowUtc = todayStr(),
+) => {
+  if (!playerAId || !playerBId || playerAId === playerBId) {
+    return null;
+  }
+
+  const players = state?.players || [];
+  const sessions = state?.sessions || [];
+  const playerIndex = buildPlayerIndex(players);
+  const playerA = getPlayerById(playerIndex, playerAId);
+  const playerB = getPlayerById(playerIndex, playerBId);
+  const currentSeasonId = getCurrentRivalOpsSeasonId(nowUtc);
+  if (!playerA || !playerB || !currentSeasonId) {
+    return null;
+  }
+
+  const seasonSessions = getSeasonSessions(sessions, currentSeasonId);
+  if (!seasonSessions.length) {
+    return null;
+  }
+
+  const seasonStats = allStats(players, seasonSessions);
+  const playerAStats = seasonStats.find((player) => player.id === playerAId);
+  const playerBStats = seasonStats.find((player) => player.id === playerBId);
+  if (!playerAStats?.appearances || !playerBStats?.appearances) {
+    return null;
+  }
+
+  const seasonRivals = getRivals(seasonSessions);
+  const rivalryRow = seasonRivals.find(
+    (entry) => getRivalPairId(entry.p1, entry.p2) === getRivalPairId(playerAId, playerBId),
+  );
+  if (!rivalryRow) {
+    return null;
+  }
+
+  const rankMap = buildSeasonRankMap(players, seasonSessions);
+  const headToHead = getHeadToHead(playerAId, playerBId, seasonSessions);
+  const sharedSeasonDays = buildSharedSeasonDays(seasonSessions, playerAId, playerBId);
+  const seasonWinsGap = Math.abs(playerAStats.wins - playerBStats.wins);
+  const seasonKillsGap = Math.abs(playerAStats.kills - playerBStats.kills);
+  const seasonRankGap =
+    rankMap.has(playerAId) && rankMap.has(playerBId)
+      ? Math.abs(rankMap.get(playerAId) - rankMap.get(playerBId))
+      : null;
+  const inTopBand =
+    (rankMap.get(playerAId) || 999) <= RIVAL_OPS_MAX_SEASON_RANK &&
+    (rankMap.get(playerBId) || 999) <= RIVAL_OPS_MAX_SEASON_RANK;
+
+  const eligibilityReasons = [];
+  if (seasonWinsGap <= RIVAL_OPS_MAX_SEASON_WINS_GAP) {
+    eligibilityReasons.push("wins-tight");
+  }
+  if (seasonKillsGap <= RIVAL_OPS_MAX_SEASON_KILLS_GAP) {
+    eligibilityReasons.push("kills-tight");
+  }
+  if (sharedSeasonDays.length >= RIVAL_OPS_MIN_SHARED_SEASON_DAYS) {
+    eligibilityReasons.push("shared-days");
+  }
+  if (inTopBand) {
+    eligibilityReasons.push("top-band");
+  }
+
+  const rivalryScore =
+    (rivalryRow.total * 3) +
+    Math.max(0, 6 - seasonWinsGap) +
+    Math.max(0, 4 - Math.min(seasonKillsGap, 4)) +
+    Math.min(sharedSeasonDays.length, 4);
+
+  const eligible =
+    inTopBand &&
+    sharedSeasonDays.length >= RIVAL_OPS_MIN_SHARED_SEASON_DAYS &&
+    (
+      seasonWinsGap <= RIVAL_OPS_MAX_SEASON_WINS_GAP ||
+      seasonKillsGap <= RIVAL_OPS_MAX_SEASON_KILLS_GAP
+    );
+
+  return {
+    pairId: getRivalPairId(playerAId, playerBId),
+    seasonId: currentSeasonId,
+    playerAId,
+    playerBId,
+    playerAName: playerA.username,
+    playerBName: playerB.username,
+    seasonWinsGap,
+    seasonKillsGap,
+    seasonRankGap,
+    sharedSeasonDays,
+    sharedSeasonDayCount: sharedSeasonDays.length,
+    recentSharedDay: sharedSeasonDays[sharedSeasonDays.length - 1] || null,
+    rivalryScore,
+    eligible,
+    eligibilityReasons,
+    rivalryTotal: rivalryRow.total,
+    duelWinsA: headToHead?.aDuels || 0,
+    duelWinsB: headToHead?.bDuels || 0,
+  };
+};
+
+export const isRivalOpCoolingDown = (op, nowUtc = todayStr()) =>
+  Boolean(op?.cooldownUntilUtc) && getUtcDateString(nowUtc) <= op.cooldownUntilUtc;
+
+export const getRivalOpCooldownLabel = (op, nowUtc = todayStr()) => {
+  if (!op?.cooldownUntilUtc) {
+    return "";
+  }
+  if (!isRivalOpCoolingDown(op, nowUtc)) {
+    return "Cooldown cleared.";
+  }
+  return `Cooldown clears ${op.cooldownUntilUtc}.`;
+};
+
+export const getRivalOpsCandidatePairs = (state, nowUtc = todayStr()) => {
+  const players = state?.players || [];
+  const sessions = state?.sessions || [];
+  const currentSeasonId = getCurrentRivalOpsSeasonId(nowUtc);
+  if (!players.length || !sessions.length || !currentSeasonId) {
+    return [];
+  }
+
+  const seasonSessions = getSeasonSessions(sessions, currentSeasonId);
+  const rivalryRows = getRivals(seasonSessions);
+  const stored = state?.rivalOpsState?.ops?.[0] || null;
+
+  const candidates = rivalryRows
+    .map((row) => getRivalOpsPairPressure(state, row.p1, row.p2, nowUtc))
+    .filter((row) => row?.eligible);
+
+  return candidates
+    .filter((row) => {
+      if (!stored || stored.pairId !== row.pairId) {
+        return true;
+      }
+      if (stored.state !== "cooldown") {
+        return true;
+      }
+      if (!isRivalOpCoolingDown(stored, nowUtc)) {
+        return !stored.resolutionDay || (row.recentSharedDay || "") > stored.resolutionDay;
+      }
+      return false;
+    })
+    .sort((left, right) =>
+      right.rivalryScore - left.rivalryScore ||
+      left.seasonWinsGap - right.seasonWinsGap ||
+      left.seasonKillsGap - right.seasonKillsGap ||
+      right.sharedSeasonDayCount - left.sharedSeasonDayCount,
+    );
+};
+
+export const armWatchRivalOp = (pair, nowUtc = todayStr()) => ({
+  id: `rival-op-${pair.pairId}`,
+  pairId: pair.pairId,
+  seasonId: pair.seasonId,
+  playerAId: pair.playerAId,
+  playerBId: pair.playerBId,
+  state: "watch",
+  armedAtUtc: getUtcDateString(nowUtc),
+});
+
+export const activateRivalOp = (op, nowUtc = todayStr()) => ({
+  ...op,
+  state: "active",
+  activatedAtUtc: op.activatedAtUtc || getUtcDateString(nowUtc),
+});
+
+export const enterRivalOpCooldown = (
+  op,
+  nowUtc = todayStr(),
+  cooldownDays = RIVAL_OPS_COOLDOWN_DAYS,
+) => ({
+  ...op,
+  state: "cooldown",
+  cooldownUntilUtc: addDaysUtc(getUtcDateString(nowUtc), cooldownDays),
+});
+
+export const getRivalOpsResolutionWindow = (state, op) => {
+  if (!op?.activatedAtUtc) {
+    return null;
+  }
+  const sessions = state?.sessions || [];
+  const seasonSessions = getSeasonSessions(sessions, op.seasonId);
+  const nextSharedDay = [...new Set(
+    seasonSessions
+      .filter(
+        (session) =>
+          session.date > op.activatedAtUtc &&
+          session.attendees?.includes(op.playerAId) &&
+          session.attendees?.includes(op.playerBId),
+      )
+      .map((session) => session.date),
+  )].sort()[0];
+
+  if (!nextSharedDay) {
+    return null;
+  }
+
+  const daySessions = seasonSessions.filter((session) => session.date === nextSharedDay);
+  const playerADay = getStats(op.playerAId, daySessions);
+  const playerBDay = getStats(op.playerBId, daySessions);
+  const placementTotals = daySessions.reduce(
+    (totals, session) => {
+      const placements = session.placements || session.attendees || [];
+      const aIndex = placements.indexOf(op.playerAId);
+      const bIndex = placements.indexOf(op.playerBId);
+      if (aIndex !== -1) {
+        totals.aSum += aIndex + 1;
+        totals.aCount += 1;
+      }
+      if (bIndex !== -1) {
+        totals.bSum += bIndex + 1;
+        totals.bCount += 1;
+      }
+      return totals;
+    },
+    { aSum: 0, aCount: 0, bSum: 0, bCount: 0 },
+  );
+
+  return {
+    nextSharedDay,
+    playerAStats: {
+      wins: playerADay.wins,
+      kills: playerADay.kills,
+      averagePlacement: placementTotals.aCount
+        ? Number((placementTotals.aSum / placementTotals.aCount).toFixed(2))
+        : null,
+    },
+    playerBStats: {
+      wins: playerBDay.wins,
+      kills: playerBDay.kills,
+      averagePlacement: placementTotals.bCount
+        ? Number((placementTotals.bSum / placementTotals.bCount).toFixed(2))
+        : null,
+    },
+  };
+};
+
+export const resolveRivalOpFromSessions = (state, op) => {
+  const window = getRivalOpsResolutionWindow(state, op);
+  if (!window) {
+    return null;
+  }
+
+  const { playerAStats, playerBStats, nextSharedDay } = window;
+  if (playerAStats.wins !== playerBStats.wins) {
+    return {
+      result: "won",
+      winnerId: playerAStats.wins > playerBStats.wins ? op.playerAId : op.playerBId,
+      resolutionReason: "wins",
+      resolutionDay: nextSharedDay,
+      playerAStats,
+      playerBStats,
+    };
+  }
+  if (playerAStats.kills !== playerBStats.kills) {
+    return {
+      result: "won",
+      winnerId: playerAStats.kills > playerBStats.kills ? op.playerAId : op.playerBId,
+      resolutionReason: "kills",
+      resolutionDay: nextSharedDay,
+      playerAStats,
+      playerBStats,
+    };
+  }
+  if (
+    playerAStats.averagePlacement !== null &&
+    playerBStats.averagePlacement !== null &&
+    playerAStats.averagePlacement !== playerBStats.averagePlacement
+  ) {
+    return {
+      result: "won",
+      winnerId:
+        playerAStats.averagePlacement < playerBStats.averagePlacement
+          ? op.playerAId
+          : op.playerBId,
+      resolutionReason: "placement",
+      resolutionDay: nextSharedDay,
+      playerAStats,
+      playerBStats,
+    };
+  }
+
+  return {
+    result: "standoff",
+    winnerId: null,
+    resolutionReason: "standoff",
+    resolutionDay: nextSharedDay,
+    playerAStats,
+    playerBStats,
+  };
+};
+
+export const resolveRivalOp = (op, outcome, nowUtc = todayStr()) => ({
+  ...op,
+  state: "resolved",
+  winnerId: outcome.winnerId,
+  result: outcome.result,
+  resolutionReason: outcome.resolutionReason,
+  resolutionDay: outcome.resolutionDay,
+  resolvedAtUtc: getUtcDateString(nowUtc),
+  cooldownUntilUtc: addDaysUtc(getUtcDateString(nowUtc), RIVAL_OPS_COOLDOWN_DAYS),
+});
+
+const toSingleRivalOpState = (persisted) => {
+  const next = persisted || emptyRivalOpsState();
+  return {
+    ops: next.ops?.length ? [next.ops[0]] : [],
+    selectedOpId: next.selectedOpId || next.ops?.[0]?.id || null,
+    lastResolvedOpId: next.lastResolvedOpId || null,
+  };
+};
+
+export const reconcileRivalOpsState = (state, nowUtc = todayStr()) => {
+  const currentSeasonId = getCurrentRivalOpsSeasonId(nowUtc);
+  const baseState = toSingleRivalOpState(state?.rivalOpsState);
+  if (!currentSeasonId) {
+    return emptyRivalOpsState();
+  }
+
+  const stored = baseState.ops[0] || null;
+  const candidates = getRivalOpsCandidatePairs({ ...state, rivalOpsState: baseState }, nowUtc);
+  const topCandidate = candidates[0] || null;
+
+  const createNextOp = (candidate) => {
+    if (!candidate) {
+      return emptyRivalOpsState();
+    }
+    const nextOp = isActiveThresholdPair(candidate)
+      ? activateRivalOp(armWatchRivalOp(candidate, nowUtc), nowUtc)
+      : armWatchRivalOp(candidate, nowUtc);
+    return {
+      ops: [nextOp],
+      selectedOpId: nextOp.id,
+      lastResolvedOpId: baseState.lastResolvedOpId,
+    };
+  };
+
+  if (!stored) {
+    return createNextOp(topCandidate);
+  }
+
+  if (stored.seasonId !== currentSeasonId) {
+    return createNextOp(topCandidate);
+  }
+
+  const storedPressure = getRivalOpsPairPressure(
+    state,
+    stored.playerAId,
+    stored.playerBId,
+    nowUtc,
+  );
+
+  if ((stored.state === "watch" || stored.state === "active") && !storedPressure?.eligible) {
+    return createNextOp(topCandidate);
+  }
+
+  if (stored.state === "watch" && storedPressure && isActiveThresholdPair(storedPressure)) {
+    const activeOp = activateRivalOp(stored, nowUtc);
+    return {
+      ops: [activeOp],
+      selectedOpId: activeOp.id,
+      lastResolvedOpId: baseState.lastResolvedOpId,
+    };
+  }
+
+  if (stored.state === "active") {
+    const outcome = resolveRivalOpFromSessions(state, stored);
+    if (outcome) {
+      const resolved = resolveRivalOp(stored, outcome, nowUtc);
+      return {
+        ops: [resolved],
+        selectedOpId: resolved.id,
+        lastResolvedOpId: resolved.id,
+      };
+    }
+    return baseState;
+  }
+
+  if (stored.state === "resolved") {
+    const resolvedAt = stored.resolvedAtUtc || stored.resolutionDay || getUtcDateString(nowUtc);
+    if (getUtcDateString(nowUtc) > addDaysUtc(resolvedAt, RIVAL_OPS_RESOLVED_HOLD_DAYS - 1)) {
+      const cooled = enterRivalOpCooldown(stored, resolvedAt);
+      return {
+        ops: [cooled],
+        selectedOpId: cooled.id,
+        lastResolvedOpId: stored.id,
+      };
+    }
+    return baseState;
+  }
+
+  if (stored.state === "cooldown") {
+    if (isRivalOpCoolingDown(stored, nowUtc)) {
+      return baseState;
+    }
+    const topAfterCooldown = candidates[0] || null;
+    const canReopenSamePair =
+      topAfterCooldown &&
+      topAfterCooldown.pairId === stored.pairId &&
+      (!stored.resolutionDay || (topAfterCooldown.recentSharedDay || "") > stored.resolutionDay);
+    if (canReopenSamePair) {
+      return createNextOp(topAfterCooldown);
+    }
+    if (topAfterCooldown && topAfterCooldown.pairId !== stored.pairId) {
+      return createNextOp(topAfterCooldown);
+    }
+    return {
+      ops: [],
+      selectedOpId: null,
+      lastResolvedOpId: baseState.lastResolvedOpId,
+    };
+  }
+
+  return baseState;
+};
+
+export const getStoredRivalOps = (state) =>
+  toSingleRivalOpState(state?.rivalOpsState).ops;
+
+export const getActiveRivalOp = (state, nowUtc = todayStr()) =>
+  reconcileRivalOpsState(state, nowUtc).ops.find((op) => op.state === "active") || null;
+
+export const getWatchRivalOps = (state, nowUtc = todayStr()) =>
+  reconcileRivalOpsState(state, nowUtc).ops.filter((op) => op.state === "watch");
+
+export const getResolvedRivalOpsEcho = (state, nowUtc = todayStr()) => {
+  const reconciled = reconcileRivalOpsState(state, nowUtc);
+  const op = reconciled.ops[0] || null;
+  if (!op || (op.state !== "resolved" && reconciled.lastResolvedOpId !== op.id)) {
+    return null;
+  }
+  const players = buildPlayerIndex(state?.players || []);
+  const playerA = getPlayerById(players, op.playerAId);
+  const playerB = getPlayerById(players, op.playerBId);
+  const winner = getPlayerById(players, op.winnerId);
+  if (!playerA || !playerB) {
+    return null;
+  }
+  if (op.result === "standoff") {
+    return {
+      id: op.id,
+      line: `Last file closed: ${playerA.username} and ${playerB.username} stayed level on the next shared night.`,
+    };
+  }
+  if (!winner) {
+    return null;
+  }
+  const loser = winner.id === playerA.id ? playerB : playerA;
+  return {
+    id: op.id,
+    line: `Last file closed: ${winner.username} took the edge over ${loser.username} on the next shared night.`,
+  };
+};
+
+export const getRivalOpsLifecycleState = (state, nowUtc = todayStr()) => {
+  const reconciled = reconcileRivalOpsState(state, nowUtc);
+  return {
+    activeOp: reconciled.ops.find((op) => op.state === "active") || null,
+    watchOps: reconciled.ops.filter((op) => op.state === "watch"),
+    cooldownOps: reconciled.ops.filter((op) => op.state === "cooldown"),
+    resolvedEcho: getResolvedRivalOpsEcho({ ...state, rivalOpsState: reconciled }, nowUtc),
+  };
+};
+
+export const getRivalOpsCardModel = (state, op, nowUtc = todayStr()) => {
+  if (!op) {
+    return null;
+  }
+  const players = buildPlayerIndex(state?.players || []);
+  const playerA = getPlayerById(players, op.playerAId);
+  const playerB = getPlayerById(players, op.playerBId);
+  const pairPressure = getRivalOpsPairPressure(state, op.playerAId, op.playerBId, nowUtc);
+  const winner = getPlayerById(players, op.winnerId);
+  if (!playerA || !playerB) {
+    return null;
+  }
+
+  const base = {
+    id: op.id,
+    pairId: op.pairId,
+    playerAId: playerA.id,
+    playerBId: playerB.id,
+    playerALabel: playerA.username,
+    playerBLabel: playerB.username,
+    state: op.state,
+    selectable: true,
+    highlighted: true,
+  };
+
+  if (op.state === "watch") {
+    return {
+      ...base,
+      stateChip: "WATCH",
+      title: "FILE HEATING UP",
+      missionLine: "One more shared night can open this duel.",
+      pressureLine:
+        pairPressure?.seasonWinsGap <= 1
+          ? "The season gap is still close enough for one room to change the read."
+          : "Both files are still close enough for the next shared night to matter.",
+    };
+  }
+
+  if (op.state === "active") {
+    return {
+      ...base,
+      stateChip: "ACTIVE",
+      title: "RIVAL OP LIVE",
+      missionLine: "Finish ahead on the next shared night to take this file.",
+      pressureLine:
+        pairPressure?.seasonKillsGap <= 6
+          ? "Wins are still tight, and the room has not settled this one."
+          : "One stronger room decides who owns this file next.",
+    };
+  }
+
+  if (op.state === "resolved") {
+    let missionLine = "No separation landed on the next shared night.";
+    let pressureLine = "The duel held level and closed as a standoff.";
+    if (op.result === "won" && winner) {
+      if (op.resolutionReason === "wins") {
+        missionLine = `${winner.username} took the next shared night on wins.`;
+        pressureLine = "The file broke cleanly once the room closed.";
+      } else if (op.resolutionReason === "kills") {
+        missionLine = `${winner.username} took the next shared night on kills after the wins held level.`;
+        pressureLine = "Damage was the line that finally separated them.";
+      } else if (op.resolutionReason === "placement") {
+        missionLine = `${winner.username} took the next shared night on placement after wins and kills tied.`;
+        pressureLine = "The room stayed level until the finish order split it.";
+      }
+    }
+    return {
+      ...base,
+      stateChip: "CLOSED",
+      title: "FILE CLOSED",
+      missionLine,
+      pressureLine,
+    };
+  }
+
+  if (op.state === "cooldown") {
+    return {
+      ...base,
+      stateChip: "COOLDOWN",
+      title: "WINDOW CLOSED",
+      missionLine: "This file can reopen after the cooldown clears.",
+      pressureLine: "The room needs fresh pressure before this duel goes live again.",
+    };
+  }
+
+  return null;
+};
+
+export const getRivalOpsDetailModel = (state, op, nowUtc = todayStr()) => {
+  const card = getRivalOpsCardModel(state, op, nowUtc);
+  if (!card) {
+    return null;
+  }
+  const players = buildPlayerIndex(state?.players || []);
+  const playerA = getPlayerById(players, op.playerAId);
+  const playerB = getPlayerById(players, op.playerBId);
+  const pairPressure = getRivalOpsPairPressure(state, op.playerAId, op.playerBId, nowUtc);
+  if (!playerA || !playerB) {
+    return null;
+  }
+
+  return {
+    id: card.id,
+    pairId: card.pairId,
+    header: `${playerA.username} vs ${playerB.username}`,
+    stateChip: card.stateChip,
+    title: "FILE READ",
+    missionLine:
+      op.state === "watch"
+        ? "This pair is close enough to stay on the live board."
+        : op.state === "active"
+          ? "The next shared night is carrying the whole file now."
+          : op.state === "resolved"
+            ? "The room has already settled this file."
+            : "This file is waiting on fresh pressure before it reopens.",
+    pressureLine: card.pressureLine,
+    ruleLabel: "RESOLUTION RULE",
+    ruleLine: "The next shared night decides it on wins, then kills, then placement.",
+    aftermathLine: op.state === "resolved" ? card.pressureLine : undefined,
+    cooldownLine: op.state === "cooldown" ? getRivalOpCooldownLabel(op, nowUtc) : undefined,
+    recentSharedDay: pairPressure?.recentSharedDay || null,
+  };
+};
+
+export const getRivalOpsViewModel = (state, nowUtc = todayStr()) => {
+  const reconciled = reconcileRivalOpsState(state, nowUtc);
+  const op = reconciled.ops[0] || null;
+  const cards = op ? [getRivalOpsCardModel(state, op, nowUtc)].filter(Boolean).slice(0, RIVAL_OPS_MAX_VISIBLE) : [];
+  const selectedOpId =
+    reconciled.selectedOpId && cards.find((card) => card.id === reconciled.selectedOpId)
+      ? reconciled.selectedOpId
+      : cards[0]?.id || null;
+  const selectedOp = selectedOpId && op?.id === selectedOpId ? op : cards[0] ? op : null;
+  const detail = selectedOp ? getRivalOpsDetailModel(state, selectedOp, nowUtc) : null;
+  const resolvedEcho = getResolvedRivalOpsEcho({ ...state, rivalOpsState: reconciled }, nowUtc);
+
+  if (!cards.length) {
+    return {
+      sectionLabel: "RIVAL OPS",
+      introLine: "The conflict layer is quiet right now.",
+      cards: [],
+      selectedOpId: null,
+      detail: null,
+      resolvedEcho,
+      emptyState: {
+        title: "NO LIVE FILE",
+        line: "No rivalry is hot enough to open right now.",
+      },
+    };
+  }
+
+  return {
+    sectionLabel: "RIVAL OPS",
+    introLine:
+      op?.state === "watch"
+        ? "One rivalry file is heating up right now."
+        : op?.state === "active"
+          ? "One rivalry file is live right now."
+          : op?.state === "resolved"
+            ? "One rivalry file just closed."
+            : op?.state === "cooldown"
+              ? "The last live rivalry file is cooling off right now."
+              : "The conflict layer is quiet right now.",
+    cards,
+    selectedOpId,
+    detail,
+    resolvedEcho,
+    emptyState: null,
+  };
+};
+
+export { sameRivalOpsState, emptyRivalOpsState };
 
 export const getSeasonOneWrap = (sessions, players) => {
   const seasonOneSessions = getSeasonSessions(sessions, "s1");

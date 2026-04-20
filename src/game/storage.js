@@ -1,4 +1,5 @@
 import { STORAGE_VERSION } from "./config";
+import { CEREMONY_START_DATE } from "./seasons";
 import { INITIAL_PLAYERS, INITIAL_SESSIONS } from "./seedData";
 import { todayStr } from "./time";
 
@@ -37,6 +38,12 @@ const getDefaultState = () => ({
   showCeremony: false,
 });
 
+const getDefaultRivalOpsState = () => ({
+  ops: [],
+  selectedOpId: null,
+  lastResolvedOpId: null,
+});
+
 export const loadGameData = async (store) => {
   try {
     const versionResult = await store.get("gn-version");
@@ -59,7 +66,7 @@ export const loadGameData = async (store) => {
     const predictionResult = await store.get("gn-s2-prediction");
 
     let showCeremony = false;
-    if (todayStr() >= "2026-04-01") {
+    if (todayStr() >= CEREMONY_START_DATE) {
       const ceremonySeen = await store.get("gn-s2-ceremony-seen");
       showCeremony = !ceremonySeen?.value;
     }
@@ -85,4 +92,87 @@ export const persistGameData = async (store, players, sessions) => {
   }
 
   return { players, sessions };
+};
+
+export const readRivalOpsState = async (store) => {
+  try {
+    const result = await store.get("gn-rival-ops");
+    if (!result?.value) {
+      return getDefaultRivalOpsState();
+    }
+    const parsed = JSON.parse(result.value);
+    return {
+      ops: parsed?.ops?.length ? [parsed.ops[0]] : [],
+      selectedOpId: parsed?.selectedOpId ?? null,
+      lastResolvedOpId: parsed?.lastResolvedOpId ?? null,
+    };
+  } catch {
+    return getDefaultRivalOpsState();
+  }
+};
+
+export const writeRivalOpsState = async (store, nextState) => {
+  const safeState = {
+    ops: nextState?.ops?.length ? [nextState.ops[0]] : [],
+    selectedOpId: nextState?.selectedOpId ?? null,
+    lastResolvedOpId: nextState?.lastResolvedOpId ?? null,
+  };
+
+  try {
+    await store.set("gn-rival-ops", JSON.stringify(safeState));
+  } catch {
+    return null;
+  }
+
+  return safeState;
+};
+
+export const upsertRivalOpRecord = async (store, op, currentState) => {
+  const nextState = {
+    ops: op ? [op] : [],
+    selectedOpId: op?.id ?? null,
+    lastResolvedOpId:
+      op?.state === "resolved" ? op.id : currentState?.lastResolvedOpId ?? null,
+  };
+  return writeRivalOpsState(store, nextState);
+};
+
+export const setSelectedRivalOpId = async (store, opId, currentState) =>
+  writeRivalOpsState(store, {
+    ...(currentState || getDefaultRivalOpsState()),
+    selectedOpId: opId ?? null,
+  });
+
+export const pruneExpiredResolvedEcho = (persisted, nowUtc) => {
+  if (!persisted?.ops?.length) {
+    return getDefaultRivalOpsState();
+  }
+  const op = persisted.ops[0];
+  if (op.state !== "resolved" || !op.resolvedAtUtc) {
+    return persisted;
+  }
+  if (String(nowUtc).split("T")[0] <= op.resolvedAtUtc) {
+    return persisted;
+  }
+  return {
+    ...persisted,
+    lastResolvedOpId: op.id,
+  };
+};
+
+export const pruneInvalidRivalOps = (persisted, state, nowUtc) => {
+  const safeState = persisted || getDefaultRivalOpsState();
+  if (!safeState.ops.length) {
+    return safeState;
+  }
+  const op = safeState.ops[0];
+  const players = state?.players || [];
+  const sessions = state?.sessions || [];
+  const hasPlayers =
+    players.some((player) => player.id === op.playerAId) &&
+    players.some((player) => player.id === op.playerBId);
+  if (!hasPlayers || !sessions.length) {
+    return getDefaultRivalOpsState();
+  }
+  return pruneExpiredResolvedEcho(safeState, nowUtc);
 };
