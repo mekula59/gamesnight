@@ -6,7 +6,117 @@ import {
   filterSessionsBySeason,
   getSeasonForDate,
 } from "./seasons";
-import { todayStr } from "./time";
+import { getNextSession, isLiveNow, todayStr } from "./time";
+
+const SHELL_ALERT_PRIORITY = {
+  FLASHPOINT: 500,
+  HOT: 400,
+  AFTERMATH: 300,
+  WATCH: 200,
+  QUIET: 100,
+};
+
+const SHELL_ALERT_SOURCE_PRIORITY = {
+  rival_ops: 60,
+  missions: 50,
+  latest_fallout: 40,
+  daily_orders: 30,
+  system: 10,
+};
+
+const SHELL_ZONE_META = {
+  home: {
+    id: "home",
+    label: "HOME BASE",
+    shortLabel: "HOME",
+    pathLabel: "COMMAND > HOME BASE",
+    statusLine: "Command feed live",
+  },
+  leaderboard: {
+    id: "leaderboard",
+    label: "THE ARENA",
+    shortLabel: "ARENA",
+    pathLabel: "COMMAND > THE ARENA",
+    statusLine: "Pressure board open",
+  },
+  profile: {
+    id: "profile",
+    label: "COMBAT FILE",
+    shortLabel: "FILE",
+    pathLabel: "COMMAND > COMBAT FILE",
+    statusLine: "Dossier terminal open",
+  },
+  lobbies: {
+    id: "lobbies",
+    label: "WAR ROOM",
+    shortLabel: "WAR ROOM",
+    pathLabel: "COMMAND > WAR ROOM",
+    statusLine: "Archive file open",
+  },
+  rivals: {
+    id: "rivals",
+    label: "RIVALS",
+    shortLabel: "RIVALS",
+    pathLabel: "COMMAND > RIVALS",
+    statusLine: "Conflict desk open",
+  },
+  season1: {
+    id: "season1",
+    label: "S1 ARCHIVE",
+    shortLabel: "S1",
+    pathLabel: "COMMAND > S1 ARCHIVE",
+    statusLine: "Campaign archive sealed",
+  },
+  season2: {
+    id: "season2",
+    label: "SEASON 2",
+    shortLabel: "S2",
+    pathLabel: "COMMAND > SEASON 2",
+    statusLine: "Live campaign file open",
+  },
+  hof: {
+    id: "hof",
+    label: "LEGENDS WING",
+    shortLabel: "WING",
+    pathLabel: "COMMAND > LEGENDS WING",
+    statusLine: "Legacy chamber open",
+  },
+  records: {
+    id: "records",
+    label: "THE VAULT",
+    shortLabel: "VAULT",
+    pathLabel: "COMMAND > THE VAULT",
+    statusLine: "Secured records open",
+  },
+  charts: {
+    id: "charts",
+    label: "INTEL",
+    shortLabel: "INTEL",
+    pathLabel: "COMMAND > INTEL",
+    statusLine: "System intel open",
+  },
+  faq: {
+    id: "faq",
+    label: "BRIEFING ROOM",
+    shortLabel: "BRIEFING",
+    pathLabel: "COMMAND > BRIEFING ROOM",
+    statusLine: "Rules and room brief open",
+  },
+  admin: {
+    id: "admin",
+    label: "COMMAND",
+    shortLabel: "COMMAND",
+    pathLabel: "COMMAND",
+    statusLine: "Control layer open",
+  },
+  fallback: {
+    id: "fallback",
+    label: "COMMAND",
+    shortLabel: "COMMAND",
+    pathLabel: "COMMAND",
+    statusLine: "Zone link stable",
+  },
+};
 
 export const parseSessionIdNumber = (sessionId = "") => {
   const match = String(sessionId).match(/(\d+)$/);
@@ -3541,6 +3651,233 @@ export const getMissionBoardState = (sessions, players) => {
     subline: `${weekSessions.length} LOBBIES THIS WEEK · ${uniqueWeeklyWinners} WINNERS ON FILE`,
     supportLines: supportLines.slice(0, 2),
   };
+};
+
+const formatShellUtcTime = (dateValue) => {
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  if (Number.isNaN(date.getTime())) {
+    return "17:00 UTC";
+  }
+  const weekday = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][date.getUTCDay()];
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${weekday} ${hours}:${minutes} UTC`;
+};
+
+const getShellAlertCandidates = (state, options = {}) => {
+  const nowUtc = options.nowUtc || todayStr();
+  const players = state?.players || [];
+  const sessions = state?.sessions || [];
+  const now = nowUtc instanceof Date ? nowUtc : new Date(nowUtc);
+  const dailyOrdersState = getDailyOrdersScheduleState(now);
+  const rivalOps = getRivalOpsLifecycleState(state, nowUtc);
+  const latestFallout = getLatestDayConsequences(sessions, players);
+  const missionBoard = getMissionBoardState(sessions, players);
+  const candidates = [];
+  const pushCandidate = ({ level, title, line, source }) => {
+    if (!title || !line || !source) {
+      return;
+    }
+    candidates.push({
+      level,
+      title,
+      line,
+      source,
+      priority:
+        (SHELL_ALERT_PRIORITY[level] || 0) +
+        (SHELL_ALERT_SOURCE_PRIORITY[source] || 0),
+      dismissible: false,
+    });
+  };
+
+  if (rivalOps.activeOp) {
+    pushCandidate({
+      level: "FLASHPOINT",
+      title: "FLASHPOINT",
+      line: "Rival Ops is live and resolves on the next shared night.",
+      source: "rival_ops",
+    });
+  } else if (rivalOps.watchOps.length) {
+    pushCandidate({
+      level: "HOT",
+      title: "HOT",
+      line: "One rivalry file is heating up right now.",
+      source: "rival_ops",
+    });
+  } else if (rivalOps.resolvedEcho?.line) {
+    pushCandidate({
+      level: "AFTERMATH",
+      title: "AFTERMATH",
+      line: rivalOps.resolvedEcho.line,
+      source: "rival_ops",
+    });
+  } else if (rivalOps.cooldownOps.length) {
+    pushCandidate({
+      level: "WATCH",
+      title: "WATCH",
+      line: "The last live rivalry file is cooling off right now.",
+      source: "rival_ops",
+    });
+  }
+
+  const falloutLine = latestFallout?.summary?.[0] || latestFallout?.consequences?.[0]?.shortText || "";
+  if (falloutLine) {
+    pushCandidate({
+      level: "AFTERMATH",
+      title: "AFTERMATH",
+      line: falloutLine,
+      source: "latest_fallout",
+    });
+  }
+
+  const nextMission = missionBoard?.nextMission || null;
+  const nextMissionRemaining = nextMission
+    ? Math.max((nextMission.target || 0) - (nextMission.progress || 0), 0)
+    : null;
+  if (nextMission && nextMissionRemaining === 1) {
+    pushCandidate({
+      level: "FLASHPOINT",
+      title: "FLASHPOINT",
+      line: "One mission is one push from flipping the room.",
+      source: "missions",
+    });
+  } else if (
+    missionBoard &&
+    ((missionBoard.mode === "adaptive" && missionBoard.missions?.length) || missionBoard.openCount > 0)
+  ) {
+    pushCandidate({
+      level: "HOT",
+      title: "HOT",
+      line: "Mission Board is still carrying live room pressure.",
+      source: "missions",
+    });
+  }
+
+  if (dailyOrdersState.isActive) {
+    pushCandidate({
+      level: "WATCH",
+      title: "WATCH",
+      line: "Daily Orders are live in Combat File.",
+      source: "daily_orders",
+    });
+  }
+
+  pushCandidate({
+    level: "QUIET",
+    title: "QUIET",
+    line: dailyOrdersState.isActive
+      ? "No major flashpoint is open, but the room is still moving."
+      : "Room is between cycles right now.",
+    source: "system",
+  });
+
+  return candidates;
+};
+
+const rankShellAlertCandidates = (candidates) =>
+  [...candidates]
+    .sort((left, right) => right.priority - left.priority)
+    .shift() || null;
+
+export const getCurrentZoneMeta = (view) =>
+  SHELL_ZONE_META[view] || SHELL_ZONE_META.fallback;
+
+export const getGlobalShellAlert = (state, options = {}) =>
+  rankShellAlertCandidates(getShellAlertCandidates(state, options)) || {
+    level: "QUIET",
+    title: "QUIET",
+    line: "The room is between cycles right now.",
+    source: "system",
+    priority:
+      SHELL_ALERT_PRIORITY.QUIET + SHELL_ALERT_SOURCE_PRIORITY.system,
+    dismissible: false,
+  };
+
+export const getShellCycleChip = (state, options = {}) => {
+  const nowUtc = options.nowUtc || todayStr();
+  const now = nowUtc instanceof Date ? nowUtc : new Date(nowUtc);
+  const dailyOrdersState = getDailyOrdersScheduleState(now);
+  if (isLiveNow()) {
+    return {
+      kind: "cycle",
+      label: "CYCLE",
+      value: "ROOM LIVE NOW",
+      tone: "hot",
+      source: "schedule",
+    };
+  }
+  if (!dailyOrdersState.isActive) {
+    return {
+      kind: "cycle",
+      label: "CYCLE",
+      value: "OFF WINDOW",
+      tone: "quiet",
+      source: "schedule",
+    };
+  }
+  return {
+    kind: "cycle",
+    label: "CYCLE",
+    value: `NEXT ROOM ${formatShellUtcTime(getNextSession())}`,
+    tone: "watch",
+    source: "schedule",
+  };
+};
+
+export const getShellPressureChip = (state, options = {}) => {
+  const nowUtc = options.nowUtc || todayStr();
+  const now = nowUtc instanceof Date ? nowUtc : new Date(nowUtc);
+  const activeAlert = options.activeAlert || null;
+  const dailyOrdersState = getDailyOrdersScheduleState(now);
+  const rivalOps = getRivalOpsLifecycleState(state, nowUtc);
+  const missionBoard = getMissionBoardState(state?.sessions || [], state?.players || []);
+
+  if (activeAlert?.source !== "rival_ops") {
+    if (rivalOps.activeOp) {
+      return {
+        kind: "pressure",
+        label: "PRESSURE",
+        value: "RIVAL OPS LIVE",
+        tone: "hot",
+        source: "rival_ops",
+      };
+    }
+    if (rivalOps.watchOps.length) {
+      return {
+        kind: "pressure",
+        label: "PRESSURE",
+        value: "RIVAL OPS WATCH",
+        tone: "watch",
+        source: "rival_ops",
+      };
+    }
+  }
+
+  if (
+    activeAlert?.source !== "missions" &&
+    missionBoard &&
+    ((missionBoard.mode === "adaptive" && missionBoard.missions?.length) || missionBoard.openCount > 0)
+  ) {
+    return {
+      kind: "pressure",
+      label: "PRESSURE",
+      value: "MISSION BOARD",
+      tone: "watch",
+      source: "missions",
+    };
+  }
+
+  if (activeAlert?.source !== "daily_orders" && dailyOrdersState.isActive) {
+    return {
+      kind: "pressure",
+      label: "PRESSURE",
+      value: "DAILY ORDERS",
+      tone: "watch",
+      source: "daily_orders",
+    };
+  }
+
+  return null;
 };
 
 export const getDaysActive = (playerId, sessions) =>

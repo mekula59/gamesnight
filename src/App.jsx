@@ -34,6 +34,7 @@ import {
   getDrought as selectGetDrought,
   getFormGuide as selectGetFormGuide,
   getHeadToHead as selectGetHeadToHead,
+  getGlobalShellAlert as selectGetGlobalShellAlert,
   getLastSeen as selectGetLastSeen,
   getLatestDayConsequences as selectGetLatestDayConsequences,
   getLatestSessionDate as selectGetLatestSessionDate,
@@ -52,6 +53,7 @@ import {
   getSeasonCampaignFile as selectGetSeasonCampaignFile,
   getSeasonOneWrap as selectGetSeasonOneWrap,
   getSeasonSessions as selectGetSeasonSessions,
+  getShellCycleChip as selectGetShellCycleChip,
   getSortedLeaderboard as selectGetSortedLeaderboard,
   sameRivalOpsState as selectSameRivalOpsState,
   getStats as selectGetStats,
@@ -157,6 +159,72 @@ const CSS = `
     border:1px solid var(--panel-accent-border,rgba(255,255,255,.1));
     border-left:3px solid var(--panel-accent,rgba(255,255,255,.3));
     border-radius:0 6px 6px 0;
+  }
+
+  .ops-strip{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    margin:0 0 14px;
+    padding:9px 12px 10px;
+    background:linear-gradient(135deg,rgba(255,255,255,.03),rgba(0,0,0,.2));
+    border:1px solid rgba(255,255,255,.08);
+    border-left:3px solid var(--ops-accent,rgba(255,255,255,.18));
+    border-radius:0 8px 8px 0;
+    animation:opsStripConfirm .16s ease both;
+  }
+  .ops-strip-tag{
+    flex-shrink:0;
+    font-family:"Barlow Condensed",sans-serif;
+    font-size:.64rem;
+    font-weight:900;
+    letter-spacing:.22em;
+    color:var(--ops-accent,#FFD700);
+    text-transform:uppercase;
+  }
+  .ops-strip-line{
+    min-width:0;
+    flex:1;
+    font-family:"Barlow Condensed",sans-serif;
+    font-size:.82rem;
+    font-weight:700;
+    line-height:1.42;
+    color:#fff;
+  }
+  .ops-strip-chip{
+    flex-shrink:0;
+    padding:7px 10px 6px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.04);
+    font-family:"Barlow Condensed",sans-serif;
+    font-size:.63rem;
+    font-weight:800;
+    letter-spacing:.14em;
+    color:rgba(255,255,255,.86);
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .ops-strip-chip.tone-hot{border-color:rgba(255,107,53,.3);color:#FFB196;}
+  .ops-strip-chip.tone-watch{border-color:rgba(255,215,0,.28);color:#FFE27A;}
+  .ops-strip-chip.tone-quiet{border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.66);}
+  @media(max-width:900px){
+    .ops-strip{
+      flex-wrap:wrap;
+      gap:8px;
+      padding:9px 11px 10px;
+      margin-bottom:12px;
+    }
+    .ops-strip-line{
+      width:100%;
+      font-size:.78rem;
+    }
+    .ops-strip-chip{
+      font-size:.6rem;
+      letter-spacing:.12em;
+      margin-left:auto;
+    }
   }
 
   /* Intel hover card */
@@ -506,36 +574,18 @@ const CSS = `
     .warroom-beat-tags>div:nth-child(n+4){display:none!important;}
     .warroom-placements{padding-left:0!important;gap:6px!important;}
     .warroom-endchips{padding-left:0!important;gap:6px!important;}
-    .season2-top-shell .vote-panel{padding:16px 15px!important;margin-bottom:18px!important;}
-    .season2-top-shell .vote-panel-top{grid-template-columns:1fr!important;gap:10px!important;margin-bottom:10px!important;}
-    .season2-top-shell .vote-panel-read{min-height:0!important;padding:11px 12px!important;}
-    .season2-top-shell .vote-panel-grid{display:grid!important;gap:12px!important;}
-    .season2-top-shell .vote-panel-tier-top{
-      display:grid!important;
-      grid-template-columns:1fr!important;
-      gap:8px!important;
-    }
-    .season2-top-shell .vote-panel-tier-field{
-      display:grid!important;
-      grid-template-columns:repeat(2,minmax(0,1fr))!important;
-      gap:7px!important;
-      padding-top:10px;
-      border-top:1px solid rgba(255,255,255,.08);
-    }
-    .season2-top-shell .vote-panel-choice{padding:10px 10px!important;align-items:flex-start!important;}
-    .season2-top-shell .vote-panel-choice.compact{padding:8px 9px!important;gap:7px!important;}
-    .season2-top-shell .vote-panel-choice.compact .vote-panel-note{display:none!important;}
-    .season2-top-shell .vote-panel-choice.compact .vote-panel-headline{margin-top:3px!important;}
     .season2-top-shell .season2-banner{padding:20px 15px!important;margin-bottom:24px!important;}
     .season2-top-shell .season2-banner-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
     .season2-top-shell .season2-banner-copy{margin-top:16px!important;padding-top:16px!important;gap:9px!important;}
     .season2-top-shell .season2-marker-grid{grid-template-columns:1fr!important;gap:8px!important;}
   }
+  @media(min-width:900px){
+    .season2-top-shell .season2-hero-block{margin-bottom:24px!important;}
+  }
   @media(max-width:400px){
     .bc9.hero-big{font-size:clamp(2.8rem,16vw,5rem)!important;}
     .combat-selector{max-height:264px;}
     .combat-file-page .combat-file-summary{grid-template-columns:1fr!important;}
-    .season2-top-shell .vote-panel-tier-field{grid-template-columns:1fr!important;}
   }
 
   .records-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
@@ -565,7 +615,6 @@ const CSS = `
     box-shadow:inset 0 -1px 0 rgba(255,255,255,.04);
     animation:zoneRailRise .34s ease both;
   }
-  .zone-rail.live{animation:zoneRailRise .34s ease both,zoneRailSweep .7s ease;}
   .zone-rail-chip{
     display:inline-flex;align-items:center;gap:10px;min-width:0;
   }
@@ -638,15 +687,8 @@ const CSS = `
   @keyframes bootPulse{0%,100%{text-shadow:0 0 20px rgba(255,215,0,.6)}50%{text-shadow:0 0 50px rgba(255,215,0,1),0 0 80px rgba(255,107,53,.6)}}
 
   /* ── LEVEL TITLE CARD ── */
-  @keyframes lvlSweep{0%{transform:translateX(-100%)}60%{transform:translateX(0%)}100%{transform:translateX(0%)}}
-  @keyframes lvlText{0%{opacity:0;letter-spacing:1.5em;transform:scale(.85)}60%{opacity:1;letter-spacing:.05em;transform:scale(1.02)}100%{opacity:1;letter-spacing:.04em;transform:scale(1)}}
-  @keyframes lvlSub{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
-  @keyframes lvlOut{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
-  @keyframes lvlLine{0%{width:0}100%{width:100%}}
-  @keyframes lvlFlicker{0%,100%{opacity:1}30%{opacity:.7}32%{opacity:1}60%{opacity:.85}62%{opacity:1}}
   @keyframes zoneRailRise{0%{opacity:0;transform:translateY(-8px)}100%{opacity:1;transform:translateY(0)}}
-  @keyframes zoneRailSweep{0%{box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 0 0 transparent}55%{box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 8px 26px rgba(0,0,0,.18)}100%{box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 0 0 transparent}}
-  @keyframes navIncoming{0%{transform:translateY(-1px);opacity:.8}40%{transform:translateY(0)}100%{opacity:1}}
+  @keyframes opsStripConfirm{0%{opacity:0;transform:translateY(-3px)}100%{opacity:1;transform:translateY(0)}}
 
   /* ── HUD / ARENA ── */
   @keyframes hudIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
@@ -744,7 +786,6 @@ const CSS = `
     opacity:1;transform:scaleX(1);
     box-shadow:0 0 12px rgba(255,255,255,.18);
   }
-  .nav-btn.incoming{animation:navIncoming .5s ease both;}
   .nav-desktop::-webkit-scrollbar{display:none;}
   .nav-desktop{scrollbar-width:none;}
 
@@ -1089,345 +1130,6 @@ function Avatar({p,size=44,glow=false,intel=null}){
   );
 }
 
-// ── VotePanel — module-level so hooks are stable ──
-function VotePanel({players,allStats,s2Prediction,setS2Prediction,store,showToast,dn}){
-  const voteKey="gn-s2-vote-mvp";
-  const [voteCounts,setVoteCounts]=useState({});
-
-  useEffect(()=>{
-    const load=async()=>{
-      try{
-        const r=typeof window!=="undefined"&&window.storage?.get
-          ?await window.storage.get(voteKey,true).catch(()=>null)
-          :await store.get(voteKey);
-        if(r?.value)setVoteCounts(JSON.parse(r.value));
-      }catch{
-        setVoteCounts({});
-      }
-    };
-    load();
-    const iv=setInterval(load,12000);
-    return()=>clearInterval(iv);
-  },[store]);
-
-  const castVote=async(pid)=>{
-    if(s2Prediction)return;
-    setS2Prediction(pid);
-    const name=players.find(p=>p.id===pid)?.username||"?";
-    try{
-      const counts={...voteCounts};
-      counts[pid]=(counts[pid]||0)+1;
-      setVoteCounts(counts);
-      const str=JSON.stringify(counts);
-      if(typeof window!=="undefined"&&window.storage?.set){
-        await window.storage.set(voteKey,str,true).catch(()=>null);
-      }
-      await store.set(voteKey,str);
-      showToast(`Vote locked in for ${dn(name)}!`);
-    }catch{
-      showToast(`Vote saved for ${dn(name)}. Shared tally will sync later.`);
-    }
-  };
-
-  const voteRows=allStats().filter((player)=>player.appearances>=3)
-    .sort((left,right)=>right.wins-left.wins||right.kills-left.kills);
-  const votePlayers=voteRows
-    .slice(0,16)
-    .map((row)=>players.find((player)=>player.id===row.id))
-    .filter(Boolean);
-  const voteLeadPlayers=votePlayers.slice(0,3);
-  const voteFieldPlayers=votePlayers.slice(3);
-  const voteKillsBoard=[...voteRows].sort((left,right)=>right.kills-left.kills||right.wins-left.wins);
-  const voteStatsById=new Map(voteRows.map((row)=>[row.id,row]));
-  const voteWinRankById=new Map(voteRows.map((row,index)=>[row.id,index+1]));
-  const voteKillRankById=new Map(voteKillsBoard.map((row,index)=>[row.id,index+1]));
-
-  const totalVotes=Object.values(voteCounts).reduce((a,b)=>a+b,0);
-  const sortedVotes=Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]);
-  const topVotedId=sortedVotes[0]?.[0];
-  const topVotedPlayer=topVotedId?players.find((player)=>player.id===topVotedId):null;
-  const voteLeadGap=sortedVotes.length>1?(sortedVotes[0][1]-sortedVotes[1][1]):(sortedVotes[0]?.[1]||0);
-  const winsLeader=voteRows[0]||null;
-  const killsLeader=voteKillsBoard[0]||null;
-  const winsLeaderPlayer=winsLeader?players.find((player)=>player.id===winsLeader.id):null;
-  const killsLeaderPlayer=killsLeader?players.find((player)=>player.id===killsLeader.id):null;
-  const voteSummary=totalVotes>0&&topVotedPlayer
-    ?voteLeadGap<=1&&sortedVotes.length>1
-      ?`${dn(topVotedPlayer.username)} is only a vote ahead. The room is still split.`
-      :`${dn(topVotedPlayer.username)} has the strongest trust read on the board right now.`
-    :winsLeaderPlayer&&killsLeaderPlayer&&winsLeaderPlayer.id!==killsLeaderPlayer.id
-      ?`${dn(winsLeaderPlayer.username)} owns the wins lane, but ${dn(killsLeaderPlayer.username)} still carries the damage read.`
-      :winsLeaderPlayer
-        ?`${dn(winsLeaderPlayer.username)} has the strongest live file on wins, and the room has not named a favorite yet.`
-        :"No favorite yet. The first real pile-on will matter.";
-  const voteSubSummary=totalVotes>0
-    ?`${totalVotes} vote${totalVotes===1?"":"s"} on file · ${sortedVotes.length} file${sortedVotes.length===1?"":"s"} have drawn trust`
-    :winsLeaderPlayer&&winsLeader
-      ?`${dn(winsLeaderPlayer.username)} leads Season 2 on wins at ${winsLeader.wins}W. First calls are live.`
-      :"Ballot box open";
-  const votePressureLine=totalVotes>0
-    ?voteLeadGap<=1&&sortedVotes.length>1
-      ?"One extra vote still flips this read."
-      :"The room has a lean, not a lock."
-    :winsLeaderPlayer&&killsLeaderPlayer&&winsLeaderPlayer.id!==killsLeaderPlayer.id
-      ?`Wins and damage are still pulling the room in different directions.`
-      :"The first calls will decide what the room values first.";
-
-  const getVotePlayerRead=(player)=>{
-    const stats=voteStatsById.get(player.id);
-    const variantSeed=(player.id||"").split("").reduce((sum,char)=>sum+char.charCodeAt(0),0);
-    const pickVariant=(variants)=>variants[variantSeed%variants.length];
-    if(!stats){
-      return{
-        headline:"File still opening",
-        note:"Still waiting on enough Season 2 tape to read this file cleanly.",
-      };
-    }
-    const winsRank=voteWinRankById.get(player.id)||0;
-    const killRank=voteKillRankById.get(player.id)||0;
-    if(winsRank===1){
-      return{
-        headline:`Season leader · ${stats.wins}W`,
-        note:killRank===1
-          ?`Still owns both the crown line and the damage pace.`
-          :`Still setting the pace on wins, even with the damage race elsewhere.`,
-      };
-    }
-    if(killRank===1){
-      return{
-        headline:`Damage leader · ${stats.kills}K`,
-        note:winsRank===2
-          ?`Closest real push on the crown line and still the deadliest file on the board.`
-          :`The kills file is heavy enough to keep this read live even off the top win line.`,
-      };
-    }
-    if(winsRank===2){
-      return{
-        headline:`Closest on wins · ${stats.wins}W`,
-        note:`One sharp day is enough to drag the crown read back into a real argument.`,
-      };
-    }
-    if(winsRank<=5){
-      const topFiveLabel=winsRank===3
-        ?`Third line file · ${stats.wins}W`
-        :winsRank===4
-          ?`Fourth line file · ${stats.wins}W`
-          :winsRank===5
-            ?`Fifth line file · ${stats.wins}W`
-            :`Top five file · ${stats.wins}W`;
-      const topFiveVariants=winsRank===3
-        ?[
-          `A clean night here still pulls this file back into the main conversation.`,
-          `One sharp session still drags this file right back under the room lights.`,
-          `This file is still close enough to turn one good night into a real swing.`,
-          `One heavy session still puts this file back in the main argument.`,
-        ]
-        :winsRank===4
-          ?[
-            `One heavy session still puts this file back in the main argument.`,
-            `The room would have to take notice if this file lands one clean night.`,
-            `One strong day still changes who the room is tracking next.`,
-            `This file is still close enough to crash the main read in one swing.`,
-          ]
-          :[
-            `A clean night here still pulls this file back into the main conversation.`,
-            `The room would have to take notice if this file lands one clean night.`,
-            `This file is still close enough to crash the main read in one swing.`,
-            `One good stretch still changes how this file sits in the top pack.`,
-          ];
-      return{
-        headline:topFiveLabel,
-        note:pickVariant(topFiveVariants),
-      };
-    }
-    if(stats.wins===0){
-      return{
-        headline:`First win still open · ${stats.appearances}G`,
-        note:pickVariant([
-          `One crown changes how the whole room reads this file.`,
-          `The first win would change this file faster than any speech about form.`,
-          `That first crown is still the cleanest way back into the conversation.`,
-        ]),
-      };
-    }
-    return{
-      headline:`${stats.wins}W · ${stats.kills}K on file`,
-      note:pickVariant(stats.kills>=100
-        ?[
-          `The damage is already loud enough that one strong day changes the whole read.`,
-          `This file already carries enough damage to jump the conversation fast.`,
-          `One sharp session still turns this damage line into a bigger story.`,
-        ]
-        :[
-          `One clean session still changes how this file gets read.`,
-          `There is enough on file here for one strong day to move the room.`,
-          `This file is not parked yet. One sharp night changes the tone fast.`,
-          `The room would read this file differently after one strong day.`,
-          `A single sharp session still changes the shape of this file.`,
-        ]),
-    };
-  };
-
-  return(
-    <div className="vote-panel" style={{
-      background:"linear-gradient(135deg,rgba(199,125,255,.08),rgba(0,229,255,.035))",
-      border:"1px solid rgba(199,125,255,.24)",
-      borderLeft:"3px solid rgba(199,125,255,.6)",
-      borderRadius:"0 12px 12px 0",padding:"17px 18px",marginBottom:14}}>
-      <div className="vote-panel-top" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(190px,260px)",gap:12,alignItems:"start",marginBottom:12}}>
-        <div>
-          <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
-            letterSpacing:".25em",color:"rgba(199,125,255,.8)",marginBottom:6}}>
-            🗳️ S2 MVP VOTE · LIVE
-          </div>
-          <div style={{fontFamily:"Fredoka One",fontSize:"1.02rem",color:"#fff",marginBottom:4}}>
-            Who has the strongest Season 2 file right now?
-          </div>
-          <div style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
-            color:"var(--text3)",letterSpacing:".04em",lineHeight:1.55}}>
-            {totalVotes>0
-              ?`${totalVotes} vote${totalVotes===1?"":"s"} are in. The room is already showing where trust is landing.`
-              :"Ballot box is open. The first calls will shape the read fast."}
-            {s2Prediction?" Your vote is locked in.":""}
-          </div>
-        </div>
-        <div className="vote-panel-read" style={{
-          alignSelf:"stretch",
-          background:"linear-gradient(135deg,rgba(0,0,0,.24),rgba(199,125,255,.08))",
-          border:"1px solid rgba(199,125,255,.18)",
-          borderLeft:"3px solid rgba(199,125,255,.44)",
-          borderRadius:"0 10px 10px 0",
-          padding:"12px 13px",
-          minHeight:74,
-        }}>
-          <div className="bc7" style={{fontSize:".55rem",letterSpacing:".22em",color:"rgba(199,125,255,.72)",marginBottom:6}}>
-            CURRENT READ
-          </div>
-          <div className="bc9" style={{fontSize:".82rem",lineHeight:1.28,color:"#fff",marginBottom:4}}>
-            {voteSummary}
-          </div>
-          <div className="bc7" style={{fontSize:".62rem",lineHeight:1.55,color:"var(--text3)"}}>
-            {voteSubSummary}
-          </div>
-          <div className="bc7" style={{fontSize:".62rem",lineHeight:1.58,color:"rgba(255,255,255,.7)",marginTop:6}}>
-            {votePressureLine}
-          </div>
-        </div>
-      </div>
-
-      {totalVotes>0&&(
-        <div style={{marginBottom:12}}>
-          {Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([pid,count])=>{
-            const vp=players.find(p=>p.id===pid);
-            if(!vp)return null;
-            const pct=Math.round((count/totalVotes)*100);
-            const isTop=pid===topVotedId;
-            return(
-              <div key={pid} style={{marginBottom:8}}>
-                <div style={{display:"flex",justifyContent:"space-between",
-                  alignItems:"center",marginBottom:3}}>
-                  <div style={{display:"flex",alignItems:"center",gap:7}}>
-                    <Avatar p={vp} size={20}/>
-                    <span style={{fontFamily:"Barlow Condensed",fontWeight:900,
-                      fontSize:".75rem",color:isTop?vp.color:"var(--text2)"}}>
-                      {isTop?"👑 ":""}{dn(vp.username)}
-                    </span>
-                  </div>
-                  <span style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                    fontSize:".72rem",color:isTop?vp.color:"var(--text3)"}}>
-                    {count}v · {pct}%
-                  </span>
-                </div>
-                <div style={{height:4,background:"rgba(255,255,255,.08)",
-                  borderRadius:2,overflow:"hidden"}}>
-                  <div style={{height:"100%",
-                    background:isTop?`linear-gradient(90deg,${vp.color}77,${vp.color})`:`${vp.color}44`,
-                    width:`${pct}%`,borderRadius:2,transition:"width .6s ease",
-                    boxShadow:isTop?`0 0 8px ${vp.color}55`:"none"}}/>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="vote-panel-grid" style={{display:"grid",
-        gridTemplateColumns:"repeat(auto-fill,minmax(145px,1fr))",gap:5}}>
-        <div className="vote-panel-tier-top">
-        {voteLeadPlayers.map(player=>{
-          const isVoted=s2Prediction===player.id;
-          const vcount=voteCounts[player.id]||0;
-          const playerRead=getVotePlayerRead(player);
-          return(
-            <button className="vote-panel-choice" key={player.id} onClick={()=>castVote(player.id)}
-              disabled={!!s2Prediction} style={{
-                display:"flex",alignItems:"center",gap:8,
-                background:isVoted?`${player.color}20`:`${player.color}08`,
-                border:isVoted?`1.5px solid ${player.color}66`:`1px solid ${player.color}1a`,
-                borderRadius:6,padding:"8px 10px",cursor:s2Prediction?"default":"pointer",
-                textAlign:"left",transition:"all .12s",outline:"none",
-                opacity:s2Prediction&&!isVoted?0.5:1}}>
-              <Avatar p={player} size={26}/>
-              <div style={{minWidth:0}}>
-                <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".72rem",
-                  color:player.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  {player.host?"👑 ":""}{dn(player.username)}{isVoted?" ✓":""}
-                </div>
-                <div className="vote-panel-headline" style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                  fontSize:".58rem",color:isVoted?player.color:"var(--text2)",lineHeight:1.35,
-                  marginTop:2}}>
-                  {vcount>0?`${vcount} vote${vcount===1?"":"s"} on this file`:playerRead.headline}
-                </div>
-                <div className="vote-panel-note" style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                  fontSize:".54rem",color:"var(--text3)",lineHeight:1.42,marginTop:2}}>
-                  {vcount>0
-                    ?playerRead.note
-                    :playerRead.note}
-                </div>
-              </div>
-            </button>
-          );
-        })}
-        </div>
-        <div className="vote-panel-tier-field">
-        {voteFieldPlayers.map(player=>{
-          const isVoted=s2Prediction===player.id;
-          const vcount=voteCounts[player.id]||0;
-          const playerRead=getVotePlayerRead(player);
-          return(
-            <button className="vote-panel-choice compact" key={player.id} onClick={()=>castVote(player.id)}
-              disabled={!!s2Prediction} style={{
-                display:"flex",alignItems:"center",gap:8,
-                background:isVoted?`${player.color}20`:`${player.color}08`,
-                border:isVoted?`1.5px solid ${player.color}66`:`1px solid ${player.color}1a`,
-                borderRadius:6,padding:"8px 10px",cursor:s2Prediction?"default":"pointer",
-                textAlign:"left",transition:"all .12s",outline:"none",
-                opacity:s2Prediction&&!isVoted?0.5:1}}>
-              <Avatar p={player} size={24}/>
-              <div style={{minWidth:0}}>
-                <div style={{fontFamily:"Barlow Condensed",fontWeight:900,fontSize:".7rem",
-                  color:player.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  {player.host?"👑 ":""}{dn(player.username)}{isVoted?" ✓":""}
-                </div>
-                <div className="vote-panel-headline" style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                  fontSize:".57rem",color:isVoted?player.color:"var(--text2)",lineHeight:1.34,
-                  marginTop:2}}>
-                  {vcount>0?`${vcount} vote${vcount===1?"":"s"} on this file`:playerRead.headline}
-                </div>
-                <div className="vote-panel-note" style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                  fontSize:".54rem",color:"var(--text3)",lineHeight:1.42,marginTop:2}}>
-                  {playerRead.note}
-                </div>
-              </div>
-            </button>
-          );
-        })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── TypedBio — module-level component so its reference is stable ──
 // Must be outside GameNight or React remounts it on every parent render,
 // killing the interval before it finishes.
@@ -1630,7 +1332,6 @@ export default function GameNight(){
   const [lobbyDate,  setLobbyDate]   = useState("");
   const [lobbySearch,setLobbySearch] = useState("");
   const [lobbyLimit, setLobbyLimit]  = useState(DEFAULT_LOBBY_LIMIT);
-  const [queuedView, setQueuedView]   = useState(null);
   const [zonePulse,  setZonePulse]    = useState(0);
   const [s2CdClock,  setS2CdClock]   = useState({d:0,h:0,m:0,s:0});
 
@@ -1641,7 +1342,6 @@ export default function GameNight(){
   const [shareCard,setShareCard]=useState(null); // {sid, visible}
   const [confetti,setConfetti]=useState(()=>foolsDay?createFoolsConfetti():[]);
   const [foolsToast,setFoolsToast]=useState(0); // 0=hidden 1=warning 2=reveal
-  const [lvlCard,setLvlCard]=useState(null); // {label, icon, color, phase:'in'|'out'}
   const [bootPhase,setBootPhase]=useState(0); // 0=logo 1=bar 2=done
   const [dailyOrdersSchedule,setDailyOrdersSchedule]=useState(()=>selectGetDailyOrdersScheduleState());
   const [rivalOpsState,setRivalOpsState]=useState({ops:[],selectedOpId:null,lastResolvedOpId:null});
@@ -1649,7 +1349,6 @@ export default function GameNight(){
 
   // ── Dual storage: window.storage (artifact) + localStorage (Netlify) ──
   const store=gameStore;
-  const zoneTimersRef=useRef({swap:null,clear:null});
   const {
     players,
     setPlayers,
@@ -1662,8 +1361,6 @@ export default function GameNight(){
     markCeremonySeen,
     snoozeCeremony,
     openCeremony,
-    s2Prediction,
-    setS2Prediction,
   } = useGameData({ store, view });
 
   // ── clock ──
@@ -1827,45 +1524,15 @@ export default function GameNight(){
       window.scrollTo({top:0,behavior});
     }
   };
-  const clearZoneTimers=()=>{
-    if(zoneTimersRef.current.swap){
-      clearTimeout(zoneTimersRef.current.swap);
-      zoneTimersRef.current.swap=null;
-    }
-    if(zoneTimersRef.current.clear){
-      clearTimeout(zoneTimersRef.current.clear);
-      zoneTimersRef.current.clear=null;
-    }
-  };
   const go=v=>{
-    const fromView=queuedView||view;
     setMobileOpen(false);
-    const lv=LEVEL_MAP[v];
-    if(lv&&v!==fromView){
-      clearZoneTimers();
-      setQueuedView(v);
-      setZonePulse((count)=>count+1);
-      setLvlCard({
-        ...lv,
-        phase:"in",
-        brief:ZONE_BRIEFS[v]||"Zone link stable",
-        fromLabel:(LEVEL_MAP[fromView]||LEVEL_MAP.home).label,
-      });
-      zoneTimersRef.current.swap=setTimeout(()=>{
-        setView(v);
-        scrollToTop("auto");
-        setLvlCard(c=>c?{...c,phase:"out"}:null);
-        zoneTimersRef.current.clear=setTimeout(()=>{
-          setLvlCard(null);
-          setQueuedView(null);
-        },500);
-      },560);
-    } else {
-      clearZoneTimers();
-      setQueuedView(null);
+    if(v!==view){
       setView(v);
-      scrollToTop("smooth");
+      setZonePulse((count)=>count+1);
+      scrollToTop("auto");
+      return;
     }
+    scrollToTop("smooth");
   };
   const goProfile=pid=>{
     if(!pid)return;
@@ -1923,8 +1590,6 @@ export default function GameNight(){
       />
     );
   };
-
-  useEffect(()=>()=>clearZoneTimers(),[]);
 
   const joinHumanList=(items)=>{
     const list=items.filter(Boolean);
@@ -2876,13 +2541,12 @@ export default function GameNight(){
       })
     :rivals;
   const rivalOpsViewModel=selectGetRivalOpsViewModel({players,sessions,rivalOpsState},todayStr());
-  const activeNavView=queuedView||view;
+  const activeNavView=view;
   const activeZone=LEVEL_MAP[activeNavView]||LEVEL_MAP.home;
-  const currentZone=LEVEL_MAP[view]||LEVEL_MAP.home;
-  const zoneLinking=Boolean(queuedView&&queuedView!==view);
-  const zoneRailStatus=zoneLinking
-    ? `Linking from ${currentZone.label}`
-    : "Zone link stable";
+  const shellAlert=selectGetGlobalShellAlert({players,sessions,rivalOpsState},{nowUtc:todayStr(),view:activeNavView});
+  const shellCycleChip=selectGetShellCycleChip({players,sessions,rivalOpsState},{nowUtc:todayStr()});
+  const shellChip=shellCycleChip||null;
+  const zoneRailStatus="Zone link stable";
 
   // ════════════════════════════════════════════════════
   return(<>
@@ -2895,7 +2559,7 @@ export default function GameNight(){
     }}/>
     {/* Ambient zone glow — shifts colour per zone */}
     <div className="zone-glow-orb" style={{
-      background:`radial-gradient(ellipse,${(lvlCard?.color||activeZone.color)}12 0%,transparent 70%)`,
+      background:`radial-gradient(ellipse,${activeZone.color}12 0%,transparent 70%)`,
     }}/>
     {showScroll&&<button className="scroll-top" onClick={()=>scrollToTop("smooth")}>↑</button>}
 
@@ -3066,7 +2730,7 @@ export default function GameNight(){
       <div style={{width:1,height:22,background:"rgba(255,255,255,.1)",marginRight:4,flexShrink:0}}/>
       <div className="nav-desktop" style={{flex:1,display:"flex",gap:2,overflowX:"auto",scrollbarWidth:"none"}}>
         {navItems.map(item=>(
-          <button key={item.id} className={`nav-btn${activeNavView===item.id?" active":""}${queuedView===item.id?" incoming":""}`} onClick={()=>go(item.id)} aria-current={activeNavView===item.id?"page":undefined} style={{
+          <button key={item.id} className={`nav-btn${activeNavView===item.id?" active":""}`} onClick={()=>go(item.id)} aria-current={activeNavView===item.id?"page":undefined} style={{
             "--navc":(LEVEL_MAP[item.id]||LEVEL_MAP.home).color,
             padding:"5px 10px",borderRadius:0,fontWeight:700,fontSize:".66rem",
             fontFamily:"Barlow Condensed",letterSpacing:".16em",
@@ -3113,7 +2777,7 @@ export default function GameNight(){
         {mobileOpen?"✕":"☰"}
       </button>
     </nav>
-    <div key={zonePulse} className={`zone-rail${zoneLinking?" live":""}`} style={{"--zonec":activeZone.color}}>
+    <div key={zonePulse} className="zone-rail" style={{"--zonec":activeZone.color}}>
       <div className="zone-rail-chip">
         <span className="zone-rail-icon">{activeZone.icon}</span>
         <div className="zone-rail-copy">
@@ -3148,6 +2812,35 @@ export default function GameNight(){
 
     {/* ════ MAIN ════ */}
     <main style={{maxWidth:1100,margin:"0 auto",padding:"clamp(12px,4vw,28px) clamp(8px,3vw,14px)",position:"relative",zIndex:2}}>
+      {(()=>{
+        const alertTone=
+          shellAlert.level==="FLASHPOINT"
+            ? "#FF6B35"
+            : shellAlert.level==="HOT"
+              ? "#FFD700"
+              : shellAlert.level==="AFTERMATH"
+                ? "#00E5FF"
+                : shellAlert.level==="WATCH"
+                  ? "#C77DFF"
+                  : "rgba(255,255,255,.22)";
+        const chipToneClass=(chip)=>
+          chip?.tone==="hot"
+            ?"tone-hot"
+            : chip?.tone==="watch"
+              ?"tone-watch"
+              :"tone-quiet";
+        return(
+          <div className="ops-strip" aria-label="GamesNight global ops strip" style={{"--ops-accent":alertTone}}>
+            <span className="ops-strip-tag">{shellAlert.title}</span>
+            <div className="ops-strip-line">{shellAlert.line}</div>
+            {shellChip&&(
+              <div className={`ops-strip-chip ${chipToneClass(shellChip)}`}>
+                {shellChip.value}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ═══════════════ HOME ═══════════════ */}
       {view==="home"&&(
@@ -6577,20 +6270,6 @@ export default function GameNight(){
                   </div>
                 </div>
               </div>
-              {s2Prediction&&(()=>{
-                const pick=players.find(p=>p.id===s2Prediction);
-                return pick?(
-                  <div style={{
-                    background:"rgba(199,125,255,.12)",border:"1px solid rgba(199,125,255,.3)",
-                    borderRadius:10,padding:"6px 14px",display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:".8rem"}}>🔮</span>
-                    <div>
-                      <div style={{fontSize:".64rem",color:"var(--text3)",fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>Your S2 Pick</div>
-                      <div style={{fontFamily:"Fredoka One",color:pick.color,fontSize:".88rem"}}>{pick.username}</div>
-                    </div>
-                  </div>
-                ):null;
-              })()}
             </div>
           )}
 
@@ -6976,7 +6655,7 @@ export default function GameNight(){
       ══════════════════════════════════════════════ */}
       {view==="season2"&&(
         <div className="fade-up season2-top-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
-          <div className="zone-arrival-slice" style={{"--arrive-delay":"50ms",textAlign:"center",marginBottom:32}}>
+          <div className="zone-arrival-slice season2-hero-block" style={{"--arrive-delay":"50ms",textAlign:"center",marginBottom:32}}>
             <p style={{color:"#00E5FF",fontWeight:800,fontSize:".7rem",letterSpacing:3,
               textTransform:"uppercase",marginBottom:8}}>April 2026</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.4rem)",
@@ -7221,79 +6900,8 @@ export default function GameNight(){
 
             return(
               <div>
-                <div className="zone-receive-anchor" style={{"--receive-delay":"110ms"}}>
-                  <VotePanel players={players} allStats={allStats} s2Prediction={s2Prediction} setS2Prediction={setS2Prediction} store={store} showToast={showToast} dn={dn}/>
-                </div>
-                {/* ── Prediction tracker — how's your pick doing? ── */}
-                {s2Prediction&&(()=>{
-                  const pick=players.find(p=>p.id===s2Prediction);
-                  if(!pick)return null;
-                  const pickStats=s2Stats.find(p=>p.id===s2Prediction);
-                  const pickRank=byWins.findIndex(p=>p.id===s2Prediction)+1;
-                  const leader=byWins[0];
-                  const leaderPlayer=players.find(p=>p.id===leader?.id);
-                  const isLeading=pickRank===1&&leader?.wins>0;
-                  const gapToFirst=leader&&pickStats?(leader.wins-pickStats.wins):null;
-                  return(
-                    <div style={{
-                      background:isLeading
-                        ?"linear-gradient(135deg,rgba(0,255,148,.12),rgba(0,229,255,.08))"
-                        :"linear-gradient(135deg,rgba(199,125,255,.1),rgba(0,229,255,.06))",
-                      border:`2px solid ${isLeading?"rgba(0,255,148,.4)":"rgba(199,125,255,.35)"}`,
-                      borderRadius:18,padding:"14px 18px",marginBottom:18,
-                      animation:"popIn .4s ease"}}>
-                      <div style={{fontSize:".66rem",color:"var(--text3)",fontWeight:800,
-                        letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>
-                        🔮 Your Season 2 Prediction
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <div style={{width:46,height:46,borderRadius:"50%",flexShrink:0,
-                            background:`linear-gradient(135deg,${pick.color},${pick.color}88)`,
-                            display:"flex",alignItems:"center",justifyContent:"center",
-                            fontFamily:"Fredoka One",fontSize:"1.2rem",color:"#fff",
-                            boxShadow:`0 0 20px ${pick.color}55`}}>
-                            {pick.username[0]}
-                          </div>
-                          <div>
-                            <div style={{fontFamily:"Fredoka One",color:pick.color,fontSize:"1.05rem"}}>
-                              {pick.host?"👑 ":""}{pick.username}
-                            </div>
-                            <div style={{fontSize:".7rem",color:"var(--text3)",fontWeight:700,marginTop:2}}>
-                              {pickStats?`${pickStats.wins}W · ${pickStats.appearances} lobbies on the S2 file`:"Still waiting on the first real S2 drop"}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{flex:1,minWidth:120}}>
-                          {isLeading?(
-                            <div style={{fontFamily:"Fredoka One",color:"#00FF94",fontSize:".96rem",lineHeight:1.25}}>
-                              🔥 Currently leading S2. Your call is holding the front line.
-                            </div>
-                          ):pickRank>0&&leaderPlayer?(
-                            <div>
-                              <div style={{fontFamily:"Fredoka One",
-                                color:"var(--text2)",fontSize:".9rem",marginBottom:2}}>
-                                #{pickRank} right now
-                              </div>
-                              <div style={{fontSize:".72rem",color:"var(--text3)",fontWeight:700,lineHeight:1.55}}>
-                                {gapToFirst>0
-                                  ?`${gapToFirst}W behind ${leaderPlayer.username}. One heavy night changes that picture.`
-                                  :"Tied for the lead. One clean lobby decides the next swing."}
-                              </div>
-                            </div>
-                          ):(
-                            <div style={{fontFamily:"Fredoka One",color:"var(--text3)",fontSize:".9rem"}}>
-                              Their Season 2 file is still waiting on first contact.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
                 {/* Season 2 totals */}
-                <MotionReveal className="season2-banner zone-receive-follow" delay={110} style={{"--receive-delay":"180ms",
+                <MotionReveal className="season2-banner zone-receive-follow" delay={90} style={{"--receive-delay":"130ms",
                   background:"linear-gradient(135deg,rgba(0,229,255,.12),rgba(0,255,148,.08),rgba(199,125,255,.1))",
                   border:"2px solid rgba(0,229,255,.35)",borderRadius:20,
                   padding:"24px 20px",marginBottom:28,textAlign:"center"}}>
@@ -7960,71 +7568,6 @@ export default function GameNight(){
         </div>
       );
     })()}
-
-    {/* ── LEVEL TITLE CARD ── */}
-    {lvlCard&&(
-      <div className="lvl-card" style={{
-        opacity:lvlCard.phase==="out"?0:1,
-        transform:lvlCard.phase==="out"?"scale(1.04)":"scale(1)",
-        transition:"opacity .45s ease, transform .45s ease",
-      }}>
-        {/* BG grid */}
-        <div style={{position:"absolute",inset:0,
-          backgroundImage:"linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)",
-          backgroundSize:"44px 44px",pointerEvents:"none"}}/>
-        {/* Sweep bar */}
-        <div style={{
-          position:"absolute",left:0,top:0,bottom:0,
-          background:`linear-gradient(90deg,${lvlCard.color}22,${lvlCard.color}08,transparent)`,
-          animation:"lvlSweep .7s cubic-bezier(.16,1,.3,1) both",
-          width:"100%",
-          borderLeft:`3px solid ${lvlCard.color}`,
-          pointerEvents:"none"
-        }}/>
-        {/* Scanline */}
-        <div style={{position:"absolute",left:0,right:0,height:"1.5px",
-          background:`linear-gradient(90deg,transparent,${lvlCard.color}44,transparent)`,
-          animation:"bootScan 1.8s linear infinite",pointerEvents:"none"}}/>
-        {/* Content */}
-        <div style={{textAlign:"center",position:"relative",zIndex:2,padding:"0 20px"}}>
-          <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
-            fontSize:"clamp(.7rem,2vw,.95rem)",letterSpacing:".5em",
-            color:"rgba(255,255,255,.3)",marginBottom:14,textTransform:"uppercase",
-            animation:"lvlSub .4s ease .1s both"}}>
-            NOW ENTERING
-          </div>
-          <div style={{fontFamily:"Barlow Condensed",fontWeight:800,
-            fontSize:"clamp(.62rem,1.8vw,.8rem)",letterSpacing:".22em",
-            color:`${lvlCard.color}99`,marginBottom:10,textTransform:"uppercase",
-            animation:"lvlSub .35s ease both"}}>
-            {lvlCard.fromLabel} TO {lvlCard.label}
-          </div>
-          <div style={{fontSize:"clamp(2rem,6vw,2.5rem)",marginBottom:10,
-            animation:"lvlSub .4s ease .05s both"}}>{lvlCard.icon}</div>
-          <div style={{
-            fontFamily:"Barlow Condensed",fontWeight:900,
-            fontSize:"clamp(2.8rem,12vw,6rem)",
-            letterSpacing:".08em",lineHeight:.9,
-            color:lvlCard.color,textTransform:"uppercase",
-            textShadow:`0 0 60px ${lvlCard.color}88`,
-            animation:"lvlFlicker .8s ease both",
-          }}>
-            {lvlCard.label}
-          </div>
-          <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
-            fontSize:"clamp(.76rem,2vw,.95rem)",letterSpacing:".12em",
-            color:"rgba(200,186,255,.72)",maxWidth:560,margin:"12px auto 0",
-            lineHeight:1.5,animation:"lvlSub .45s ease .12s both"}}>
-            {lvlCard.brief}
-          </div>
-          {/* Animated line */}
-          <div style={{height:2,marginTop:18,
-            background:`linear-gradient(90deg,transparent,${lvlCard.color},transparent)`,
-            animation:"lvlLine .6s ease .2s both",width:0,margin:"18px auto 0"}}>
-          </div>
-        </div>
-      </div>
-    )}
 
     {/* ── CONFETTI ── */}
     {confetti.map(p=>(
