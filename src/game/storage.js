@@ -34,7 +34,6 @@ const getDefaultState = () => ({
   players: INITIAL_PLAYERS,
   sessions: INITIAL_SESSIONS,
   pollVote: null,
-  s2Prediction: null,
   showCeremony: false,
 });
 
@@ -63,8 +62,6 @@ export const loadGameData = async (store) => {
 
     const pollKey = `gn-poll-${todayStr()}`;
     const pollResult = await store.get(pollKey);
-    const predictionResult = await store.get("gn-s2-prediction");
-
     let showCeremony = false;
     if (todayStr() >= CEREMONY_START_DATE) {
       const ceremonySeen = await store.get("gn-s2-ceremony-seen");
@@ -75,7 +72,6 @@ export const loadGameData = async (store) => {
       players: storedPlayers,
       sessions: storedSessions && storedSessions.length > 0 ? storedSessions : INITIAL_SESSIONS,
       pollVote: pollResult?.value ?? null,
-      s2Prediction: predictionResult?.value ?? null,
       showCeremony,
     };
   } catch {
