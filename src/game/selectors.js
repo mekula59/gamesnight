@@ -172,6 +172,29 @@ const sortKillKingEntries = (entries, players) => {
   });
 };
 
+const sortWinLeaderEntries = (entries, players, getWins, getKills = () => 0) => {
+  const hostId = players.find((player) => player.host)?.id || "";
+  return [...entries].sort((left, right) => {
+    const winDelta = getWins(right) - getWins(left);
+    if (winDelta !== 0) {
+      return winDelta;
+    }
+    const leftId = left.id || left.pid || "";
+    const rightId = right.id || right.pid || "";
+    if (leftId === hostId && rightId !== hostId) {
+      return -1;
+    }
+    if (rightId === hostId && leftId !== hostId) {
+      return 1;
+    }
+    const killDelta = getKills(right) - getKills(left);
+    if (killDelta !== 0) {
+      return killDelta;
+    }
+    return 0;
+  });
+};
+
 export const getLatestSessionDate = (sessions) => {
   if (!sessions.length) {
     return todayStr();
@@ -319,6 +342,35 @@ export const getStreak = (playerId, sessions) => {
   return best;
 };
 
+export const getLiveDayStreak = (
+  playerId,
+  sessions,
+  date = getLatestSessionDate(sessions),
+) => {
+  if (!playerId || !date) {
+    return 0;
+  }
+
+  const daySessions = [...sessions]
+    .filter(
+      (session) =>
+        session.date === date &&
+        session.attendees?.includes(playerId),
+    )
+    .sort(compareSessionsAsc);
+
+  let current = 0;
+  daySessions.forEach((session) => {
+    if (session.winner === playerId) {
+      current += 1;
+    } else {
+      current = 0;
+    }
+  });
+
+  return current;
+};
+
 export const getCarryScore = (playerId, sessions) =>
   sessions
     .filter(
@@ -392,9 +444,9 @@ export const getBadges = (playerId, sessions) => {
   const streak = getStreak(playerId, sessions);
 
   if (streak >= 3) {
-    badges.push({ icon: "🔥", label: `${streak} Streak`, hot: true });
+    badges.push({ icon: "🔥", label: `Best Run ${streak}`, hot: true });
   } else if (streak >= 2) {
-    badges.push({ icon: "🔥", label: `${streak} Streak` });
+    badges.push({ icon: "🔥", label: `Best Run ${streak}` });
   }
 
   if (stats.wins > 0) {
@@ -524,6 +576,24 @@ export const getBadges = (playerId, sessions) => {
       topSeasonTwoWinner[1] > 0
     ) {
       badges.push({ icon: "👑", label: "S2 Champion", hot: true });
+    }
+
+    const seasonTwoConfig = SEASONS.find((season) => season.id === "s2");
+    const finalDayFiled = seasonTwoConfig
+      ? seasonTwoSessions.some((session) => session.date === seasonTwoConfig.end)
+      : false;
+    const seasonTwoResolved = seasonTwoConfig
+      ? todayStr() > seasonTwoConfig.end || finalDayFiled
+      : false;
+    const wonEveryFiledDay =
+      seasonTwoDays.length > 0 &&
+      seasonTwoDays.every((date) =>
+        seasonTwoSessions.some(
+          (session) => session.date === date && session.winner === playerId,
+        ),
+      );
+    if (seasonTwoResolved && wonEveryFiledDay) {
+      badges.push({ icon: "🛡️", label: "Invincible", hot: true });
     }
   }
 
@@ -672,12 +742,16 @@ export const getDailyMVP = (sessions, players) => {
     });
   }
   const sortedKillKings = sortKillKingEntries(killKings, players);
+  const sortedWinners = sortWinLeaderEntries(
+    stats,
+    players,
+    (player) => player.wins,
+    (player) => player.kills,
+  );
 
   return {
     date: latestDate,
-    topWinner: [...stats].sort(
-      (left, right) => right.wins - left.wins || right.kills - left.kills,
-    )[0],
+    topWinner: sortedWinners[0],
     topKiller: [...stats].sort(
       (left, right) => right.kills - left.kills || right.wins - left.wins,
     )[0],
@@ -715,6 +789,177 @@ export const getRivals = (sessions) => {
   });
 
   return Object.values(duels).sort((left, right) => right.total - left.total);
+};
+
+const getUtcDayDistance = (fromDate, toDate) => {
+  if (!fromDate || !toDate) {
+    return 999;
+  }
+  const from = new Date(`${fromDate}T12:00:00Z`);
+  const to = new Date(`${toDate}T12:00:00Z`);
+  return Math.max(0, Math.round((to - from) / 86400000));
+};
+
+const getRivalryHeatLine = (row) => {
+  if (row.gap <= 1 && row.seasonMeetings >= 2) {
+    return "One top-two finish can swing this.";
+  }
+  if (row.gap <= 2) {
+    return "Close enough to turn fast.";
+  }
+  if (row.recentMeetings.length >= 3) {
+    return "They keep landing in the same fight.";
+  }
+  if (row.seasonMeetings >= 3) {
+    return "This season keeps pulling them together.";
+  }
+  return "History is still on the board.";
+};
+
+export const getRivalryBoard = (sessions, players, options = {}) => {
+  const sortedSessions = [...sessions].sort(compareSessionsAsc);
+  const latestDate = options.latestDate || sortedSessions.at(-1)?.date || todayStr();
+  const activeSeason = options.seasonId
+    ? SEASONS.find((season) => season.id === options.seasonId) || null
+    : getSeasonForDate(latestDate);
+  const latestSessionIds = new Set(sortedSessions.slice(-24).map((session) => session.id));
+  const rowsByPair = {};
+
+  sortedSessions.forEach((session) => {
+    const placements = session.placements || session.attendees;
+    if (!placements || placements.length < 2) {
+      return;
+    }
+
+    const [first, second] = placements;
+    if (!first || !second || first === second) {
+      return;
+    }
+
+    const pairId = [first, second].sort().join(":");
+    if (!rowsByPair[pairId]) {
+      const [playerAId, playerBId] = pairId.split(":");
+      rowsByPair[pairId] = {
+        pairId,
+        playerAId,
+        playerBId,
+        playerA: players.find((player) => player.id === playerAId) || null,
+        playerB: players.find((player) => player.id === playerBId) || null,
+        meetings: 0,
+        playerAWins: 0,
+        playerBWins: 0,
+        lastMeetingDate: "",
+        recentMeetings: [],
+        seasonMeetings: 0,
+        seasonPlayerAWins: 0,
+        seasonPlayerBWins: 0,
+        recentClashCount: 0,
+      };
+    }
+
+    const row = rowsByPair[pairId];
+    const playerAWon = row.playerAId === first;
+    row.meetings += 1;
+    row.playerAWins += playerAWon ? 1 : 0;
+    row.playerBWins += playerAWon ? 0 : 1;
+    row.lastMeetingDate = session.date;
+    row.recentMeetings.push({
+      sessionId: session.id,
+      date: session.date,
+      firstId: first,
+      secondId: second,
+      winnerId: first,
+    });
+
+    if (
+      activeSeason &&
+      session.date >= activeSeason.start &&
+      session.date <= activeSeason.end
+    ) {
+      row.seasonMeetings += 1;
+      row.seasonPlayerAWins += playerAWon ? 1 : 0;
+      row.seasonPlayerBWins += playerAWon ? 0 : 1;
+    }
+
+    if (latestSessionIds.has(session.id)) {
+      row.recentClashCount += 1;
+    }
+  });
+
+  const rows = Object.values(rowsByPair)
+    .filter((row) => row.meetings > 0 && row.playerA && row.playerB)
+    .map((row) => {
+      const leaderId =
+        row.playerAWins === row.playerBWins
+          ? null
+          : row.playerAWins > row.playerBWins
+            ? row.playerAId
+            : row.playerBId;
+      const gap = Math.abs(row.playerAWins - row.playerBWins);
+      const daysSince = getUtcDayDistance(row.lastMeetingDate, latestDate);
+      const recencyScore =
+        daysSince <= 2 ? 36 :
+        daysSince <= 7 ? 28 :
+        daysSince <= 14 ? 18 :
+        daysSince <= 30 ? 9 : 0;
+      const meetingScore = Math.min(row.meetings * 2.4, 28);
+      const gapScore = Math.max(0, 18 - gap * 3);
+      const seasonScoreValue = Math.min(row.seasonMeetings * 4, 22);
+      const repeatScore = Math.min(row.recentClashCount * 5, 18);
+      const heatScore = Math.round(recencyScore + meetingScore + gapScore + seasonScoreValue + repeatScore);
+
+      return {
+        pairId: row.pairId,
+        playerA: row.playerA,
+        playerB: row.playerB,
+        meetings: row.meetings,
+        playerAWins: row.playerAWins,
+        playerBWins: row.playerBWins,
+        leaderId,
+        scoreLine: `${row.playerAWins}-${row.playerBWins}`,
+        gap,
+        lastMeetingDate: row.lastMeetingDate,
+        recentMeetings: row.recentMeetings.slice(-5).reverse(),
+        seasonMeetings: row.seasonMeetings,
+        seasonScore: {
+          playerAWins: row.seasonPlayerAWins,
+          playerBWins: row.seasonPlayerBWins,
+          scoreLine: `${row.seasonPlayerAWins}-${row.seasonPlayerBWins}`,
+        },
+        allTimeScore: {
+          playerAWins: row.playerAWins,
+          playerBWins: row.playerBWins,
+          scoreLine: `${row.playerAWins}-${row.playerBWins}`,
+        },
+        heatTier: "cold",
+        heatScore,
+        pressureLine: getRivalryHeatLine({
+          gap,
+          seasonMeetings: row.seasonMeetings,
+          recentMeetings: row.recentMeetings.slice(-5),
+        }),
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.heatScore - left.heatScore ||
+        right.meetings - left.meetings ||
+        left.gap - right.gap ||
+        right.lastMeetingDate.localeCompare(left.lastMeetingDate),
+    );
+
+  rows.forEach((row, index) => {
+    row.heatTier = index < 6 ? "hot" : index < 13 ? "watch" : "cold";
+  });
+
+  return {
+    hot: rows.filter((row) => row.heatTier === "hot"),
+    watch: rows.filter((row) => row.heatTier === "watch"),
+    cold: rows.filter((row) => row.heatTier === "cold"),
+    rows,
+    seasonId: activeSeason?.id || "all",
+    latestDate,
+  };
 };
 
 export const getActivityFeed = (sessions, players) => {
@@ -1110,33 +1355,45 @@ export const getLiveStreaks = (sessions, players) => {
     return [];
   }
 
+  return players
+    .map((player) => ({ ...player, streak: getLiveDayStreak(player.id, sessions, latestDate) }))
+    .filter((player) => player.streak >= 2)
+    .sort((left, right) => right.streak - left.streak);
+};
+
+export const getLatestDayHeatRun = (
+  sessions,
+  players,
+  date = getLatestSessionDate(sessions),
+) => {
+  if (!date || !sessions.length || !players.length) {
+    return null;
+  }
+
   const daySessions = [...sessions]
-    .filter((session) => session.date === latestDate)
+    .filter((session) => session.date === date)
     .sort(compareSessionsAsc);
 
-  const streaks = {};
-  daySessions.forEach((session) => {
-    players.forEach((player) => {
-      if (!session.attendees?.includes(player.id)) {
-        return;
-      }
+  if (!daySessions.length) {
+    return null;
+  }
 
-      if (!streaks[player.id]) {
-        streaks[player.id] = 0;
-      }
+  const playerIndex = buildPlayerIndex(players);
+  const bestWinRun = getLongestWinRun(daySessions, playerIndex);
 
-      if (session.winner === player.id) {
-        streaks[player.id] += 1;
-      } else {
-        streaks[player.id] = 0;
-      }
-    });
-  });
+  if (!bestWinRun?.player || bestWinRun.length < 2) {
+    return null;
+  }
 
-  return players
-    .filter((player) => (streaks[player.id] || 0) >= 2)
-    .map((player) => ({ ...player, streak: streaks[player.id] }))
-    .sort((left, right) => right.streak - left.streak);
+  return {
+    id: bestWinRun.player.id,
+    username: bestWinRun.player.username,
+    player: bestWinRun.player,
+    streak: bestWinRun.length,
+    start: bestWinRun.start,
+    end: bestWinRun.end,
+    date,
+  };
 };
 
 export const getDayRecap = (date, sessions, players) => {
@@ -1160,9 +1417,17 @@ export const getDayRecap = (date, sessions, players) => {
     }
   });
 
-  const topWinnerEntry = Object.entries(winMap).sort(
-    (left, right) => right[1] - left[1],
-  )[0];
+  const sortedWinnerEntries = sortWinLeaderEntries(
+    Object.entries(winMap).map(([pid, wins]) => ({
+      pid,
+      wins,
+      kills: daySessions.reduce((sum, session) => sum + (session.kills?.[pid] || 0), 0),
+    })),
+    players,
+    (entry) => entry.wins,
+    (entry) => entry.kills,
+  );
+  const topWinnerEntry = sortedWinnerEntries[0] || null;
 
   let killKingValue = 0;
   daySessions.forEach((session) => {
@@ -1189,9 +1454,11 @@ export const getDayRecap = (date, sessions, players) => {
 
   const sortedKillKingsList = sortKillKingEntries(killKingsList, players);
   const killKing = sortedKillKingsList[0] || { pid: "", k: 0, sid: "", player: null };
-  const winnersList = Object.entries(winMap)
-    .sort((left, right) => right[1] - left[1])
-    .map(([pid, wins]) => ({ pid, wins, player: players.find((player) => player.id === pid) }));
+  const winnersList = sortedWinnerEntries.map(({ pid, wins }) => ({
+    pid,
+    wins,
+    player: players.find((player) => player.id === pid),
+  }));
 
   return {
     date,
@@ -1200,9 +1467,9 @@ export const getDayRecap = (date, sessions, players) => {
     uniquePlayers: uniquePlayers.length,
     topWinner: topWinnerEntry
       ? {
-          pid: topWinnerEntry[0],
-          wins: topWinnerEntry[1],
-          player: players.find((player) => player.id === topWinnerEntry[0]),
+          pid: topWinnerEntry.pid,
+          wins: topWinnerEntry.wins,
+          player: players.find((player) => player.id === topWinnerEntry.pid),
         }
       : null,
     killKing: { ...killKing, player: killKing.player || null },
@@ -1363,7 +1630,7 @@ export const getLatestDayConsequences = (
         entry.afterRank > 0 && entry.afterRank <= 5 && entry.beforeRank > entry.afterRank,
     ) || null;
 
-  const biggestClimber = afterRanks
+  let biggestClimber = afterRanks
     .map((player) => ({
       player: getPlayer(player.id),
       beforeRank: getRankFor(beforeRanks, player.id),
@@ -1386,6 +1653,24 @@ export const getLatestDayConsequences = (
         right.dayWins - left.dayWins ||
         right.dayKills - left.dayKills,
     )[0] || null;
+
+  if (biggestClimber?.player) {
+    const beforeTotalsForClimber = findTotals(beforeTotals, biggestClimber.player.id);
+    const afterTotalsForClimber = findTotals(afterTotals, biggestClimber.player.id);
+    const climbCopy = buildAllTimeClimbCopy({
+      player: biggestClimber.player,
+      afterRank: biggestClimber.afterRank,
+      beforeWins: beforeTotalsForClimber.wins,
+      afterWins: afterTotalsForClimber.wins,
+    });
+    biggestClimber = {
+      ...biggestClimber,
+      beforeWins: beforeTotalsForClimber.wins,
+      afterWins: afterTotalsForClimber.wins,
+      line: climbCopy.line,
+      shortLine: climbCopy.shortLine,
+    };
+  }
 
   const buildRivalPressure = (leftName, rightName) => {
     const leftPlayer = players.find((player) => player.username === leftName) || null;
@@ -1488,7 +1773,7 @@ export const getLatestDayConsequences = (
         text:
           afterGap > beforeGap
             ? `${leaderPlayer.username} kept the ${activeSeason.name} lead and pushed the gap over ${runnerPlayer.username} to ${afterGap} wins.`
-            : `${leaderPlayer.username} kept the ${activeSeason.name} lead with ${leaderDayWins} wins on the day.`,
+            : `${leaderPlayer.username} kept the ${activeSeason.name} lead with ${leaderDayWins} win${leaderDayWins===1?"":"s"} on the day.`,
         shortText:
           afterGap > beforeGap
             ? `${leaderPlayer.username} kept the lead at +${afterGap}.`
@@ -1498,17 +1783,13 @@ export const getLatestDayConsequences = (
   }
 
   if (biggestClimber?.player) {
-    const climbLine =
-      biggestClimber.afterRank <= 5
-        ? `${biggestClimber.player.username} climbed into ${formatOrdinal(biggestClimber.afterRank)} on the all-time wins table.`
-        : `${biggestClimber.player.username} climbed to ${formatOrdinal(biggestClimber.afterRank)} on the all-time wins table.`;
     pushConsequence(consequences, {
       type: "climbed",
       icon: "📈",
       color: "#00E5FF",
       priority: 95,
-      text: climbLine,
-      shortText: climbLine,
+      text: biggestClimber.line,
+      shortText: biggestClimber.shortLine,
     });
   }
 
@@ -1751,35 +2032,50 @@ const getLongestPlacementRun = (daySessions, playerId, limit = 3) => {
 };
 
 const getLongestWinRun = (daySessions, playerIndex) => {
-  let currentWinner = "";
-  let currentLength = 0;
-  let currentStart = null;
   let best = null;
 
-  daySessions.forEach((session) => {
-    if (!session.winner) {
-      currentWinner = "";
-      currentLength = 0;
-      currentStart = null;
-      return;
-    }
+  Object.values(playerIndex).forEach((player) => {
+    const playedSessions = daySessions.filter((session) =>
+      session.attendees?.includes(player.id),
+    );
+    let currentLength = 0;
+    let currentStart = null;
+    let currentKills = 0;
 
-    if (session.winner === currentWinner) {
-      currentLength += 1;
-    } else {
-      currentWinner = session.winner;
-      currentLength = 1;
-      currentStart = session;
-    }
+    playedSessions.forEach((session) => {
+      if (session.winner === player.id) {
+        currentLength += 1;
+        currentStart = currentStart || session;
+        currentKills += Number(session.kills?.[player.id] || 0);
 
-    if (currentLength >= 2 && (!best || currentLength > best.length)) {
-      best = {
-        player: playerIndex[currentWinner] || null,
-        length: currentLength,
-        start: currentStart,
-        end: session,
-      };
-    }
+        if (
+          currentLength >= 2 &&
+          (
+            !best ||
+            currentLength > best.length ||
+            (currentLength === best.length && currentKills > best.totalKills) ||
+            (
+              currentLength === best.length &&
+              currentKills === best.totalKills &&
+              best.end &&
+              compareSessionsAsc(best.end, session) < 0
+            )
+          )
+        ) {
+          best = {
+            player,
+            length: currentLength,
+            start: currentStart,
+            end: session,
+            totalKills: currentKills,
+          };
+        }
+      } else {
+        currentLength = 0;
+        currentStart = null;
+        currentKills = 0;
+      }
+    });
   });
 
   return best;
@@ -1796,6 +2092,32 @@ const buildPlacementRankMap = (players, sessions, sort = "wins") => {
     });
 
   return Object.fromEntries(ranked.map((player, index) => [player.id, index + 1]));
+};
+
+const buildAllTimeClimbCopy = ({
+  player,
+  afterRank,
+  beforeWins,
+  afterWins,
+}) => {
+  if (!player) {
+    return { line: "", shortLine: "" };
+  }
+
+  if (afterWins > beforeWins) {
+    return {
+      line:
+        afterRank <= 5
+          ? `${player.username} climbed into ${formatOrdinal(afterRank)} on the all-time wins table.`
+          : `${player.username} climbed to ${formatOrdinal(afterRank)} on the all-time wins table.`,
+      shortLine: `${player.username} climbed to ${formatOrdinal(afterRank)} on the wins table.`,
+    };
+  }
+
+  return {
+    line: `${player.username} moved up to ${formatOrdinal(afterRank)} on the all-time board on tiebreaks.`,
+    shortLine: `${player.username} moved up on the all-time board.`,
+  };
 };
 
 export const getDayStorylines = (date, sessions, players) => {
@@ -1871,10 +2193,24 @@ export const getDayStorylines = (date, sessions, players) => {
     }
   }
 
-  const bestWinRun = getLongestWinRun(daySessions, playerIndex);
-  if (bestWinRun?.player) {
+  const sharedHeatRun =
+    getLatestDayHeatRun(sessions, players, date) ||
+    (() => {
+      const fallbackRun = getLongestWinRun(daySessions, playerIndex);
+      if (!fallbackRun?.player) {
+        return null;
+      }
+      return {
+        player: fallbackRun.player,
+        streak: fallbackRun.length,
+        start: fallbackRun.start,
+        end: fallbackRun.end,
+      };
+    })();
+
+  if (sharedHeatRun?.player) {
     pushStoryline(
-      `${bestWinRun.player.username} had the cleanest run of the day with ${bestWinRun.length} straight wins from ${getLobbyLabel(bestWinRun.start.id)} through ${getLobbyLabel(bestWinRun.end.id)}.`,
+      `${sharedHeatRun.player.username} had the cleanest run of the day with ${sharedHeatRun.streak} straight wins from ${getLobbyLabel(sharedHeatRun.start.id)} through ${getLobbyLabel(sharedHeatRun.end.id)}.`,
     );
   }
 
@@ -2126,6 +2462,355 @@ export const getBenchmark = (playerId, players, sessions) => {
     winGap,
     killGap,
     sameWins: winGap === 0,
+  };
+};
+
+export const getPlayerFileState = (
+  playerId,
+  players,
+  sessions,
+  {
+    seasonId = SEASONS[SEASONS.length - 1]?.id || "all",
+    formCount = 5,
+  } = {},
+) => {
+  const playerIndex = buildPlayerIndex(players);
+  const player = getPlayerById(playerIndex, playerId);
+  if (!player) {
+    return null;
+  }
+
+  const stats = getStats(playerId, sessions);
+  const seasonSessions = seasonId === "all" ? sessions : getSeasonSessions(sessions, seasonId);
+  const seasonStats = getStats(playerId, seasonSessions);
+  const rank = getRank(playerId, players, sessions);
+  const level = getPlayerLevel(playerId, sessions);
+  const form = getFormGuide(playerId, sessions, formCount);
+  const recentWins = form.filter((entry) => entry.win).length;
+  const drought = getDrought(playerId, sessions);
+  const liveDayStreak = getLiveDayStreak(playerId, sessions);
+  const carry = getCarryScore(playerId, sessions);
+  const consistency = getConsistency(playerId, sessions);
+  const lastSeen = getLastSeen(playerId, sessions);
+  const benchmark = getBenchmark(playerId, players, sessions);
+  const seasonBenchmark = (() => {
+    const rows = allStats(players, seasonSessions)
+      .filter((row) => row.appearances > 0)
+      .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+    const currentIndex = rows.findIndex((row) => row.id === playerId);
+    if (currentIndex <= 0) {
+      return null;
+    }
+    const target = rows[currentIndex - 1];
+    const targetPlayer = getPlayerById(playerIndex, target.id);
+    return targetPlayer
+      ? {
+          target: targetPlayer,
+          winGap: target.wins - seasonStats.wins,
+          killGap: target.kills - seasonStats.kills,
+          sameWins: target.wins === seasonStats.wins,
+        }
+      : null;
+  })();
+
+  const topRival = getRivals(sessions).find((entry) => entry.p1 === playerId || entry.p2 === playerId) || null;
+  const rivalId = topRival ? (topRival.p1 === playerId ? topRival.p2 : topRival.p1) : null;
+  const rival = rivalId ? getPlayerById(playerIndex, rivalId) : null;
+  const playerRivalWins = topRival ? (topRival.p1 === playerId ? topRival.p1wins : topRival.p2wins) : 0;
+  const rivalWins = topRival ? (topRival.p1 === playerId ? topRival.p2wins : topRival.p1wins) : 0;
+  const duelGap = Math.abs(playerRivalWins - rivalWins);
+  const rivalrySessions = topRival
+    ? sessions.filter((session) => {
+        const placements = session.placements || session.attendees || [];
+        const [first, second] = placements;
+        return first && second && [first, second].sort().join(":") === [topRival.p1, topRival.p2].sort().join(":");
+      })
+    : [];
+  const playerSharedKills = rivalrySessions.reduce(
+    (total, session) => total + (session.kills?.[playerId] || 0),
+    0,
+  );
+  const rivalSharedKills = rivalId
+    ? rivalrySessions.reduce((total, session) => total + (session.kills?.[rivalId] || 0), 0)
+    : 0;
+  const sharedKillGap = Math.abs(playerSharedKills - rivalSharedKills);
+  const latestSharedNight = rivalrySessions.length
+    ? [...rivalrySessions].sort(compareSessionsDesc)[0]
+    : null;
+
+  const currentState = (() => {
+    if (stats.appearances === 0) {
+      return {
+        label: "UNOPENED FILE",
+        line: "No official lobby has pinned this file down yet.",
+        tone: "quiet",
+        color: "#7B8CDE",
+      };
+    }
+    if (liveDayStreak >= 3) {
+      return {
+        label: "RUNNING HOT",
+        line: `${player.username} is carrying a ${liveDayStreak}-win latest-day run.`,
+        tone: "hot",
+        color: "#FF6B35",
+      };
+    }
+    if (drought >= 6 && stats.wins > 0) {
+      return {
+        label: "UNDER QUIET PRESSURE",
+        line: `${drought} lobbies without a win is leading the file right now.`,
+        tone: "watch",
+        color: "#FFD700",
+      };
+    }
+    if (recentWins >= 3) {
+      return {
+        label: "FORM RISING",
+        line: `${recentWins} wins in the last ${form.length} logged lobbies has the file moving.`,
+        tone: "hot",
+        color: "#00FF94",
+      };
+    }
+    if (stats.wins === 0) {
+      return {
+        label: "FIRST CLOSE PENDING",
+        line: "The first official win is still the whole case.",
+        tone: "quiet",
+        color: "#00E5FF",
+      };
+    }
+    return {
+      label: "LIVE FILE",
+      line: "Enough history to matter, enough room left to change.",
+      tone: "watch",
+      color: "#00E5FF",
+    };
+  })();
+
+  const liveRead = (() => {
+    if (stats.appearances === 0) {
+      return `${player.username} is still an unopened file waiting on a first official read.`;
+    }
+    if (liveDayStreak >= 3) {
+      return `${player.username} is carrying the clearest hot run in the file right now.`;
+    }
+    if (drought >= 6 && stats.wins > 0) {
+      return `${player.username} has history, but the next answer is the current file.`;
+    }
+    if (stats.wins >= 25) {
+      return `${player.username} is established enough to be hunted.`;
+    }
+    if (stats.wins === 0) {
+      return `${player.username} is still chasing the close that makes the file real.`;
+    }
+    if (recentWins >= 2) {
+      return `${player.username} is giving the file fresh movement.`;
+    }
+    return `${player.username} is live enough to matter when the room opens.`;
+  })();
+
+  const pressureLine = (() => {
+    if (seasonBenchmark) {
+      if (seasonBenchmark.sameWins) {
+        return {
+          label: "NEXT BOARD MOVE",
+          line: `${seasonBenchmark.target.username} is the next Season 2 file above on kills.`,
+          detail: `${Math.max(seasonBenchmark.killGap, 0)} kill${Math.abs(seasonBenchmark.killGap) === 1 ? "" : "s"} changes that chase.`,
+          tone: "season",
+          color: "#00E5FF",
+          targetId: seasonBenchmark.target.id,
+          concrete: true,
+        };
+      }
+      return {
+        label: "NEXT BOARD MOVE",
+        line: `${seasonBenchmark.target.username} is the next Season 2 file above on wins.`,
+        detail: `${seasonBenchmark.winGap} win${seasonBenchmark.winGap === 1 ? "" : "s"} closes the gap.`,
+        tone: "season",
+        color: "#00E5FF",
+        targetId: seasonBenchmark.target.id,
+        concrete: true,
+      };
+    }
+    if (benchmark) {
+      if (benchmark.sameWins) {
+        return {
+          label: "NEXT ALL-TIME MOVE",
+          line: `${benchmark.target.username} is the next all-time file above on kills.`,
+          detail: `${Math.max(benchmark.killGap, 0)} kill${Math.abs(benchmark.killGap) === 1 ? "" : "s"} changes the order.`,
+          tone: "board",
+          color: "#FFD700",
+          targetId: benchmark.target.id,
+          concrete: true,
+        };
+      }
+      return {
+        label: "NEXT ALL-TIME MOVE",
+        line: `${benchmark.target.username} is the next all-time file above on wins.`,
+        detail: `${benchmark.winGap} win${benchmark.winGap === 1 ? "" : "s"} closes the gap.`,
+        tone: "board",
+        color: "#FFD700",
+        targetId: benchmark.target.id,
+        concrete: true,
+      };
+    }
+    if (stats.wins === 0) {
+      return {
+        label: "FIRST BREAKTHROUGH",
+        line: "One win changes the whole file from waiting to filed.",
+        detail: "Until then, every late room carries extra weight.",
+        tone: "quiet",
+        color: "#00E5FF",
+        targetId: null,
+        concrete: true,
+      };
+    }
+    return {
+      label: "NEXT MARK",
+      line: "The next clear change has to come from a filed room.",
+      detail: "No official board move is close enough to call yet.",
+      tone: "quiet",
+      color: "#7B8CDE",
+      targetId: null,
+      concrete: false,
+    };
+  })();
+
+  const conflict = rival
+    ? {
+        rivalId: rival.id,
+        rivalName: rival.username,
+        edgeLine:
+          playerRivalWins === rivalWins
+            ? `Dead level at ${playerRivalWins}-${rivalWins}.`
+            : playerRivalWins > rivalWins
+              ? `${player.username} owns the edge at ${playerRivalWins}-${rivalWins}.`
+              : `${rival.username} owns the edge at ${rivalWins}-${playerRivalWins}.`,
+        nextSharedNight:
+          duelGap === 0
+            ? "The next shared night breaks the tie."
+            : duelGap === 1
+              ? "The next shared night can flip the tone fast."
+              : "The next shared night decides whether this stays a rivalry or becomes distance.",
+        support:
+          topRival.total >= 10
+            ? `${topRival.total} meetings is enough history for the room to remember it.`
+            : `${topRival.total} meetings on file, still forming but already useful.`,
+        playerWins: playerRivalWins,
+        rivalWins,
+        meetings: topRival.total,
+        playerSharedKills,
+        rivalSharedKills,
+        sharedKillLeader:
+          playerSharedKills === rivalSharedKills
+            ? "LEVEL"
+            : playerSharedKills > rivalSharedKills
+              ? player.username
+              : rival.username,
+        sharedWinLeader:
+          playerRivalWins === rivalWins
+            ? "LEVEL"
+            : playerRivalWins > rivalWins
+              ? player.username
+              : rival.username,
+        gapLine:
+          duelGap <= 1
+            ? "Duel edge is close enough to flip."
+            : sharedKillGap <= 10
+              ? "Damage gap is still close enough to matter."
+              : "The gap needs a real answer.",
+        latestSharedNight: latestSharedNight?.date || "",
+        color: "#FF4D8F",
+      }
+    : {
+        rivalId: null,
+        rivalName: "No primary rival yet",
+        edgeLine: "No duel has enough repeated shape to lead the file.",
+        nextSharedNight: "The next repeated matchup can start writing that case.",
+        support: "Conflict stays quiet until the official rooms make it real.",
+        playerWins: 0,
+        rivalWins: 0,
+        meetings: 0,
+        playerSharedKills: 0,
+        rivalSharedKills: 0,
+        sharedKillLeader: "NONE",
+        sharedWinLeader: "NONE",
+        gapLine: "No rivalry gap is live yet.",
+        latestSharedNight: "",
+        color: "#7B8CDE",
+      };
+
+  const recentFormRead = (() => {
+    if (!form.length) return "No recent form line yet.";
+    if (recentWins >= 4) return `${recentWins}/${form.length} recent wins. The file is hot enough to draw attention.`;
+    if (recentWins >= 2) return `${recentWins}/${form.length} recent wins. The file is holding in the fight.`;
+    if (recentWins === 0) return `0/${form.length} recent wins. The room is waiting for a response.`;
+    return `${recentWins}/${form.length} recent wins. One result can change the read.`;
+  })();
+
+  const threat = (() => {
+    if (stats.appearances === 0) return "No threat profile yet.";
+    if (carry >= 3) return `${carry} carry wins means the crown and damage can land together.`;
+    if (stats.biggestGame >= 6) return `${stats.biggestGame} kills is the ceiling. One loose lobby can get loud quickly.`;
+    if (stats.kd >= 1.8 && stats.kills >= 20) return `${stats.kd} kills per lobby keeps pressure in the file even without a win.`;
+    if (stats.winRate >= 30 && stats.appearances >= 8) return `${stats.winRate}% win rate says late-room conversion is the danger.`;
+    return "The threat is timing. If the room opens, this file can still change the night.";
+  })();
+
+  const weakness = (() => {
+    if (stats.appearances === 0) return "The file is too thin to call a weakness.";
+    if (stats.wins === 0) return "The missing first close is still the pressure point.";
+    if (drought >= 5) return `${drought} lobbies without a win is the part opponents can lean on.`;
+    if (consistency < 45 && stats.appearances >= 8) return "The floor still drops often enough to keep the file vulnerable.";
+    if (seasonStats.appearances >= 4 && seasonStats.wins === 0) return "Season 2 has not paid out yet.";
+    return "The danger is drift. Long quiet stretches let the room move on.";
+  })();
+
+  const nextMark = (() => {
+    const nextWin = getNextMilestone(stats.wins, WIN_MILESTONE_TARGETS);
+    const nextKill = getNextMilestone(stats.kills, KILL_MILESTONE_TARGETS);
+    const winGap = nextWin ? nextWin - stats.wins : null;
+    const killGap = nextKill ? nextKill - stats.kills : null;
+    if (winGap != null && winGap <= 3) {
+      return {
+        label: `${nextWin} wins`,
+        line: `${winGap} win${winGap === 1 ? "" : "s"} away.`,
+        color: "#FFD700",
+      };
+    }
+    if (killGap != null && killGap <= 10) {
+      return {
+        label: `${nextKill} kills`,
+        line: `${killGap} kill${killGap === 1 ? "" : "s"} away.`,
+        color: "#FF4D8F",
+      };
+    }
+    return {
+      label: "No close mark",
+      line: "Nothing is close enough to force the room yet.",
+      color: "#7B8CDE",
+    };
+  })();
+
+  return {
+    currentState,
+    liveRead,
+    pressureLine,
+    conflict,
+    recentFormRead,
+    threat,
+    weakness,
+    nextMark,
+    coreStats: [
+      { label: "WINS", value: stats.wins, color: "#FFD700" },
+      { label: "KILLS", value: stats.kills, color: "#FF4D8F" },
+      { label: "WIN RATE", value: `${stats.winRate}%`, color: "#00FF94" },
+      { label: "LOBBIES", value: stats.appearances, color: "#00E5FF" },
+    ],
+    rank,
+    level,
+    lastSeen,
+    form,
   };
 };
 
@@ -2781,6 +3466,382 @@ export const getOnDeckPressure = (
     summary: selected.map((entry) => entry.shortText || entry.text),
     topItem: selected[0] || null,
     scopeLabel,
+  };
+};
+
+const PRESSURE_QUEUE_EMPTY_LINE = "No live pressure is close enough to call right now.";
+
+const getPressureQueueTypeFamily = (type = "") => {
+  if (type === "rivalry-pressure") {
+    return "rivalry";
+  }
+  if (type === "milestone-pressure") {
+    return "milestone";
+  }
+  if (type === "crown-pressure") {
+    return "crown";
+  }
+  if (type === "rank-jump-pressure") {
+    return "rank-jump";
+  }
+  if (type === "streak-pressure") {
+    return "streak";
+  }
+  if (type === "drought-pressure") {
+    return "drought";
+  }
+  if (type === "season-window-pressure") {
+    return "season-window";
+  }
+  if (type === "record-threat") {
+    return "record-threat";
+  }
+  return type || "other";
+};
+
+const getPressureQueueColor = (type = "", tone = "watch") => {
+  if (type === "crown-pressure") {
+    return "#FF4D8F";
+  }
+  if (type === "rank-jump-pressure") {
+    return "#00E5FF";
+  }
+  if (type === "milestone-pressure") {
+    return tone === "hot" ? "#FFD700" : "#FFAB40";
+  }
+  if (type === "streak-pressure") {
+    return "#FF6B35";
+  }
+  if (type === "rivalry-pressure") {
+    return "#FF4D8F";
+  }
+  if (type === "drought-pressure") {
+    return "#FFAB40";
+  }
+  if (type === "season-window-pressure") {
+    return "#FFD700";
+  }
+  if (type === "record-threat") {
+    return "#C77DFF";
+  }
+  return tone === "hot" ? "#FF6B35" : "#00E5FF";
+};
+
+const mapOnDeckPressureToQueueItem = (item, playersById) => {
+  if (!item?.type || !item?.text) {
+    return null;
+  }
+  const playerIds = item.players || [];
+  const firstPlayer = getPlayerById(playersById, playerIds[0]);
+  const secondPlayer = getPlayerById(playersById, playerIds[1]);
+  const tone = item.gap === 1 ? "hot" : "watch";
+
+  if (item.type === "wins-benchmark" || item.type === "kills-benchmark") {
+    return {
+      id: `pressure-queue-ondeck-${item.type}-${playerIds.join("-")}-${item.benchmarkValue || "mark"}`,
+      type: "milestone-pressure",
+      priority: item.priority || 80,
+      label: "MILESTONE PRESSURE",
+      headline: item.text,
+      detail:
+        item.type === "wins-benchmark"
+          ? item.gap === 1
+            ? "One win moves that mark immediately."
+            : "Two wins is still close enough to matter next session."
+          : item.gap <= 4
+            ? "One busy room can close that gap."
+            : "That number is still close enough to stay on the board.",
+      playerIds,
+      source: "on_deck_pressure",
+      tone,
+    };
+  }
+
+  if (item.type === "rivalry" && firstPlayer && secondPlayer) {
+    return {
+      id: `pressure-queue-ondeck-rivalry-${playerIds.join("-")}`,
+      type: "rivalry-pressure",
+      priority: item.priority || 86,
+      label: "RIVALRY PRESSURE",
+      headline: `${firstPlayer.username} vs ${secondPlayer.username} is still within one swing.`,
+      detail: item.shortText || item.text,
+      playerIds,
+      source: "on_deck_pressure",
+      tone,
+    };
+  }
+
+  if (item.type === "scope-flip") {
+    return {
+      id: `pressure-queue-ondeck-scope-${playerIds.join("-")}`,
+      type: "rank-jump-pressure",
+      priority: item.priority || 85,
+      label: "RANK JUMP",
+      headline: item.shortText || item.text,
+      detail: "That line is still close enough to move in the next room.",
+      playerIds,
+      source: "on_deck_pressure",
+      tone,
+    };
+  }
+
+  return null;
+};
+
+export const getPressureQueue = (
+  state,
+  {
+    limit = 3,
+    seasonId = "",
+    nowUtc = todayStr(),
+  } = {},
+) => {
+  const players = state?.players || [];
+  const sessions = state?.sessions || [];
+
+  if (!players.length || !sessions.length) {
+    return {
+      items: [],
+      emptyLine: PRESSURE_QUEUE_EMPTY_LINE,
+    };
+  }
+
+  const latestDate = getLatestSessionDate(sessions);
+  const activeSeason =
+    (seasonId ? SEASONS.find((season) => season.id === seasonId) : null) ||
+    getSeasonForDate(latestDate) ||
+    SEASONS[SEASONS.length - 1];
+  const activeSeasonId = activeSeason?.id || "all";
+  const seasonSessions =
+    activeSeasonId === "all" ? sessions : getSeasonSessions(sessions, activeSeasonId);
+  const playersById = buildPlayerIndex(players);
+  const allRows = allStats(players, sessions)
+    .filter((row) => row.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+  const seasonRows = allStats(players, seasonSessions)
+    .filter((row) => row.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+  const onDeck = getOnDeckPressure(sessions, players, {
+    seasonId: activeSeasonId,
+    period: "all",
+    limit: 4,
+  });
+  const rivalOps = getRivalOpsViewModel(state, nowUtc);
+  const latestHeatRun = getLatestDayHeatRun(sessions, players, latestDate);
+  const seasonAnchor = new Date(`${nowUtc}T12:00:00Z`);
+  const seasonEndDate = activeSeason?.end ? new Date(`${activeSeason.end}T12:00:00Z`) : null;
+  const seasonDaysLeft = seasonEndDate
+    ? Math.max(0, Math.ceil((seasonEndDate - seasonAnchor) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const candidates = [];
+  const pushCandidate = (candidate) => {
+    if (!candidate?.id || !candidate?.headline || !candidate?.detail) {
+      return;
+    }
+    candidates.push({
+      ...candidate,
+      color: getPressureQueueColor(candidate.type, candidate.tone),
+    });
+  };
+
+  const seasonLeader = seasonRows[0] || null;
+  const seasonRunner = seasonRows[1] || null;
+  const seasonLeaderPlayer = seasonLeader ? getPlayerById(playersById, seasonLeader.id) : null;
+  const seasonRunnerPlayer = seasonRunner ? getPlayerById(playersById, seasonRunner.id) : null;
+  if (seasonLeader && seasonRunner && seasonLeaderPlayer && seasonRunnerPlayer) {
+    const winGap = seasonLeader.wins - seasonRunner.wins;
+    if (winGap <= 3) {
+      pushCandidate({
+        id: `pressure-queue-crown-${seasonLeader.id}-${seasonRunner.id}`,
+        type: "crown-pressure",
+        priority: winGap === 0 ? 110 : winGap === 1 ? 108 : winGap === 2 ? 103 : 99,
+        label: "CROWN PRESSURE",
+        headline:
+          winGap === 0
+            ? `${seasonLeaderPlayer.username} and ${seasonRunnerPlayer.username} are level on wins.`
+            : `${seasonRunnerPlayer.username} is ${winGap} win${winGap === 1 ? "" : "s"} from ${seasonLeaderPlayer.username}.`,
+        detail:
+          seasonDaysLeft != null && seasonDaysLeft <= 6
+            ? `${seasonDaysLeft} day${seasonDaysLeft === 1 ? "" : "s"} left. The top line is still moving.`
+            : winGap === 0
+              ? "The next clean finish changes the top line."
+              : winGap === 1
+                ? "One strong room pulls the lead level."
+                : "One sharp night cuts the gap to one.",
+        playerIds: [seasonLeader.id, seasonRunner.id],
+        source: "season_leaderboard",
+        tone: winGap <= 1 ? "hot" : "watch",
+      });
+    }
+  }
+
+  const rankJumpCandidates = seasonRows
+    .map((row, index) => {
+      if (index <= 0 || index >= 8) {
+        return null;
+      }
+      const target = seasonRows[index - 1];
+      const player = getPlayerById(playersById, row.id);
+      const targetPlayer = getPlayerById(playersById, target.id);
+      if (!player || !targetPlayer) {
+        return null;
+      }
+      const winGap = target.wins - row.wins;
+      const killGap = target.kills - row.kills;
+      if (index === 1 && seasonLeader?.id === target.id) {
+        return null;
+      }
+      if (winGap === 0 && killGap > 0 && killGap <= 8) {
+        return {
+          id: `pressure-queue-rank-tie-${row.id}-${target.id}`,
+          type: "rank-jump-pressure",
+          priority: 97 - index,
+          label: "RANK JUMP",
+          headline: `${player.username} is level on wins with ${targetPlayer.username}.`,
+          detail: `${killGap} kill${killGap === 1 ? "" : "s"} separate the tiebreak right now.`,
+          playerIds: [row.id, target.id],
+          source: "season_leaderboard",
+          tone: "hot",
+        };
+      }
+      if (winGap === 1) {
+        return {
+          id: `pressure-queue-rank-gap-${row.id}-${target.id}`,
+          type: "rank-jump-pressure",
+          priority: 94 - index,
+          label: "RANK JUMP",
+          headline: `${player.username} is 1 win from ${targetPlayer.username}'s spot.`,
+          detail: "One sharp room flips that line immediately.",
+          playerIds: [row.id, target.id],
+          source: "season_leaderboard",
+          tone: "watch",
+        };
+      }
+      return null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.priority - left.priority);
+  if (rankJumpCandidates[0]) {
+    pushCandidate(rankJumpCandidates[0]);
+  }
+
+  if (latestHeatRun?.player && latestHeatRun.streak >= 2) {
+    pushCandidate({
+      id: `pressure-queue-streak-${latestHeatRun.player.id}-${latestDate}`,
+      type: "streak-pressure",
+      priority: latestHeatRun.streak >= 3 ? 92 : 86,
+      label: "STREAK PRESSURE",
+      headline: `${latestHeatRun.player.username} closed the last session day on ${latestHeatRun.streak} straight wins.`,
+      detail: "That is the cleanest unresolved streak still hanging over the next room.",
+      playerIds: [latestHeatRun.player.id],
+      source: "latest_day_heat_run",
+      tone: latestHeatRun.streak >= 3 ? "hot" : "watch",
+    });
+  }
+
+  const rivalCard = rivalOps.activeCards[0] || rivalOps.watchCards[0] || null;
+  if (rivalCard) {
+    pushCandidate({
+      id: `pressure-queue-rivalops-${rivalCard.id}`,
+      type: "rivalry-pressure",
+      priority: rivalCard.state === "active" ? 95 : 89,
+      label: rivalCard.state === "active" ? "RIVALRY PRESSURE" : "RIVALRY WATCH",
+      headline: `${rivalCard.playerALabel} vs ${rivalCard.playerBLabel} is still carrying board pressure.`,
+      detail: rivalCard.pressureLine || rivalCard.stateLine,
+      playerIds: [rivalCard.playerAId, rivalCard.playerBId],
+      source: "rival_ops",
+      tone: rivalCard.state === "active" ? "hot" : "watch",
+    });
+  }
+
+  const droughtCandidate = allRows
+    .filter((row) => row.wins > 0)
+    .map((row) => ({
+      row,
+      drought: getDrought(row.id, sessions),
+      player: getPlayerById(playersById, row.id),
+    }))
+    .filter((entry) => entry.player && entry.drought >= 6)
+    .sort(
+      (left, right) =>
+        right.drought - left.drought ||
+        right.row.wins - left.row.wins ||
+        right.row.appearances - left.row.appearances,
+    )[0] || null;
+  if (droughtCandidate) {
+    pushCandidate({
+      id: `pressure-queue-drought-${droughtCandidate.player.id}`,
+      type: "drought-pressure",
+      priority: Math.min(88, 80 + droughtCandidate.drought),
+      label: "DROUGHT PRESSURE",
+      headline: `${droughtCandidate.player.username} is ${droughtCandidate.drought} lobbies without a win.`,
+      detail: "One clean room ends it immediately and changes how that file is being read.",
+      playerIds: [droughtCandidate.player.id],
+      source: "standings_drought",
+      tone: droughtCandidate.drought >= 10 ? "hot" : "watch",
+    });
+  }
+
+  onDeck.items
+    .map((item) => mapOnDeckPressureToQueueItem(item, playersById))
+    .filter(Boolean)
+    .forEach(pushCandidate);
+
+  const selected = [];
+  const usedFamilies = new Map();
+  const usedPlayerKeys = new Set();
+  const usedSourceKeys = new Set();
+  const familyCaps = {
+    rivalry: 1,
+    milestone: 1,
+  };
+
+  candidates
+    .sort((left, right) => right.priority - left.priority || left.headline.localeCompare(right.headline))
+    .forEach((candidate) => {
+      if (selected.length >= limit) {
+        return;
+      }
+
+      const family = getPressureQueueTypeFamily(candidate.type);
+      const familyCount = usedFamilies.get(family) || 0;
+      if (familyCaps[family] && familyCount >= familyCaps[family]) {
+        return;
+      }
+
+      const playerKey = [...(candidate.playerIds || [])].sort().join(":");
+      const sourceKey = `${family}:${playerKey}:${candidate.headline}`;
+      if ((playerKey && usedPlayerKeys.has(`${family}:${playerKey}`)) || usedSourceKeys.has(sourceKey)) {
+        return;
+      }
+
+      const conflictsWithSelected = selected.some((entry) => {
+        const sameFamily = getPressureQueueTypeFamily(entry.type) === family;
+        const overlap = (candidate.playerIds || []).some((playerId) => entry.playerIds.includes(playerId));
+        if (family === "crown" && getPressureQueueTypeFamily(entry.type) === "rank-jump" && overlap) {
+          return true;
+        }
+        if (family === "rank-jump" && getPressureQueueTypeFamily(entry.type) === "crown" && overlap) {
+          return true;
+        }
+        return sameFamily && overlap;
+      });
+      if (conflictsWithSelected) {
+        return;
+      }
+
+      selected.push(candidate);
+      usedFamilies.set(family, familyCount + 1);
+      if (playerKey) {
+        usedPlayerKeys.add(`${family}:${playerKey}`);
+      }
+      usedSourceKeys.add(sourceKey);
+    });
+
+  return {
+    items: selected.slice(0, limit),
+    emptyLine: PRESSURE_QUEUE_EMPTY_LINE,
   };
 };
 
@@ -3933,9 +4994,9 @@ const RIVAL_OPS_MAX_SEASON_WINS_GAP = 3;
 const RIVAL_OPS_MAX_SEASON_KILLS_GAP = 12;
 const RIVAL_OPS_MIN_SHARED_SEASON_DAYS = 2;
 const RIVAL_OPS_MAX_SEASON_RANK = 16;
-const RIVAL_OPS_MAX_VISIBLE = 1;
 const RIVAL_OPS_COOLDOWN_DAYS = 7;
 const RIVAL_OPS_RESOLVED_HOLD_DAYS = 1;
+const RIVAL_OPS_MAX_COLD_FILES = 8;
 
 const emptyRivalOpsState = () => ({
   ops: [],
@@ -4114,7 +5175,9 @@ export const getRivalOpsCandidatePairs = (state, nowUtc = todayStr()) => {
 
   const seasonSessions = getSeasonSessions(sessions, currentSeasonId);
   const rivalryRows = getRivals(seasonSessions);
-  const stored = state?.rivalOpsState?.ops?.[0] || null;
+  const storedByPair = new Map(
+    normalizeRivalOpsState(state?.rivalOpsState).ops.map((op) => [op.pairId, op]),
+  );
 
   const candidates = rivalryRows
     .map((row) => getRivalOpsPairPressure(state, row.p1, row.p2, nowUtc))
@@ -4122,7 +5185,8 @@ export const getRivalOpsCandidatePairs = (state, nowUtc = todayStr()) => {
 
   return candidates
     .filter((row) => {
-      if (!stored || stored.pairId !== row.pairId) {
+      const stored = storedByPair.get(row.pairId);
+      if (!stored) {
         return true;
       }
       if (stored.state !== "cooldown") {
@@ -4134,6 +5198,28 @@ export const getRivalOpsCandidatePairs = (state, nowUtc = todayStr()) => {
       return false;
     })
     .sort((left, right) =>
+      right.rivalryScore - left.rivalryScore ||
+      left.seasonWinsGap - right.seasonWinsGap ||
+      left.seasonKillsGap - right.seasonKillsGap ||
+      right.sharedSeasonDayCount - left.sharedSeasonDayCount,
+    );
+};
+
+export const getRivalOpsAllPairPressure = (state, nowUtc = todayStr()) => {
+  const players = state?.players || [];
+  const sessions = state?.sessions || [];
+  const currentSeasonId = getCurrentRivalOpsSeasonId(nowUtc);
+  if (!players.length || !sessions.length || !currentSeasonId) {
+    return [];
+  }
+
+  const seasonSessions = getSeasonSessions(sessions, currentSeasonId);
+  return getRivals(seasonSessions)
+    .map((row) => getRivalOpsPairPressure(state, row.p1, row.p2, nowUtc))
+    .filter(Boolean)
+    .sort((left, right) =>
+      Number(right.eligible) - Number(left.eligible) ||
+      Number(isActiveThresholdPair(right)) - Number(isActiveThresholdPair(left)) ||
       right.rivalryScore - left.rivalryScore ||
       left.seasonWinsGap - right.seasonWinsGap ||
       left.seasonKillsGap - right.seasonKillsGap ||
@@ -4294,10 +5380,10 @@ export const resolveRivalOp = (op, outcome, nowUtc = todayStr()) => ({
   cooldownUntilUtc: addDaysUtc(getUtcDateString(nowUtc), RIVAL_OPS_COOLDOWN_DAYS),
 });
 
-const toSingleRivalOpState = (persisted) => {
+const normalizeRivalOpsState = (persisted) => {
   const next = persisted || emptyRivalOpsState();
   return {
-    ops: next.ops?.length ? [next.ops[0]] : [],
+    ops: Array.isArray(next.ops) ? next.ops.filter(Boolean) : [],
     selectedOpId: next.selectedOpId || next.ops?.[0]?.id || null,
     lastResolvedOpId: next.lastResolvedOpId || null,
   };
@@ -4305,110 +5391,108 @@ const toSingleRivalOpState = (persisted) => {
 
 export const reconcileRivalOpsState = (state, nowUtc = todayStr()) => {
   const currentSeasonId = getCurrentRivalOpsSeasonId(nowUtc);
-  const baseState = toSingleRivalOpState(state?.rivalOpsState);
+  const baseState = normalizeRivalOpsState(state?.rivalOpsState);
   if (!currentSeasonId) {
     return emptyRivalOpsState();
   }
 
-  const stored = baseState.ops[0] || null;
-  const candidates = getRivalOpsCandidatePairs({ ...state, rivalOpsState: baseState }, nowUtc);
-  const topCandidate = candidates[0] || null;
+  const nextOps = [];
+  const touchedPairIds = new Set();
+  let lastResolvedOpId = baseState.lastResolvedOpId;
 
-  const createNextOp = (candidate) => {
-    if (!candidate) {
-      return emptyRivalOpsState();
-    }
-    const nextOp = isActiveThresholdPair(candidate)
+  const createNextOp = (candidate) =>
+    isActiveThresholdPair(candidate)
       ? activateRivalOp(armWatchRivalOp(candidate, nowUtc), nowUtc)
       : armWatchRivalOp(candidate, nowUtc);
-    return {
-      ops: [nextOp],
-      selectedOpId: nextOp.id,
-      lastResolvedOpId: baseState.lastResolvedOpId,
-    };
+
+  baseState.ops.forEach((stored) => {
+    if (!stored || stored.seasonId !== currentSeasonId) {
+      return;
+    }
+
+    const storedPressure = getRivalOpsPairPressure(
+      state,
+      stored.playerAId,
+      stored.playerBId,
+      nowUtc,
+    );
+
+    touchedPairIds.add(stored.pairId);
+
+    if (stored.state === "watch" || stored.state === "active") {
+      if (!storedPressure?.eligible) {
+        return;
+      }
+      if (stored.state === "watch" && isActiveThresholdPair(storedPressure)) {
+        nextOps.push(activateRivalOp(stored, nowUtc));
+        return;
+      }
+      if (stored.state === "active") {
+        const outcome = resolveRivalOpFromSessions(state, stored);
+        if (outcome) {
+          const resolved = resolveRivalOp(stored, outcome, nowUtc);
+          nextOps.push(resolved);
+          lastResolvedOpId = resolved.id;
+          return;
+        }
+      }
+      nextOps.push(stored);
+      return;
+    }
+
+    if (stored.state === "resolved") {
+      const resolvedAt =
+        stored.resolvedAtUtc || stored.resolutionDay || getUtcDateString(nowUtc);
+      if (getUtcDateString(nowUtc) > addDaysUtc(resolvedAt, RIVAL_OPS_RESOLVED_HOLD_DAYS - 1)) {
+        nextOps.push(enterRivalOpCooldown(stored, resolvedAt));
+      } else {
+        nextOps.push(stored);
+      }
+      lastResolvedOpId = stored.id;
+      return;
+    }
+
+    if (stored.state === "cooldown") {
+      if (isRivalOpCoolingDown(stored, nowUtc)) {
+        nextOps.push(stored);
+        return;
+      }
+      if (
+        storedPressure?.eligible &&
+        (!stored.resolutionDay || (storedPressure.recentSharedDay || "") > stored.resolutionDay)
+      ) {
+        nextOps.push(createNextOp(storedPressure));
+      }
+    }
+  });
+
+  getRivalOpsCandidatePairs({ ...state, rivalOpsState: baseState }, nowUtc).forEach((candidate) => {
+    if (touchedPairIds.has(candidate.pairId)) {
+      return;
+    }
+    nextOps.push(createNextOp(candidate));
+  });
+
+  return {
+    ops: nextOps.sort((left, right) => {
+      const leftPressure = getRivalOpsPairPressure(state, left.playerAId, left.playerBId, nowUtc);
+      const rightPressure = getRivalOpsPairPressure(state, right.playerAId, right.playerBId, nowUtc);
+      const leftRank = left.state === "active" ? 0 : left.state === "watch" ? 1 : left.state === "resolved" ? 2 : 3;
+      const rightRank = right.state === "active" ? 0 : right.state === "watch" ? 1 : right.state === "resolved" ? 2 : 3;
+      return (
+        leftRank - rightRank ||
+        (rightPressure?.rivalryScore || 0) - (leftPressure?.rivalryScore || 0) ||
+        (leftPressure?.seasonWinsGap || 99) - (rightPressure?.seasonWinsGap || 99) ||
+        (leftPressure?.seasonKillsGap || 99) - (rightPressure?.seasonKillsGap || 99)
+      );
+    }),
+    selectedOpId: baseState.selectedOpId || nextOps[0]?.id || null,
+    lastResolvedOpId,
   };
-
-  if (!stored) {
-    return createNextOp(topCandidate);
-  }
-
-  if (stored.seasonId !== currentSeasonId) {
-    return createNextOp(topCandidate);
-  }
-
-  const storedPressure = getRivalOpsPairPressure(
-    state,
-    stored.playerAId,
-    stored.playerBId,
-    nowUtc,
-  );
-
-  if ((stored.state === "watch" || stored.state === "active") && !storedPressure?.eligible) {
-    return createNextOp(topCandidate);
-  }
-
-  if (stored.state === "watch" && storedPressure && isActiveThresholdPair(storedPressure)) {
-    const activeOp = activateRivalOp(stored, nowUtc);
-    return {
-      ops: [activeOp],
-      selectedOpId: activeOp.id,
-      lastResolvedOpId: baseState.lastResolvedOpId,
-    };
-  }
-
-  if (stored.state === "active") {
-    const outcome = resolveRivalOpFromSessions(state, stored);
-    if (outcome) {
-      const resolved = resolveRivalOp(stored, outcome, nowUtc);
-      return {
-        ops: [resolved],
-        selectedOpId: resolved.id,
-        lastResolvedOpId: resolved.id,
-      };
-    }
-    return baseState;
-  }
-
-  if (stored.state === "resolved") {
-    const resolvedAt = stored.resolvedAtUtc || stored.resolutionDay || getUtcDateString(nowUtc);
-    if (getUtcDateString(nowUtc) > addDaysUtc(resolvedAt, RIVAL_OPS_RESOLVED_HOLD_DAYS - 1)) {
-      const cooled = enterRivalOpCooldown(stored, resolvedAt);
-      return {
-        ops: [cooled],
-        selectedOpId: cooled.id,
-        lastResolvedOpId: stored.id,
-      };
-    }
-    return baseState;
-  }
-
-  if (stored.state === "cooldown") {
-    if (isRivalOpCoolingDown(stored, nowUtc)) {
-      return baseState;
-    }
-    const topAfterCooldown = candidates[0] || null;
-    const canReopenSamePair =
-      topAfterCooldown &&
-      topAfterCooldown.pairId === stored.pairId &&
-      (!stored.resolutionDay || (topAfterCooldown.recentSharedDay || "") > stored.resolutionDay);
-    if (canReopenSamePair) {
-      return createNextOp(topAfterCooldown);
-    }
-    if (topAfterCooldown && topAfterCooldown.pairId !== stored.pairId) {
-      return createNextOp(topAfterCooldown);
-    }
-    return {
-      ops: [],
-      selectedOpId: null,
-      lastResolvedOpId: baseState.lastResolvedOpId,
-    };
-  }
-
-  return baseState;
 };
 
 export const getStoredRivalOps = (state) =>
-  toSingleRivalOpState(state?.rivalOpsState).ops;
+  normalizeRivalOpsState(state?.rivalOpsState).ops;
 
 export const getActiveRivalOp = (state, nowUtc = todayStr()) =>
   reconcileRivalOpsState(state, nowUtc).ops.find((op) => op.state === "active") || null;
@@ -4418,8 +5502,11 @@ export const getWatchRivalOps = (state, nowUtc = todayStr()) =>
 
 export const getResolvedRivalOpsEcho = (state, nowUtc = todayStr()) => {
   const reconciled = reconcileRivalOpsState(state, nowUtc);
-  const op = reconciled.ops[0] || null;
-  if (!op || (op.state !== "resolved" && reconciled.lastResolvedOpId !== op.id)) {
+  const op =
+    reconciled.ops.find((entry) => entry.id === reconciled.lastResolvedOpId) ||
+    reconciled.ops.find((entry) => entry.state === "resolved") ||
+    null;
+  if (!op) {
     return null;
   }
   const players = buildPlayerIndex(state?.players || []);
@@ -4455,173 +5542,258 @@ export const getRivalOpsLifecycleState = (state, nowUtc = todayStr()) => {
   };
 };
 
-export const getRivalOpsCardModel = (state, op, nowUtc = todayStr()) => {
-  if (!op) {
+const getRivalOpsPairEdgeLine = (pairPressure) => {
+  if (!pairPressure) {
+    return "";
+  }
+  if (pairPressure.duelWinsA === pairPressure.duelWinsB) {
+    return `Final-room edge is level at ${pairPressure.duelWinsA}-${pairPressure.duelWinsB}.`;
+  }
+  const leaderName =
+    pairPressure.duelWinsA > pairPressure.duelWinsB
+      ? pairPressure.playerAName
+      : pairPressure.playerBName;
+  return `${leaderName} leads the final-room edge ${Math.max(pairPressure.duelWinsA, pairPressure.duelWinsB)}-${Math.min(pairPressure.duelWinsA, pairPressure.duelWinsB)}.`;
+};
+
+const getRivalOpsMarker = (op, pairPressure) => {
+  if (op?.state === "resolved" || op?.state === "cooldown") {
+    return op.resolutionDay ? `CLOSED ${op.resolutionDay}` : "FILE CLOSED";
+  }
+  if ((pairPressure?.seasonWinsGap || 99) <= 1) {
+    return pairPressure.seasonWinsGap === 0 ? "LEVEL WINS" : "1 WIN GAP";
+  }
+  if ((pairPressure?.seasonKillsGap || 99) <= 6) {
+    return `${pairPressure.seasonKillsGap} KILL GAP`;
+  }
+  if (pairPressure?.sharedSeasonDayCount) {
+    return `${pairPressure.sharedSeasonDayCount} SHARED NIGHTS`;
+  }
+  return `${pairPressure?.rivalryTotal || 0} FINAL ROOMS`;
+};
+
+const getRivalOpsStateLine = (op, pairPressure) => {
+  if (op?.state === "active") {
+    return "Live file on the next shared room.";
+  }
+  if (op?.state === "watch") {
+    return "Close enough to turn live.";
+  }
+  if (op?.state === "resolved") {
+    return "This file just closed.";
+  }
+  if (op?.state === "cooldown") {
+    return "Cooling before it can reopen.";
+  }
+  if (pairPressure?.eligible) {
+    return "Still sitting just outside watch.";
+  }
+  return "Lower heat, but still on the board.";
+};
+
+const getRivalOpsPressureLine = (op, pairPressure, players) => {
+  if (!pairPressure) {
+    return "";
+  }
+  const winner = getPlayerById(players, op?.winnerId);
+  if (op?.state === "resolved") {
+    if (op.result === "standoff") {
+      return "The next shared room could not split them.";
+    }
+    if (winner && op.resolutionReason === "wins") {
+      return `${winner.username} took the file on wins.`;
+    }
+    if (winner && op.resolutionReason === "kills") {
+      return `${winner.username} took it on kills after the wins held level.`;
+    }
+    if (winner && op.resolutionReason === "placement") {
+      return `${winner.username} took it on placement after the tie held deep.`;
+    }
+  }
+  if (op?.state === "cooldown") {
+    return op.cooldownUntilUtc
+      ? `Reopens after ${op.cooldownUntilUtc} if fresh pressure lands.`
+      : "Needs fresh pressure before it reopens.";
+  }
+  if (op?.state === "active") {
+    if (pairPressure.seasonWinsGap <= 1) {
+      return "One room can flip the season edge.";
+    }
+    if (pairPressure.seasonKillsGap <= 6) {
+      return "Kills are still close enough to split this fast.";
+    }
+    return "The next shared room decides who owns the read.";
+  }
+  if (op?.state === "watch") {
+    if (pairPressure.seasonWinsGap <= 1) {
+      return "A one-room swing pushes this live.";
+    }
+    if (pairPressure.seasonKillsGap <= 6) {
+      return "The damage line is still close enough to heat up.";
+    }
+    return "One sharper shared room would wake this up.";
+  }
+  if (pairPressure.eligible) {
+    return "Still close enough to climb back into watch.";
+  }
+  return "The room remembers it, but the gap has cooled.";
+};
+
+const getRivalOpsWhyNowLine = (op, pairPressure) => {
+  if (!pairPressure) {
+    return "";
+  }
+  if (op?.state === "active") {
+    return "The pair is still close enough that the next shared room can settle it cleanly.";
+  }
+  if (op?.state === "watch") {
+    return "The season edge is still narrow enough for one room to turn this live.";
+  }
+  if (op?.state === "resolved") {
+    return "The file closed, but the room still needs to prove that split will hold.";
+  }
+  if (op?.state === "cooldown") {
+    return "The file is shut for now and will not reopen until a fresh shared room lands after cooldown.";
+  }
+  if (pairPressure.eligible) {
+    return "This pair is still close enough to rise fast if they hit the same room again.";
+  }
+  return "The rivalry still has history, but the season gap has pushed it below the live tiers.";
+};
+
+const getRivalOpsSupportingLine = (pairPressure) => {
+  if (!pairPressure) {
+    return "";
+  }
+  const winLine =
+    pairPressure.seasonWinsGap === 0
+      ? "Season wins are level."
+      : `Season wins are ${pairPressure.seasonWinsGap} apart.`;
+  const sharedLine =
+    pairPressure.sharedSeasonDayCount === 1
+      ? "They have shared one season night."
+      : `They have shared ${pairPressure.sharedSeasonDayCount} season nights.`;
+  return `${winLine} ${sharedLine}`;
+};
+
+export const getRivalOpsCardModel = (state, source, nowUtc = todayStr()) => {
+  const op = source?.op || null;
+  const pairPressure =
+    source?.pairPressure ||
+    (op ? getRivalOpsPairPressure(state, op.playerAId, op.playerBId, nowUtc) : null);
+  if (!pairPressure) {
     return null;
   }
   const players = buildPlayerIndex(state?.players || []);
-  const playerA = getPlayerById(players, op.playerAId);
-  const playerB = getPlayerById(players, op.playerBId);
-  const pairPressure = getRivalOpsPairPressure(state, op.playerAId, op.playerBId, nowUtc);
-  const winner = getPlayerById(players, op.winnerId);
+  const playerA = getPlayerById(players, pairPressure.playerAId);
+  const playerB = getPlayerById(players, pairPressure.playerBId);
   if (!playerA || !playerB) {
     return null;
   }
 
-  const base = {
-    id: op.id,
-    pairId: op.pairId,
+  const stateKey =
+    op?.state ||
+    (pairPressure.eligible
+      ? isActiveThresholdPair(pairPressure)
+        ? "active"
+        : "watch"
+      : "cold");
+
+  return {
+    id: op?.id || `rival-pair-${pairPressure.pairId}`,
+    pairId: pairPressure.pairId,
     playerAId: playerA.id,
     playerBId: playerB.id,
     playerALabel: playerA.username,
     playerBLabel: playerB.username,
-    state: op.state,
-    selectable: true,
-    highlighted: true,
+    state: stateKey,
+    scoreLine: `${pairPressure.duelWinsA}-${pairPressure.duelWinsB}`,
+    stateLine: getRivalOpsStateLine(op, pairPressure),
+    pressureLine: getRivalOpsPressureLine(op, pairPressure, players),
+    marker: getRivalOpsMarker(op, pairPressure),
+    rivalryScore: pairPressure.rivalryScore,
   };
-
-  if (op.state === "watch") {
-    return {
-      ...base,
-      stateChip: "WATCH",
-      title: "FILE HEATING UP",
-      missionLine: "One more shared night can open this duel.",
-      pressureLine:
-        pairPressure?.seasonWinsGap <= 1
-          ? "The season gap is still close enough for one room to change the read."
-          : "Both files are still close enough for the next shared night to matter.",
-    };
-  }
-
-  if (op.state === "active") {
-    return {
-      ...base,
-      stateChip: "ACTIVE",
-      title: "RIVAL OP LIVE",
-      missionLine: "Finish ahead on the next shared night to take this file.",
-      pressureLine:
-        pairPressure?.seasonKillsGap <= 6
-          ? "Wins are still tight, and the room has not settled this one."
-          : "One stronger room decides who owns this file next.",
-    };
-  }
-
-  if (op.state === "resolved") {
-    let missionLine = "No separation landed on the next shared night.";
-    let pressureLine = "The duel held level and closed as a standoff.";
-    if (op.result === "won" && winner) {
-      if (op.resolutionReason === "wins") {
-        missionLine = `${winner.username} took the next shared night on wins.`;
-        pressureLine = "The file broke cleanly once the room closed.";
-      } else if (op.resolutionReason === "kills") {
-        missionLine = `${winner.username} took the next shared night on kills after the wins held level.`;
-        pressureLine = "Damage was the line that finally separated them.";
-      } else if (op.resolutionReason === "placement") {
-        missionLine = `${winner.username} took the next shared night on placement after wins and kills tied.`;
-        pressureLine = "The room stayed level until the finish order split it.";
-      }
-    }
-    return {
-      ...base,
-      stateChip: "CLOSED",
-      title: "FILE CLOSED",
-      missionLine,
-      pressureLine,
-    };
-  }
-
-  if (op.state === "cooldown") {
-    return {
-      ...base,
-      stateChip: "COOLDOWN",
-      title: "WINDOW CLOSED",
-      missionLine: "This file can reopen after the cooldown clears.",
-      pressureLine: "The room needs fresh pressure before this duel goes live again.",
-    };
-  }
-
-  return null;
 };
 
-export const getRivalOpsDetailModel = (state, op, nowUtc = todayStr()) => {
-  const card = getRivalOpsCardModel(state, op, nowUtc);
+export const getRivalOpsDetailModel = (state, source, nowUtc = todayStr()) => {
+  const op = source?.op || null;
+  const pairPressure =
+    source?.pairPressure ||
+    (op ? getRivalOpsPairPressure(state, op.playerAId, op.playerBId, nowUtc) : null);
+  const card = getRivalOpsCardModel(state, { op, pairPressure }, nowUtc);
   if (!card) {
-    return null;
-  }
-  const players = buildPlayerIndex(state?.players || []);
-  const playerA = getPlayerById(players, op.playerAId);
-  const playerB = getPlayerById(players, op.playerBId);
-  const pairPressure = getRivalOpsPairPressure(state, op.playerAId, op.playerBId, nowUtc);
-  if (!playerA || !playerB) {
     return null;
   }
 
   return {
     id: card.id,
     pairId: card.pairId,
-    header: `${playerA.username} vs ${playerB.username}`,
-    stateChip: card.stateChip,
-    title: "FILE READ",
-    missionLine:
-      op.state === "watch"
-        ? "This pair is close enough to stay on the live board."
-        : op.state === "active"
-          ? "The next shared night is carrying the whole file now."
-          : op.state === "resolved"
-            ? "The room has already settled this file."
-            : "This file is waiting on fresh pressure before it reopens.",
-    pressureLine: card.pressureLine,
-    ruleLabel: "RESOLUTION RULE",
-    ruleLine: "The next shared night decides it on wins, then kills, then placement.",
-    aftermathLine: op.state === "resolved" ? card.pressureLine : undefined,
-    cooldownLine: op.state === "cooldown" ? getRivalOpCooldownLabel(op, nowUtc) : undefined,
-    recentSharedDay: pairPressure?.recentSharedDay || null,
+    state: card.state,
+    edgeLine: getRivalOpsPairEdgeLine(pairPressure),
+    whyNowLine: getRivalOpsWhyNowLine(op, pairPressure),
+    supportLine: getRivalOpsSupportingLine(pairPressure),
   };
 };
 
 export const getRivalOpsViewModel = (state, nowUtc = todayStr()) => {
   const reconciled = reconcileRivalOpsState(state, nowUtc);
-  const op = reconciled.ops[0] || null;
-  const cards = op ? [getRivalOpsCardModel(state, op, nowUtc)].filter(Boolean).slice(0, RIVAL_OPS_MAX_VISIBLE) : [];
-  const selectedOpId =
-    reconciled.selectedOpId && cards.find((card) => card.id === reconciled.selectedOpId)
-      ? reconciled.selectedOpId
-      : cards[0]?.id || null;
-  const selectedOp = selectedOpId && op?.id === selectedOpId ? op : cards[0] ? op : null;
-  const detail = selectedOp ? getRivalOpsDetailModel(state, selectedOp, nowUtc) : null;
-  const resolvedEcho = getResolvedRivalOpsEcho({ ...state, rivalOpsState: reconciled }, nowUtc);
+  const pairPressureRows = getRivalOpsAllPairPressure(state, nowUtc);
+  const opsByPair = new Map(reconciled.ops.map((op) => [op.pairId, op]));
 
-  if (!cards.length) {
+  const activeCards = reconciled.ops
+    .filter((op) => op.state === "active")
+    .map((op) => getRivalOpsCardModel(state, { op }, nowUtc))
+    .filter(Boolean);
+
+  const watchCards = reconciled.ops
+    .filter((op) => op.state === "watch")
+    .map((op) => getRivalOpsCardModel(state, { op }, nowUtc))
+    .filter(Boolean);
+
+  const colderCards = [
+    ...reconciled.ops
+      .filter((op) => op.state === "resolved" || op.state === "cooldown")
+      .map((op) => getRivalOpsCardModel(state, { op }, nowUtc))
+      .filter(Boolean),
+    ...pairPressureRows
+      .filter((pairPressure) => !opsByPair.has(pairPressure.pairId))
+      .map((pairPressure) => getRivalOpsCardModel(state, { pairPressure }, nowUtc))
+      .filter(Boolean),
+  ].slice(0, RIVAL_OPS_MAX_COLD_FILES);
+
+  const allCards = [...activeCards, ...watchCards, ...colderCards];
+  const selectedOpId =
+    reconciled.selectedOpId && allCards.some((card) => card.id === reconciled.selectedOpId)
+      ? reconciled.selectedOpId
+      : allCards[0]?.id || null;
+  const selectedCard = allCards.find((card) => card.id === selectedOpId) || null;
+  const selectedSource = selectedCard
+    ? {
+        op: reconciled.ops.find((op) => op.id === selectedCard.id) || opsByPair.get(selectedCard.pairId) || null,
+        pairPressure: pairPressureRows.find((pairPressure) => pairPressure.pairId === selectedCard.pairId) || null,
+      }
+    : null;
+
+  if (!allCards.length) {
     return {
-      sectionLabel: "RIVAL OPS",
-      introLine: "The conflict layer is quiet right now.",
-      cards: [],
+      activeCards: [],
+      watchCards: [],
+      colderCards: [],
       selectedOpId: null,
       detail: null,
-      resolvedEcho,
       emptyState: {
         title: "NO LIVE FILE",
-        line: "No rivalry is hot enough to open right now.",
+        line: "No rivalry is carrying enough heat to rise above the board right now.",
       },
     };
   }
 
   return {
-    sectionLabel: "RIVAL OPS",
-    introLine:
-      op?.state === "watch"
-        ? "One rivalry file is heating up right now."
-        : op?.state === "active"
-          ? "One rivalry file is live right now."
-          : op?.state === "resolved"
-            ? "One rivalry file just closed."
-            : op?.state === "cooldown"
-              ? "The last live rivalry file is cooling off right now."
-              : "The conflict layer is quiet right now.",
-    cards,
+    activeCards,
+    watchCards,
+    colderCards,
     selectedOpId,
-    detail,
-    resolvedEcho,
+    detail: selectedSource ? getRivalOpsDetailModel(state, selectedSource, nowUtc) : null,
     emptyState: null,
   };
 };

@@ -9,7 +9,7 @@ export const SEASONAL_EVENT = {
   endHour: 16,
 };
 
-export const STORAGE_VERSION = "gn-v100";
+export const STORAGE_VERSION = "gn-v108";
 export const SITE_TITLE = "Games Night";
 export const HOSTED_BY = "Mekula";
 export const FEATURED_GAME = "Bullet League";
@@ -134,6 +134,7 @@ export const BADGE_CATALOGUE = [
   { icon: "🚀", name: "First Blood S2", desc: "Claimed the first win of Season 2", how: "Season 2 exclusive. Win before anyone else does." },
   { icon: "🌅", name: "Opening Night", desc: "Played the first Season 2 session", how: "Season 2 exclusive. Show up on April 1, 2026." },
   { icon: "👑", name: "S2 Champion", desc: "Current Season 2 wins leader", how: "Hold the most wins in Season 2" },
+  { icon: "🛡️", name: "Invincible", desc: "Won at least once on every filed Season 2 game day", how: "Season 2 exclusive. Take a crown on every official Season 2 game day before the file closes." },
   { icon: "🃏", name: "Fool's Crown", desc: "Won on April Fools Day, April 1, 2026", how: "Limited edition. Take a lobby on the strangest day of the month." },
   { icon: "🏆", name: "S1 Champion", desc: "Season 1 wins leader", how: "Finish first by wins in March 2026. Permanent honor." },
   { icon: "💀", name: "S1 Reaper", desc: "Season 1 kill leader", how: "Lead Season 1 in total kills. Permanent honor." },
