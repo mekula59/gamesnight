@@ -455,6 +455,9 @@ export const getBadges = (playerId, sessions) => {
   if (stats.appearances >= sessions.length && sessions.length >= 4) {
     badges.push({ icon: "📅", label: "Full House" });
   }
+  if (stats.kills >= 1000) {
+    badges.push({ icon: "👹", label: "1K Kills", hot: true });
+  }
   if (stats.kills >= 500) {
     badges.push({ icon: "💀", label: "500 Kills" });
   }
@@ -4731,7 +4734,6 @@ const getShellAlertCandidates = (state, options = {}) => {
   const sessions = state?.sessions || [];
   const now = nowUtc instanceof Date ? nowUtc : new Date(nowUtc);
   const dailyOrdersState = getDailyOrdersScheduleState(now);
-  const rivalOps = getRivalOpsLifecycleState(state, nowUtc);
   const latestFallout = getLatestDayConsequences(sessions, players);
   const missionBoard = getMissionBoardState(sessions, players);
   const candidates = [];
@@ -4750,36 +4752,6 @@ const getShellAlertCandidates = (state, options = {}) => {
       dismissible: false,
     });
   };
-
-  if (rivalOps.activeOp) {
-    pushCandidate({
-      level: "FLASHPOINT",
-      title: "FLASHPOINT",
-      line: "Rival Ops is live and resolves on the next shared night.",
-      source: "rival_ops",
-    });
-  } else if (rivalOps.watchOps.length) {
-    pushCandidate({
-      level: "HOT",
-      title: "HOT",
-      line: "One rivalry file is heating up right now.",
-      source: "rival_ops",
-    });
-  } else if (rivalOps.resolvedEcho?.line) {
-    pushCandidate({
-      level: "AFTERMATH",
-      title: "AFTERMATH",
-      line: rivalOps.resolvedEcho.line,
-      source: "rival_ops",
-    });
-  } else if (rivalOps.cooldownOps.length) {
-    pushCandidate({
-      level: "WATCH",
-      title: "WATCH",
-      line: "The last live rivalry file is cooling off right now.",
-      source: "rival_ops",
-    });
-  }
 
   const falloutLine = latestFallout?.summary?.[0] || latestFallout?.consequences?.[0]?.shortText || "";
   if (falloutLine) {
@@ -4890,29 +4862,7 @@ export const getShellPressureChip = (state, options = {}) => {
   const now = nowUtc instanceof Date ? nowUtc : new Date(nowUtc);
   const activeAlert = options.activeAlert || null;
   const dailyOrdersState = getDailyOrdersScheduleState(now);
-  const rivalOps = getRivalOpsLifecycleState(state, nowUtc);
   const missionBoard = getMissionBoardState(state?.sessions || [], state?.players || []);
-
-  if (activeAlert?.source !== "rival_ops") {
-    if (rivalOps.activeOp) {
-      return {
-        kind: "pressure",
-        label: "PRESSURE",
-        value: "RIVAL OPS LIVE",
-        tone: "hot",
-        source: "rival_ops",
-      };
-    }
-    if (rivalOps.watchOps.length) {
-      return {
-        kind: "pressure",
-        label: "PRESSURE",
-        value: "RIVAL OPS WATCH",
-        tone: "watch",
-        source: "rival_ops",
-      };
-    }
-  }
 
   if (
     activeAlert?.source !== "missions" &&

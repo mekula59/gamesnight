@@ -20,6 +20,8 @@ export default function Season2View({ ctx }) {
     s2CdClock,
     SEASON_TWO_LAUNCH_DATE,
   } = ctx;
+  const seasonTwoMeta=SEASONS.find((season)=>season.id===SEASON_TWO_ID);
+  const seasonTwoClosed=Boolean(seasonTwoMeta&&todayStr()>=seasonTwoMeta.end);
 
   return (
 <div className="fade-up season2-top-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
@@ -35,14 +37,16 @@ export default function Season2View({ ctx }) {
             <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600}}>
               {todayStr()<SEASON_TWO_LAUNCH_DATE
                 ? "Season 2 is on deck. The board stays sealed until opening night."
-                : "The live campaign file. Opening shots, swing nights, and pressure points are still being written."}
+                : seasonTwoClosed
+                  ? "The campaign file is sealed. Final standings are locked and the record now carries the season."
+                  : "The live campaign file. Opening shots, swing nights, and pressure points are still being written."}
             </p>
           </div>
           {(()=>{
             const s2=SEASONS.find(x=>x.id===SEASON_TWO_ID);
             const s2Sessions=sessions.filter(s=>s.date>=s2.start&&s.date<=s2.end);
             const today=todayStr();
-            const seasonFinalDay=today===s2.end;
+            const seasonFinalDay=!seasonTwoClosed&&today===s2.end;
             const finalDayFiled=s2Sessions.some((session)=>session.date===s2.end);
             // Hoist all data before any early return so esbuild stays in JS mode
             const s2Stats=allStats(s2Sessions).filter(p=>p.appearances>0);
@@ -98,19 +102,27 @@ export default function Season2View({ ctx }) {
             const s2CrowdDay=s2Campaign?.biggestCrowd||null;
             const s2SpreadDay=s2Campaign?.widestWinnerDay||null;
             const seasonPulse=s2LoudestDay&&s2BestRun?.player
-              ?`${uniqueWins} winners have already touched the file. ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} was the loudest night at ${s2LoudestDay.totalKills} kills, and ${dn(s2BestRun.player.username)} still owns the cleanest run at ${s2BestRun.streak} straight.`
+              ?seasonTwoClosed
+                ?`${uniqueWins} winners touched the sealed file. ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} finished as the loudest night at ${s2LoudestDay.totalKills} kills, and ${dn(s2BestRun.player.username)} owns the cleanest run at ${s2BestRun.streak} straight.`
+                :`${uniqueWins} winners have already touched the file. ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})} was the loudest night at ${s2LoudestDay.totalKills} kills, and ${dn(s2BestRun.player.username)} still owns the cleanest run at ${s2BestRun.streak} straight.`
               :seasonLeaderPlayer&&seasonChaserPlayer
-                ?winsGap===0
-                  ?`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} are level on wins, and the file still has room to turn.`
-                  :`${dn(seasonLeaderPlayer.username)} has the front for now, but only ${winsGap} win${winsGap===1?"":"s"} separate the top two files.`
+                ?seasonTwoClosed
+                  ?`${dn(seasonLeaderPlayer.username)} finished first on ${seasonLeader.wins} wins. ${dn(seasonChaserPlayer.username)} closes the file ${winsGap} win${winsGap===1?"":"s"} back.`
+                  :winsGap===0
+                    ?`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} are level on wins, and the file still has room to turn.`
+                    :`${dn(seasonLeaderPlayer.username)} has the front for now, but only ${winsGap} win${winsGap===1?"":"s"} separate the top two files.`
                 : `${uniqueWins} different winners have already left fingerprints on the season file.`;
             const quietPulse=quietWatchProfile&&quietWatchPlayer
-              ? `${dn(quietWatchProfile.username)} is still chasing the first Season 2 win, so the support pack is still open.`
+              ? seasonTwoClosed
+                ? `${dn(quietWatchProfile.username)} finished Season 2 without a win on file, which leaves the support-pack note on the final record.`
+                : `${dn(quietWatchProfile.username)} is still chasing the first Season 2 win, so the support pack is still open.`
               : attendanceLeaderPlayer&&attendanceLeader
                 ? attendanceTieCount>1
-                  ? `${attendanceTieCount} players are tied at the attendance ceiling. Even the loyalty line is still crowded.`
-                  : `${dn(attendanceLeaderPlayer.username)} has answered the call ${attendanceLeader.appearances} times already and keeps the season file moving.`
-                : "The season file is still taking shape.";
+                  ? `${attendanceTieCount} players finished tied at the attendance ceiling. Even the loyalty line stayed crowded.`
+                  : seasonTwoClosed
+                    ? `${dn(attendanceLeaderPlayer.username)} finished as the attendance leader at ${attendanceLeader.appearances} lobbies.`
+                    : `${dn(attendanceLeaderPlayer.username)} has answered the call ${attendanceLeader.appearances} times already and keeps the season file moving.`
+                : seasonTwoClosed?"The season file is sealed.":"The season file is still taking shape.";
             const s2NumberMarkers=[
               seasonLeaderPlayer&&seasonLeader
                 ?{
@@ -126,7 +138,7 @@ export default function Season2View({ ctx }) {
                 ?{
                   label:"Top reaper",
                   value:`${dn(killLeaderPlayer.username)} · ${killLeader.kills}K`,
-                  note:"still carrying the damage pace",
+                  note:seasonTwoClosed?"finished as the damage pace":"still carrying the damage pace",
                   color:"#FF4D8F",
                 }
                 :null,
@@ -164,7 +176,9 @@ export default function Season2View({ ctx }) {
                 :null,
             ].filter(Boolean).slice(0,5);
             const seasonDossier=s2Campaign?.openerWinner&&seasonLeaderPlayer
-              ?`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on the night that changes how everybody reads it."} ${s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase has not gone quiet.`:`${dn(seasonLeaderPlayer.username)} has the front with ${seasonLeader.wins} wins, but the file is still loose enough for one good night to bend it again.`}`
+              ?seasonTwoClosed
+                ?`${dn(s2Campaign.openerWinner.username)} opened the file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file closed without one clean swing night."} ${dn(seasonLeaderPlayer.username)} sealed the season at ${seasonLeader.wins} wins.`
+                :`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on the night that changes how everybody reads it."} ${s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase has not gone quiet.`:`${dn(seasonLeaderPlayer.username)} has the front with ${seasonLeader.wins} wins, but the file is still loose enough for one good night to bend it again.`}`
               :`${uniqueWins} different winners have already left fingerprints on the Season 2 file.`;
             const seasonMemoryCards=[
               {
@@ -196,21 +210,35 @@ export default function Season2View({ ctx }) {
                     :"The biggest room of the campaign has not landed yet.",
               },
               {
-                label:"LIVE PRESSURE",
+                label:seasonTwoClosed?"FINAL READ":"LIVE PRESSURE",
                 color:"#00FF94",
                 value:s2LatestFallout?.topWinners.length>=2&&s2LatestFallout.topKiller?.player
-                  ?`${s2LatestSplitLeaders} split the latest session day`
+                  ?seasonTwoClosed
+                    ?`${s2LatestSplitLeaders} split the final session day`
+                    :`${s2LatestSplitLeaders} split the latest session day`
                   :seasonLeaderPlayer&&seasonChaserPlayer
                     ?winsGap===0
-                      ?`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} are level at the top`
-                      :`${dn(seasonLeaderPlayer.username)} is ${winsGap}W clear of ${dn(seasonChaserPlayer.username)}`
+                      ?seasonTwoClosed
+                        ?`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} finished level`
+                        :`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} are level at the top`
+                      :seasonTwoClosed
+                        ?`${dn(seasonLeaderPlayer.username)} finished ${winsGap}W clear of ${dn(seasonChaserPlayer.username)}`
+                        :`${dn(seasonLeaderPlayer.username)} is ${winsGap}W clear of ${dn(seasonChaserPlayer.username)}`
                     :attendanceLeaderPlayer
-                      ?`${dn(attendanceLeaderPlayer.username)} keeps the file moving through attendance`
-                      :"This campaign is still writing its first pressure point",
+                      ?seasonTwoClosed
+                        ?`${dn(attendanceLeaderPlayer.username)} finished as the attendance marker`
+                        :`${dn(attendanceLeaderPlayer.username)} keeps the file moving through attendance`
+                      :seasonTwoClosed
+                        ?"This campaign is sealed."
+                        :"This campaign is still writing its first pressure point",
                 note:s2LatestFallout?.topWinners.length>=2&&s2LatestFallout.topKiller?.player
-                  ?`${dn(s2LatestFallout.topKiller.player.username)} still hauled out ${s2LatestFallout.topKiller.kills} kills, so the latest split did not settle anything.`
+                  ?seasonTwoClosed
+                    ?`${dn(s2LatestFallout.topKiller.player.username)} hauled out ${s2LatestFallout.topKiller.kills} kills on the final filed day. The split is part of the record now.`
+                    :`${dn(s2LatestFallout.topKiller.player.username)} still hauled out ${s2LatestFallout.topKiller.kills} kills, so the latest split did not settle anything.`
                   :s2LockNight&&seasonLeaderPlayer
-                    ?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase is still close enough for one sharp night to matter.`
+                    ?seasonTwoClosed
+                      ?`${dn(seasonLeaderPlayer.username)} held the top line from ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})} through the final file.`
+                      :`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase is still close enough for one sharp night to matter.`
                   :quietPulse,
               },
             ];
@@ -365,17 +393,19 @@ export default function Season2View({ ctx }) {
                   </div>
                 </div>
 
-                <div style={{
-                  marginBottom:22,
-                  padding:"11px 14px",
-                  borderRadius:12,
-                  border:"1px solid rgba(255,215,0,.18)",
-                  background:"linear-gradient(135deg,rgba(255,215,0,.08),rgba(199,125,255,.05))",
-                }}>
-                  <div className="bc7" style={{fontSize:".78rem",lineHeight:1.55,color:"var(--text2)"}}>
-                    Season ends in 6 days. The top line is still live.
+                {!seasonTwoClosed&&(
+                  <div style={{
+                    marginBottom:22,
+                    padding:"11px 14px",
+                    borderRadius:12,
+                    border:"1px solid rgba(255,215,0,.18)",
+                    background:"linear-gradient(135deg,rgba(255,215,0,.08),rgba(199,125,255,.05))",
+                  }}>
+                    <div className="bc7" style={{fontSize:".78rem",lineHeight:1.55,color:"var(--text2)"}}>
+                      Season ends in 6 days. The top line is still live.
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
                   {seasonMemoryCards.map((card)=>(
@@ -453,20 +483,30 @@ export default function Season2View({ ctx }) {
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:14,marginBottom:28}}>
                   {[
                     {icon:"👑",color:"#00E5FF",title:"S2 Champion",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Crown line still open",desc:seasonLeaderPlayer&&seasonChaserPlayer
-                      ?winsGap===0
-                        ?`The live crown is dead even with ${dn(seasonChaserPlayer.username)}. The next clean finish changes the page.`
-                        :winsGap===1
-                          ?`${dn(seasonChaserPlayer.username)} is only one win behind and still within one loud night of the lead.`
-                          :`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} while the chase still has teeth.`
+                      ?seasonTwoClosed
+                        ?`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} when the final standings locked.`
+                        :winsGap===0
+                          ?`The live crown is dead even with ${dn(seasonChaserPlayer.username)}. The next clean finish changes the page.`
+                          :winsGap===1
+                            ?`${dn(seasonChaserPlayer.username)} is only one win behind and still within one loud night of the lead.`
+                            :`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} while the chase still has teeth.`
                       :"Currently carrying the season crown"},
-                    {icon:"💀",color:"#FF4D8F",title:"S2 Reaper",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:"Damage board still open",desc:killLeaderPlayer&&seasonLeaderPlayer
+                    {icon:"💀",color:"#FF4D8F",title:"S2 Reaper",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:seasonTwoClosed?"Damage board sealed":"Damage board still open",desc:killLeaderPlayer&&seasonLeaderPlayer
                       ?killLeaderPlayer.id===seasonLeaderPlayer.id
-                        ?"Holding both the crown line and the damage pace while the rest of the file tries to catch up."
-                        :`Still driving the damage board even while ${dn(seasonLeaderPlayer.username)} controls the wins race.`
-                      :"Setting the damage line for the season"},
+                        ?seasonTwoClosed
+                          ?"Finished with both the crown line and the damage pace on the final file."
+                          :"Holding both the crown line and the damage pace while the rest of the file tries to catch up."
+                        :seasonTwoClosed
+                          ?`Finished as the damage leader while ${dn(seasonLeaderPlayer.username)} sealed the wins race.`
+                          :`Still driving the damage board even while ${dn(seasonLeaderPlayer.username)} controls the wins race.`
+                      :seasonTwoClosed?"Finished as the season damage line":"Setting the damage line for the season"},
                     {icon:"🎮",color:"#00FF94",title:"Most Loyal",player:byApp[0],stat:byApp[0]?`${byApp[0].appearances} lobbies`:"Attendance file still forming",desc:attendanceTieCount>1
-                      ?`Sharing the attendance ceiling with ${attendanceTieCount-1} other regular${attendanceTieCount-1===1?"":"s"} and keeping the campaign loud through presence alone.`
-                      :"Keeps answering the call and making sure the live file never goes quiet."},
+                      ?seasonTwoClosed
+                        ?`Finished tied at the attendance ceiling with ${attendanceTieCount-1} other regular${attendanceTieCount-1===1?"":"s"}.`
+                        :`Sharing the attendance ceiling with ${attendanceTieCount-1} other regular${attendanceTieCount-1===1?"":"s"} and keeping the campaign loud through presence alone.`
+                      :seasonTwoClosed
+                        ?"Finished as the attendance marker on the sealed file."
+                        :"Keeps answering the call and making sure the live file never goes quiet."},
                     ...(topGame.pid?[{icon:"☄️",color:"#C77DFF",title:"Best Single Game",player:players.find(p=>p.id===topGame.pid),stat:`${topGame.k} kills in ${topGameLobby}`,desc:`${formatLobbyDate(topGame.date,{weekday:"short",day:"numeric",month:"short"})} · still the room every damage spike gets measured against.`}]:[]),
                   ].map((a,i)=>{
                     if(!a.player)return null;

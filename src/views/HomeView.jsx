@@ -29,8 +29,6 @@ export default function HomeView({ ctx }) {
     getLiveStreaks,
     getLatestDayHeatRun,
     getOnDeckPressure,
-    getPressureQueue,
-    shellAlert,
     isEventActive,
     card,
     primaryBtn,
@@ -68,6 +66,8 @@ export default function HomeView({ ctx }) {
           {(()=>{
             const latestDate=getLatestSessionDate();
             const currentSeason=getSeasonForDate(latestDate)||SEASONS[1];
+            const homeTodayDate=todayStr?todayStr():latestDate;
+            const currentSeasonClosed=Boolean(homeTodayDate&&currentSeason.end&&homeTodayDate>=currentSeason.end);
             const seasonSess=sessions.filter(s=>s.date>=currentSeason.start&&s.date<=currentSeason.end);
             const seasonKills=seasonSess.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
             const seasonWinnerCount=[...new Set(seasonSess.filter((session)=>session.winner).map((session)=>session.winner))].length;
@@ -110,7 +110,11 @@ export default function HomeView({ ctx }) {
             const s2StatsSorted=allStats(seasonSess).filter(p=>p.appearances>0);
             const slide1P=s2ChampP;
             const slide1St=slide1P?getStats(slide1P.id,seasonSess):null;
-            const slide1Sub=slide1P&&secondP&&gapW>=0?`${dn(secondP.username)} is ${gapW}W behind`:null;
+            const slide1Sub=slide1P&&secondP&&gapW>=0
+              ?currentSeasonClosed
+                ?`${dn(secondP.username)} finished ${gapW}W back`
+                :`${dn(secondP.username)} is ${gapW}W behind`
+              :null;
             const s2KillsLeader=[...s2StatsSorted].sort((a,b)=>b.kills-a.kills)[0];
             const slide2P=s2KillsLeader?players.find(p=>p.id===s2KillsLeader.id):null;
             const s2KillsTwo=[...s2StatsSorted].sort((a,b)=>b.kills-a.kills)[1];
@@ -143,15 +147,25 @@ export default function HomeView({ ctx }) {
             const stories=getStorylines();
             const seasonShiftData=getLeaderboardShiftData(currentSeason.id,"wins");
             const leaderStageTitle=leaderP
-              ? `${dn(leaderP.username)} is setting the pace in ${currentSeason.name}`
-              : `${currentSeason.name} is still looking for a front-runner`;
+              ? currentSeasonClosed
+                ? `${dn(leaderP.username)} finished first in ${currentSeason.name}`
+                : `${dn(leaderP.username)} is setting the pace in ${currentSeason.name}`
+              : currentSeasonClosed
+                ? `${currentSeason.name} closed without a filed front-runner`
+                : `${currentSeason.name} is still looking for a front-runner`;
             const leaderStageSub=leaderP&&secondP
-              ?gapW===0
-                ? "FRONT LINE TIED"
-                :`${gapW}W GAP AT THE TOP`
+              ?currentSeasonClosed
+                ? "FINAL STANDINGS LOCKED"
+                :gapW===0
+                  ? "FRONT LINE TIED"
+                  :`${gapW}W GAP AT THE TOP`
               :leaderSlides.length
-                ? `${leaderSlides.length} LIVE READS`
-                : "RACE STILL FORMING";
+                ? currentSeasonClosed
+                  ? `${leaderSlides.length} FINAL READS`
+                  : `${leaderSlides.length} LIVE READS`
+                : currentSeasonClosed
+                  ? "FILE SEALED"
+                  : "RACE STILL FORMING";
             const falloutDateLabel=latestDate
               ?new Date(latestDate+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"long"})
               :"";
@@ -233,18 +247,14 @@ export default function HomeView({ ctx }) {
             const liveHeat=getLatestDayHeatRun()||null;
             const liveHeatPlayer=liveHeat?.player||null;
             const seasonEndDate=currentSeason.end?new Date(`${currentSeason.end}T12:00:00Z`):null;
-            const todayDate=todayStr?todayStr():latestDate;
+            const todayDate=homeTodayDate;
             const seasonAnchorDate=todayDate?new Date(`${todayDate}T12:00:00Z`):null;
             const seasonDaysLeft=seasonEndDate&&seasonAnchorDate
               ?Math.max(0,Math.ceil((seasonEndDate-seasonAnchorDate)/(1000*60*60*24)))
               :null;
-            const seasonClosing=seasonDaysLeft!=null&&seasonDaysLeft<=10;
-            const seasonFinalDay=todayDate===currentSeason.end;
-            const pressureQueue=getPressureQueue({seasonId:currentSeason.id,limit:3});
-            const isHomeLeadAllowed=(item)=>item.type!=="milestone"&&item.type!=="milestone-pressure"&&item.label!=="MILESTONE PRESSURE";
-            const homePressureLead=pressureQueue.items.find((item)=>isHomeLeadAllowed(item)&&item.source!==shellAlert?.source)
-              || pressureQueue.items.find(isHomeLeadAllowed)
-              || null;
+            const seasonClosed=Boolean(todayDate&&currentSeason.end&&todayDate>=currentSeason.end);
+            const seasonClosing=!seasonClosed&&seasonDaysLeft!=null&&seasonDaysLeft<=10;
+            const seasonFinalDay=!seasonClosed&&todayDate===currentSeason.end;
             const homePulseCards=[
               latestDayHeadline
                 ?{
@@ -345,7 +355,9 @@ export default function HomeView({ ctx }) {
                   {l:`${currentSeason.name.toUpperCase()} LOBBIES`,v:seasonSess.length,   c:"#00E5FF"},
                   {l:`${currentSeason.name.toUpperCase()} KILLS`,  v:seasonKills, c:"#FF4D8F"},
                   {l:"UNIQUE WINNERS", v:seasonWinnerCount, c:"#FFD700"},
-                  seasonClosing
+                  seasonClosed
+                    ?{l:"SEASON STATUS", v:"LOCKED", c:"#FFD700"}
+                    :seasonClosing
                     ?{l:"WINDOW LEFT", v:seasonDaysLeft>0?`${seasonDaysLeft}D`:"FINAL", c:"#FFD700"}
                     :{l:"FRONT GAP", v:frontGapValue, c:"#C77DFF"},
                 ].map((s,i)=>(
@@ -387,26 +399,6 @@ export default function HomeView({ ctx }) {
                       {dn(leaderP.username).toUpperCase()} · {leaderStats.wins}W
                     </div>
                   )}
-                </div>
-              )}
-
-              {homePressureLead&&(
-                <div className="home-pressure-lead-shell">
-                  <div className="home-pressure-lead-card" style={{
-                    borderColor:`${homePressureLead.color}24`,
-                    borderLeft:`3px solid ${homePressureLead.color}`,
-                    background:`linear-gradient(135deg,${homePressureLead.color}10,rgba(0,0,0,.28))`,
-                  }}>
-                    <div className="home-pressure-lead-label" style={{color:`${homePressureLead.color}cc`}}>
-                      {homePressureLead.label}
-                    </div>
-                    <div className="home-pressure-lead-headline">
-                      {homePressureLead.headline}
-                    </div>
-                    <div className="home-pressure-lead-detail">
-                      {homePressureLead.detail}
-                    </div>
-                  </div>
                 </div>
               )}
 

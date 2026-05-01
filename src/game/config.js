@@ -9,7 +9,7 @@ export const SEASONAL_EVENT = {
   endHour: 16,
 };
 
-export const STORAGE_VERSION = "gn-v108";
+export const STORAGE_VERSION = "gn-v109";
 export const SITE_TITLE = "Games Night";
 export const HOSTED_BY = "Mekula";
 export const FEATURED_GAME = "Bullet League";
@@ -119,6 +119,7 @@ export const BADGE_CATALOGUE = [
   { icon: "💥", name: "50 Kills", desc: "50 total kills across all lobbies", how: "Put 50 eliminations on the board" },
   { icon: "🎖️", name: "100 Kills", desc: "100 total kills. Serious work.", how: "Reach 100 kills all time" },
   { icon: "💀", name: "500 Kills", desc: "500 total kills. The room knows your name.", how: "Reach 500 all-time kills" },
+  { icon: "👹", name: "1K Kills", desc: "1,000 total kills. Permanent damage record.", how: "Reach 1,000 all-time kills" },
   { icon: "⚡", name: "2.0+ K/G", desc: "Average 2 or more kills per lobby", how: "Stay above 2.0 K/G across at least 2 lobbies" },
   { icon: "🌟", name: "Big Game", desc: "10 or more kills in one lobby", how: "Drop 10 kills in a single lobby" },
   { icon: "🎯", name: "50% Win Rate", desc: "Won at least half your lobbies", how: "Hold 50% or better win rate across 3 or more games" },
