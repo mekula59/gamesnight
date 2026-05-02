@@ -7,6 +7,7 @@ export default function HomeView({ ctx }) {
     getSeasonForDate,
     todayStr,
     SEASONS,
+    activeCampaign,
     sessions,
     allStats,
     players,
@@ -25,7 +26,6 @@ export default function HomeView({ ctx }) {
     getDailyMVP,
     getLobbyDateMarker,
     parseSessionIdNumber,
-    getStreak,
     getLiveStreaks,
     getLatestDayHeatRun,
     getOnDeckPressure,
@@ -65,9 +65,9 @@ export default function HomeView({ ctx }) {
           {/* ── Season / date row ── */}
           {(()=>{
             const latestDate=getLatestSessionDate();
-            const currentSeason=getSeasonForDate(latestDate)||SEASONS[1];
+            const currentSeason=activeCampaign||getSeasonForDate(latestDate)||SEASONS[SEASONS.length-1];
             const homeTodayDate=todayStr?todayStr():latestDate;
-            const currentSeasonClosed=Boolean(homeTodayDate&&currentSeason.end&&homeTodayDate>=currentSeason.end);
+            const currentSeasonClosed=Boolean(homeTodayDate&&currentSeason.end&&homeTodayDate>currentSeason.end);
             const seasonSess=sessions.filter(s=>s.date>=currentSeason.start&&s.date<=currentSeason.end);
             const seasonKills=seasonSess.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
             const seasonWinnerCount=[...new Set(seasonSess.filter((session)=>session.winner).map((session)=>session.winner))].length;
@@ -129,10 +129,28 @@ export default function HomeView({ ctx }) {
             const s2AppLeader=[...s2StatsSorted].sort((a,b)=>b.appearances-a.appearances)[0];
             const slide4P=s2AppLeader?players.find(p=>p.id===s2AppLeader.id):null;
             const slide4St=slide4P?getStats(slide4P.id,seasonSess):null;
-            let s2BestStreakPid="",s2BestStreakV=0;
+            let s2BestStreakPid="",s2BestStreakV=0,s2BestStreakKills=0;
+            const orderedSeasonSess=[...seasonSess].sort((a,b)=>
+              a.date.localeCompare(b.date)||
+              ((parseSessionIdNumber(a.id)||0)-(parseSessionIdNumber(b.id)||0))
+            );
             players.forEach(pl=>{
-              const v=getStreak(pl.id);
-              if(v>s2BestStreakV){s2BestStreakV=v;s2BestStreakPid=pl.id;}
+              const played=orderedSeasonSess.filter((session)=>session.attendees?.includes(pl.id));
+              let current=0,currentKills=0;
+              played.forEach((session)=>{
+                if(session.winner===pl.id){
+                  current+=1;
+                  currentKills+=Number(session.kills?.[pl.id]||0);
+                  if(current>s2BestStreakV||(current===s2BestStreakV&&currentKills>s2BestStreakKills)){
+                    s2BestStreakV=current;
+                    s2BestStreakPid=pl.id;
+                    s2BestStreakKills=currentKills;
+                  }
+                }else{
+                  current=0;
+                  currentKills=0;
+                }
+              });
             });
             const slide5P=s2BestStreakPid&&s2BestStreakV>=2?players.find(p=>p.id===s2BestStreakPid):null;
             const slide5St=slide5P?getStats(slide5P.id,seasonSess):null;
@@ -252,7 +270,7 @@ export default function HomeView({ ctx }) {
             const seasonDaysLeft=seasonEndDate&&seasonAnchorDate
               ?Math.max(0,Math.ceil((seasonEndDate-seasonAnchorDate)/(1000*60*60*24)))
               :null;
-            const seasonClosed=Boolean(todayDate&&currentSeason.end&&todayDate>=currentSeason.end);
+            const seasonClosed=Boolean(todayDate&&currentSeason.end&&todayDate>currentSeason.end);
             const seasonClosing=!seasonClosed&&seasonDaysLeft!=null&&seasonDaysLeft<=10;
             const seasonFinalDay=!seasonClosed&&todayDate===currentSeason.end;
             const homePulseCards=[
@@ -371,6 +389,22 @@ export default function HomeView({ ctx }) {
                 ))}
               </div>
 
+              {currentSeason.id==="s3"&&seasonSess.length>0&&(
+                <div className="zone-receive-follow" style={{
+                  "--receive-delay":"185ms",
+                  margin:"-14px 0 28px",
+                  padding:"10px 13px",
+                  border:"1px solid rgba(255,77,143,.2)",
+                  borderLeft:"3px solid rgba(255,77,143,.68)",
+                  borderRadius:"0 8px 8px 0",
+                  background:"linear-gradient(135deg,rgba(255,77,143,.1),rgba(0,0,0,.24))",
+                }}>
+                  <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
+                    Season 3 file opened on May 1. The first board is live.
+                  </div>
+                </div>
+              )}
+
               {seasonFinalDay&&(
                 <div className="zone-receive-follow" style={{
                   "--receive-delay":"185ms",
@@ -388,10 +422,10 @@ export default function HomeView({ ctx }) {
                 }}>
                   <div>
                     <div className="bc7" style={{fontSize:".55rem",letterSpacing:".22em",color:"rgba(255,215,0,.72)",marginBottom:4}}>
-                      SEASON WRAP WATCH
+                      FINAL DAY WATCH
                     </div>
                     <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
-                      Final day window is open. Positions harden when tonight's rooms file.
+                      Final day window is open. Positions harden when the last rooms file.
                     </div>
                   </div>
                   {leaderP&&leaderStats&&(

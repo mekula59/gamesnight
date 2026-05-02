@@ -2,6 +2,7 @@ export default function Season2View({ ctx }) {
   const {
     todayStr,
     SEASON_TWO_ID,
+    campaignSeasonId,
     SEASONS,
     sessions,
     allStats,
@@ -20,30 +21,33 @@ export default function Season2View({ ctx }) {
     s2CdClock,
     SEASON_TWO_LAUNCH_DATE,
   } = ctx;
-  const seasonTwoMeta=SEASONS.find((season)=>season.id===SEASON_TWO_ID);
-  const seasonTwoClosed=Boolean(seasonTwoMeta&&todayStr()>=seasonTwoMeta.end);
+  const seasonTwoMeta=SEASONS.find((season)=>season.id===(campaignSeasonId||SEASON_TWO_ID));
+  const seasonTwoClosed=Boolean(seasonTwoMeta&&todayStr()>seasonTwoMeta.end);
+  const campaignLabel=seasonTwoMeta?.label||"Campaign";
+  const campaignName=seasonTwoMeta?.name||"Campaign";
+  const campaignColor=seasonTwoMeta?.color||"#00E5FF";
 
   return (
 <div className="fade-up season2-top-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
           <div className="season2-hero-block" style={{textAlign:"center",marginBottom:32}}>
-            <p style={{color:"#00E5FF",fontWeight:800,fontSize:".7rem",letterSpacing:3,
-              textTransform:"uppercase",marginBottom:8}}>April 2026</p>
+            <p style={{color:campaignColor,fontWeight:800,fontSize:".7rem",letterSpacing:3,
+              textTransform:"uppercase",marginBottom:8}}>{campaignLabel}</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.4rem)",
-              background:"linear-gradient(135deg,#00E5FF,#C77DFF,#00FF94)",
+              background:`linear-gradient(135deg,${campaignColor},#C77DFF,#00FF94)`,
               WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
               marginBottom:8}}>
-              🚀 Season 2
+              🚀 {campaignName}
             </h2>
             <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600}}>
-              {todayStr()<SEASON_TWO_LAUNCH_DATE
-                ? "Season 2 is on deck. The board stays sealed until opening night."
+              {seasonTwoMeta&&todayStr()<seasonTwoMeta.start
+                ? `${campaignName} is on deck. The board stays sealed until opening night.`
                 : seasonTwoClosed
                   ? "The campaign file is sealed. Final standings are locked and the record now carries the season."
-                  : "The live campaign file. Opening shots, swing nights, and pressure points are still being written."}
+                  : `${campaignName} is live. Opening shots, swing nights, and pressure points are being written now.`}
             </p>
           </div>
           {(()=>{
-            const s2=SEASONS.find(x=>x.id===SEASON_TWO_ID);
+            const s2=seasonTwoMeta||SEASONS.find(x=>x.id===SEASON_TWO_ID);
             const s2Sessions=sessions.filter(s=>s.date>=s2.start&&s.date<=s2.end);
             const today=todayStr();
             const seasonFinalDay=!seasonTwoClosed&&today===s2.end;
@@ -52,6 +56,7 @@ export default function Season2View({ ctx }) {
             const s2Stats=allStats(s2Sessions).filter(p=>p.appearances>0);
             const byWins=[...s2Stats].sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
             const byKills=[...s2Stats].sort((a,b)=>b.kills-a.kills);
+            const byKd=[...s2Stats].filter((player)=>player.appearances>=5).sort((a,b)=>b.kd-a.kd||b.kills-a.kills);
             const byApp=[...s2Stats].sort((a,b)=>b.appearances-a.appearances);
             const totalKills=s2Sessions.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
             const uniqueWins=[...new Set(s2Sessions.filter(s=>s.winner).map(s=>s.winner))].length;
@@ -73,6 +78,28 @@ export default function Season2View({ ctx }) {
               .filter((player)=>player.wins===0)
               .sort((left,right)=>right.appearances-left.appearances||right.kills-left.kills)[0]||null;
             const quietWatchProfile=quietWatchPlayer?players.find((player)=>player.id===quietWatchPlayer.id):null;
+            const s2UniqueDates=[...new Set(s2Sessions.map((session)=>session.date))].sort();
+            const s2Midpoint=s2UniqueDates[Math.max(1,Math.floor(s2UniqueDates.length/2))]||s2.end;
+            const earlyS2Stats=allStats(s2Sessions.filter((session)=>session.date<s2Midpoint))
+              .filter((player)=>player.appearances>=3);
+            const lateS2Stats=allStats(s2Sessions.filter((session)=>session.date>=s2Midpoint))
+              .filter((player)=>player.appearances>=3);
+            let mostImproved=null;
+            let bestImprovementGain=0;
+            earlyS2Stats.forEach((earlyPlayer)=>{
+              const latePlayer=lateS2Stats.find((player)=>player.id===earlyPlayer.id);
+              if(!latePlayer)return;
+              const gain=latePlayer.winRate-earlyPlayer.winRate;
+              if(gain>bestImprovementGain){
+                bestImprovementGain=gain;
+                mostImproved={
+                  player:players.find((player)=>player.id===earlyPlayer.id),
+                  earlyWR:earlyPlayer.winRate,
+                  lateWR:latePlayer.winRate,
+                  gain,
+                };
+              }
+            });
             let topGame={pid:"",k:0,sid:"",date:""};
             s2Sessions.forEach(s=>{
               if(!s.kills)return;
@@ -83,6 +110,20 @@ export default function Season2View({ ctx }) {
               }
             });
             const topGameLobby=topGame.sid?`Lobby ${parseSessionIdNumber(topGame.sid)||topGame.sid}`:"";
+            const dayKillMap={};
+            s2Sessions.forEach((session)=>{
+              Object.entries(session.kills||{}).forEach(([pid,kills])=>{
+                const key=`${pid}|${session.date}`;
+                dayKillMap[key]=(dayKillMap[key]||0)+kills;
+              });
+            });
+            const topDayKill=Object.entries(dayKillMap)
+              .map(([key,kills])=>{
+                const [pid,date]=key.split("|");
+                return {pid,date,k:kills};
+              })
+              .sort((a,b)=>b.k-a.k)[0]||null;
+            const topDayKillPlayer=topDayKill?players.find((player)=>player.id===topDayKill.pid):null;
             const s2Ordered=[...s2Sessions].sort(compareSessionsAsc);
             const s2Opener=s2Ordered[0]||null;
             const s2OpenerWinner=s2Opener?players.find((player)=>player.id===s2Opener.winner):null;
@@ -114,8 +155,8 @@ export default function Season2View({ ctx }) {
                 : `${uniqueWins} different winners have already left fingerprints on the season file.`;
             const quietPulse=quietWatchProfile&&quietWatchPlayer
               ? seasonTwoClosed
-                ? `${dn(quietWatchProfile.username)} finished Season 2 without a win on file, which leaves the support-pack note on the final record.`
-                : `${dn(quietWatchProfile.username)} is still chasing the first Season 2 win, so the support pack is still open.`
+                ? `${dn(quietWatchProfile.username)} finished ${campaignName} without a win on file, which leaves the support-pack note on the final record.`
+                : `${dn(quietWatchProfile.username)} is still chasing the first ${campaignName} win, so the support pack is still open.`
               : attendanceLeaderPlayer&&attendanceLeader
                 ? attendanceTieCount>1
                   ? `${attendanceTieCount} players finished tied at the attendance ceiling. Even the loyalty line stayed crowded.`
@@ -179,7 +220,7 @@ export default function Season2View({ ctx }) {
               ?seasonTwoClosed
                 ?`${dn(s2Campaign.openerWinner.username)} opened the file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file closed without one clean swing night."} ${dn(seasonLeaderPlayer.username)} sealed the season at ${seasonLeader.wins} wins.`
                 :`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on the night that changes how everybody reads it."} ${s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase has not gone quiet.`:`${dn(seasonLeaderPlayer.username)} has the front with ${seasonLeader.wins} wins, but the file is still loose enough for one good night to bend it again.`}`
-              :`${uniqueWins} different winners have already left fingerprints on the Season 2 file.`;
+              :`${uniqueWins} different winners have already left fingerprints on the ${campaignName} file.`;
             const seasonMemoryCards=[
               {
                 label:"OPENING SHOT",
@@ -246,7 +287,7 @@ export default function Season2View({ ctx }) {
             // Pre-season state
             if(today<s2.start) return(
               <div>
-                {/* Live S2 countdown */}
+                {/* Campaign countdown */}
                 <div style={{
                   background:"linear-gradient(135deg,rgba(0,229,255,.1),rgba(199,125,255,.08))",
                   border:"2px solid rgba(0,229,255,.4)",borderRadius:20,
@@ -254,7 +295,7 @@ export default function Season2View({ ctx }) {
                   animation:"popIn .4s ease"}}>
                   <div style={{fontFamily:"Fredoka One",fontSize:".72rem",color:"#00E5FF",
                     letterSpacing:4,textTransform:"uppercase",marginBottom:16,opacity:.8}}>
-                    Season 2 launches in
+                    {campaignName} launches in
                   </div>
                   <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:20,flexWrap:"wrap"}}>
                     {[{l:"Days",v:s2CdClock.d},{l:"Hours",v:s2CdClock.h},{l:"Mins",v:s2CdClock.m},{l:"Secs",v:s2CdClock.s}].map((seg,i)=>(
@@ -288,7 +329,7 @@ export default function Season2View({ ctx }) {
                 borderRadius:20,padding:"40px 24px",textAlign:"center"}}>
                 <div style={{fontSize:"2.5rem",marginBottom:12}}>🎮</div>
                 <div style={{fontFamily:"Fredoka One",fontSize:"1.3rem",color:"#00E5FF",marginBottom:8}}>
-                  Season 2 is live, but the opener has not been filed yet
+                  {campaignName} is live, but the opener has not been filed yet
                 </div>
                 <p style={{color:"var(--text3)",fontSize:".85rem",fontWeight:600}}>
                   The room is waiting on that first finished lobby. Once it lands, this whole board stops feeling sealed and starts feeling hunted.
@@ -317,22 +358,22 @@ export default function Season2View({ ctx }) {
                         FINAL DAY FILE
                       </div>
                       <div className="bc7" style={{fontSize:".78rem",lineHeight:1.65,color:"var(--text2)"}}>
-                        Season 2 closes today. The wrap locks after the final filed lobby.
+                        {campaignName} closes today. The wrap locks after the final filed lobby.
                       </div>
                     </div>
                     <div className="bc7" style={{fontSize:".68rem",letterSpacing:".14em",color:finalDayFiled?"#00FF94":"#FFD700",whiteSpace:"nowrap"}}>
-                      {finalDayFiled?"FINAL DAY FILED":"FINAL ROOMS OPEN"}
+                      {finalDayFiled?"FINAL DAY FILED":"LAST DAY OPEN"}
                     </div>
                   </div>
                 )}
 
-                {/* Season 2 totals */}
+                {/* Campaign totals */}
                 <div className="season2-banner" style={{
                   background:"linear-gradient(135deg,rgba(0,229,255,.12),rgba(0,255,148,.08),rgba(199,125,255,.1))",
                   border:"2px solid rgba(0,229,255,.35)",borderRadius:20,
                   padding:"24px 20px",marginBottom:28,textAlign:"center"}}>
                   <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#00E5FF",marginBottom:16}}>
-                    Season 2 by the Numbers
+                    {campaignName} by the Numbers
                   </div>
                   <div className="season2-banner-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:12}}>
                     {[
@@ -393,20 +434,6 @@ export default function Season2View({ ctx }) {
                   </div>
                 </div>
 
-                {!seasonTwoClosed&&(
-                  <div style={{
-                    marginBottom:22,
-                    padding:"11px 14px",
-                    borderRadius:12,
-                    border:"1px solid rgba(255,215,0,.18)",
-                    background:"linear-gradient(135deg,rgba(255,215,0,.08),rgba(199,125,255,.05))",
-                  }}>
-                    <div className="bc7" style={{fontSize:".78rem",lineHeight:1.55,color:"var(--text2)"}}>
-                      Season ends in 6 days. The top line is still live.
-                    </div>
-                  </div>
-                )}
-
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
                   {seasonMemoryCards.map((card)=>(
                     <div key={card.label} style={{
@@ -433,7 +460,7 @@ export default function Season2View({ ctx }) {
                 {podium.length>=1&&(
                   <div style={{marginBottom:28}}>
                     <h3 style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:"#00E5FF",
-                      marginBottom:16,textAlign:"center"}}>🥇 Season 2 Standings</h3>
+                      marginBottom:16,textAlign:"center"}}>🥇 {campaignName} Standings</h3>
                     <div style={{display:"flex",gap:12,justifyContent:"center",alignItems:"flex-end",flexWrap:"wrap"}}>
                       {podium.map((p,i)=>{
                         const player=players.find(x=>x.id===p.id);
@@ -482,7 +509,7 @@ export default function Season2View({ ctx }) {
                 {/* S2 Award cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:14,marginBottom:28}}>
                   {[
-                    {icon:"👑",color:"#00E5FF",title:"S2 Champion",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Crown line still open",desc:seasonLeaderPlayer&&seasonChaserPlayer
+                    {icon:"👑",color:"#00E5FF",title:seasonTwoClosed?`${campaignName} Champion`:"Current Wins Leader",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Crown line still open",desc:seasonLeaderPlayer&&seasonChaserPlayer
                       ?seasonTwoClosed
                         ?`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} when the final standings locked.`
                         :winsGap===0
@@ -491,7 +518,7 @@ export default function Season2View({ ctx }) {
                             ?`${dn(seasonChaserPlayer.username)} is only one win behind and still within one loud night of the lead.`
                             :`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} while the chase still has teeth.`
                       :"Currently carrying the season crown"},
-                    {icon:"💀",color:"#FF4D8F",title:"S2 Reaper",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:seasonTwoClosed?"Damage board sealed":"Damage board still open",desc:killLeaderPlayer&&seasonLeaderPlayer
+                    {icon:"💀",color:"#FF4D8F",title:seasonTwoClosed?`${campaignName} Reaper`:"Current Kill Leader",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:seasonTwoClosed?"Damage board sealed":"Damage board still open",desc:killLeaderPlayer&&seasonLeaderPlayer
                       ?killLeaderPlayer.id===seasonLeaderPlayer.id
                         ?seasonTwoClosed
                           ?"Finished with both the crown line and the damage pace on the final file."
@@ -500,6 +527,7 @@ export default function Season2View({ ctx }) {
                           ?`Finished as the damage leader while ${dn(seasonLeaderPlayer.username)} sealed the wins race.`
                           :`Still driving the damage board even while ${dn(seasonLeaderPlayer.username)} controls the wins race.`
                       :seasonTwoClosed?"Finished as the season damage line":"Setting the damage line for the season"},
+                    ...(byKd[0]?[{icon:"🎯",color:"#00E5FF",title:"Most Efficient",player:byKd[0],stat:`${byKd[0].kd} K/G ratio`,desc:`Best kills per lobby once ${campaignName} had enough tape to trust the rate.`}]:[]),
                     {icon:"🎮",color:"#00FF94",title:"Most Loyal",player:byApp[0],stat:byApp[0]?`${byApp[0].appearances} lobbies`:"Attendance file still forming",desc:attendanceTieCount>1
                       ?seasonTwoClosed
                         ?`Finished tied at the attendance ceiling with ${attendanceTieCount-1} other regular${attendanceTieCount-1===1?"":"s"}.`
@@ -507,7 +535,9 @@ export default function Season2View({ ctx }) {
                       :seasonTwoClosed
                         ?"Finished as the attendance marker on the sealed file."
                         :"Keeps answering the call and making sure the live file never goes quiet."},
-                    ...(topGame.pid?[{icon:"☄️",color:"#C77DFF",title:"Best Single Game",player:players.find(p=>p.id===topGame.pid),stat:`${topGame.k} kills in ${topGameLobby}`,desc:`${formatLobbyDate(topGame.date,{weekday:"short",day:"numeric",month:"short"})} · still the room every damage spike gets measured against.`}]:[]),
+                    ...(mostImproved?.player?[{icon:"📈",color:"#00FF94",title:"Most Improved",player:mostImproved.player,stat:`${mostImproved.earlyWR}% to ${mostImproved.lateWR}% WR`,desc:`Sharpest late-season climb in the ${campaignName} file at +${mostImproved.gain}% win rate.`}]:[]),
+                    ...(topGame.pid?[{icon:"☄️",color:"#C77DFF",title:"Best Single Game",player:players.find(p=>p.id===topGame.pid),stat:`${topGame.k} kills in ${topGameLobby}`,desc:`${formatLobbyDate(topGame.date,{weekday:"short",day:"numeric",month:"short"})} · the single room every ${campaignName} damage spike gets measured against.`}]:[]),
+                    ...(topDayKillPlayer?[{icon:"🌋",color:"#FF4D8F",title:"Most Kills in a Day",player:topDayKillPlayer,stat:`${topDayKill.k} kills`,desc:`${formatLobbyDate(topDayKill.date,{weekday:"short",day:"numeric",month:"short"})} · the loudest damage day in the ${campaignName} file.`}]:[]),
                   ].map((a,i)=>{
                     if(!a.player)return null;
                     const playerObj=a.player.username?a.player:players.find(p=>p.id===a.player?.id);
@@ -542,7 +572,7 @@ export default function Season2View({ ctx }) {
                 {/* Full S2 leaderboard */}
                 <div style={{marginBottom:8}}>
                   <h3 style={{fontFamily:"Fredoka One",fontSize:"1.15rem",color:"#00E5FF",marginBottom:14}}>
-                    📊 Full Season 2 Leaderboard
+                    📊 Full {campaignName} Leaderboard
                   </h3>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {byWins.map((p,i)=>{

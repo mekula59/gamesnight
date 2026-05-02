@@ -2485,6 +2485,8 @@ export const getPlayerFileState = (
 
   const stats = getStats(playerId, sessions);
   const seasonSessions = seasonId === "all" ? sessions : getSeasonSessions(sessions, seasonId);
+  const activeSeason = SEASONS.find((season) => season.id === seasonId) || null;
+  const seasonName = activeSeason?.name || "current season";
   const seasonStats = getStats(playerId, seasonSessions);
   const rank = getRank(playerId, players, sessions);
   const level = getPlayerLevel(playerId, sessions);
@@ -2617,7 +2619,7 @@ export const getPlayerFileState = (
       if (seasonBenchmark.sameWins) {
         return {
           label: "NEXT BOARD MOVE",
-          line: `${seasonBenchmark.target.username} is the next Season 2 file above on kills.`,
+          line: `${seasonBenchmark.target.username} is the next ${seasonName} file above on kills.`,
           detail: `${Math.max(seasonBenchmark.killGap, 0)} kill${Math.abs(seasonBenchmark.killGap) === 1 ? "" : "s"} changes that chase.`,
           tone: "season",
           color: "#00E5FF",
@@ -2627,7 +2629,7 @@ export const getPlayerFileState = (
       }
       return {
         label: "NEXT BOARD MOVE",
-        line: `${seasonBenchmark.target.username} is the next Season 2 file above on wins.`,
+        line: `${seasonBenchmark.target.username} is the next ${seasonName} file above on wins.`,
         detail: `${seasonBenchmark.winGap} win${seasonBenchmark.winGap === 1 ? "" : "s"} closes the gap.`,
         tone: "season",
         color: "#00E5FF",
@@ -2765,7 +2767,7 @@ export const getPlayerFileState = (
     if (stats.wins === 0) return "The missing first close is still the pressure point.";
     if (drought >= 5) return `${drought} lobbies without a win is the part opponents can lean on.`;
     if (consistency < 45 && stats.appearances >= 8) return "The floor still drops often enough to keep the file vulnerable.";
-    if (seasonStats.appearances >= 4 && seasonStats.wins === 0) return "Season 2 has not paid out yet.";
+    if (seasonStats.appearances >= 4 && seasonStats.wins === 0) return `${seasonName} has not paid out yet.`;
     return "The danger is drift. Long quiet stretches let the room move on.";
   })();
 
@@ -3942,6 +3944,7 @@ export const getDailyOrdersForPlayer = (
   const weekSessions = getPeriodSessions(sessions, "week");
   const currentSeason =
     SEASONS.find((season) => latestDate >= season.start && latestDate <= season.end) || null;
+  const currentSeasonName = currentSeason?.name || "current season";
   const seasonSessions = currentSeason
     ? getSeasonSessions(sessions, currentSeason.id)
     : sessions;
@@ -4263,7 +4266,7 @@ export const getDailyOrdersForPlayer = (
       icon: "📈",
       color: player.color,
       label: "TAKE THE NEXT SPOT",
-      text: `Finish ${seasonBenchmark.winGap === 1 ? "1 win" : `${seasonBenchmark.winGap} wins`} better than ${seasonBenchmark.target.username} today and pull level in Season 2.`,
+      text: `Finish ${seasonBenchmark.winGap === 1 ? "1 win" : `${seasonBenchmark.winGap} wins`} better than ${seasonBenchmark.target.username} today and pull level in ${currentSeasonName}.`,
       note:
         seasonBenchmark.winGap === 1
           ? "One good night puts those files side by side."
@@ -4297,7 +4300,7 @@ export const getDailyOrdersForPlayer = (
         (seasonChaser.sameWins && Math.abs(seasonChaser.killGap) <= 12))
       ? seasonChaser
       : allTimeChaser;
-    const scopeLabel = chase === seasonChaser ? "Season 2" : "all-time";
+    const scopeLabel = chase === seasonChaser ? currentSeasonName : "all-time";
     if (chase) {
       pushOrder({
         category: "lead-defense",

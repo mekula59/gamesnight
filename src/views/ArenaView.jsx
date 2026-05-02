@@ -37,10 +37,11 @@ export default function ArenaView({ ctx }) {
     goProfile,
     spotlight,
     getPressureQueue,
-    seasonTwoClosed,
+    activeCampaign,
+    activeCampaignClosed,
     seasonThreeWaiting,
   } = ctx;
-  const seasonBoardClosed=seasonTwoClosed&&arenaRangeKey==="season";
+  const seasonBoardClosed=activeCampaignClosed&&arenaRangeKey==="season";
   const archiveBoardMode=seasonBoardClosed||seasonThreeWaiting;
 
   return (
@@ -124,20 +125,6 @@ export default function ArenaView({ ctx }) {
             </div>
           </div>
 
-          {!seasonTwoClosed&&(
-            <div style={{
-              marginBottom:14,
-              padding:"9px 12px",
-              borderRadius:10,
-              border:"1px solid rgba(255,215,0,.16)",
-              background:"linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,107,53,.04))",
-            }}>
-              <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
-                Season ends in 6 days. This board still has room to turn.
-              </div>
-            </div>
-          )}
-
           {/* Search */}
           <div style={{position:"relative",marginBottom:16}}>
             <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
@@ -203,7 +190,7 @@ export default function ArenaView({ ctx }) {
             }}>
               <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
                 {seasonBoardClosed
-                  ?"Season 2 is locked. This board is final record, not active movement."
+                  ?`${activeCampaign?.name||"This season"} is locked. This board is final record, not active movement.`
                   :"No May lobbies have been filed yet. Arena is showing the latest official archive."}
               </div>
             </div>
@@ -295,10 +282,10 @@ export default function ArenaView({ ctx }) {
               if(archiveBoardMode){
                 return boardChaser&&chasePlayer
                   ?seasonBoardClosed
-                    ?`${dn(leaderPlayer.username)} finished Season 2 ahead of ${dn(chasePlayer.username)}`
+                    ?`${dn(leaderPlayer.username)} finished ${activeCampaign?.name||"the season"} ahead of ${dn(chasePlayer.username)}`
                     :`${dn(leaderPlayer.username)} leads the latest archived board over ${dn(chasePlayer.username)}`
                   :seasonBoardClosed
-                    ?`${dn(leaderPlayer.username)} finished Season 2 alone on top`
+                    ?`${dn(leaderPlayer.username)} finished ${activeCampaign?.name||"the season"} alone on top`
                     :`${dn(leaderPlayer.username)} leads the latest archived board`;
               }
               if(arenaRangeKey==="today"){
@@ -369,7 +356,7 @@ export default function ArenaView({ ctx }) {
                   color:"#00E5FF",
                   value:seasonBoardClosed?"Final standings are locked":"Waiting on May data",
                   note:seasonBoardClosed
-                    ?"Season 2 movement is now archive context until a new season file opens."
+                    ?`${activeCampaign?.name||"This season"} movement is now archive context until a new season file opens.`
                     :"The next Arena movement starts when the first official May lobby is filed.",
                 },
               ]

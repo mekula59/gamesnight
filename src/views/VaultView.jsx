@@ -1,5 +1,5 @@
 export default function VaultView({ ctx }) {
-  const { sessions, players, getRecords, dn, Avatar, renderPlayerIntel, goProfile, getStats, getLobbyDateMarker } = ctx;
+  const { sessions, players, getRecords, dn, Avatar, renderPlayerIntel, goProfile, getStats, getLobbyDateMarker, activeCampaign } = ctx;
   const rec = getRecords();
 
   if (!rec) {
@@ -41,7 +41,7 @@ export default function VaultView({ ctx }) {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
           <span className="bc7" style={{ fontSize: ".62rem", letterSpacing: ".3em", color: "rgba(199,125,255,.5)" }}>PERMANENT ARCHIVE</span>
-          <span className="bc7" style={{ fontSize: ".62rem", letterSpacing: ".2em", color: "var(--text3)" }}>{sessions.length} SESSIONS · SEASON ARCHIVE CURRENT</span>
+          <span className="bc7" style={{ fontSize: ".62rem", letterSpacing: ".2em", color: "var(--text3)" }}>{sessions.length} SESSIONS · {activeCampaign?.name?.toUpperCase() || "CURRENT CAMPAIGN"} LIVE, ARCHIVES SEALED</span>
         </div>
         <h2 className="bc9" style={{ fontSize: "clamp(2rem,8vw,4rem)", letterSpacing: ".08em", lineHeight: .9, color: "#C77DFF", textShadow: "0 0 28px rgba(199,125,255,.3)", margin: "0 0 10px" }}>THE VAULT</h2>
         <div style={{ height: 1, background: "linear-gradient(90deg,rgba(199,125,255,.44),transparent)", marginBottom: 8 }} />
