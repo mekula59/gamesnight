@@ -3,6 +3,9 @@ export default function Season2View({ ctx }) {
     todayStr,
     SEASON_TWO_ID,
     campaignSeasonId,
+    selectedCampaignSeasonId,
+    setSelectedCampaignSeasonId,
+    activeCampaignId,
     SEASONS,
     sessions,
     allStats,
@@ -21,35 +24,75 @@ export default function Season2View({ ctx }) {
     s2CdClock,
     SEASON_TWO_LAUNCH_DATE,
   } = ctx;
-  const seasonTwoMeta=SEASONS.find((season)=>season.id===(campaignSeasonId||SEASON_TWO_ID));
-  const seasonTwoClosed=Boolean(seasonTwoMeta&&todayStr()>seasonTwoMeta.end);
+  const currentDate=todayStr();
+  const selectedSeasonId=campaignSeasonId||selectedCampaignSeasonId||activeCampaignId||SEASON_TWO_ID;
+  const seasonTwoMeta=SEASONS.find((season)=>season.id===selectedSeasonId);
+  const seasonTwoClosed=Boolean(seasonTwoMeta&&currentDate>seasonTwoMeta.end);
+  const seasonTwoWaiting=Boolean(seasonTwoMeta&&currentDate<seasonTwoMeta.start);
   const campaignLabel=seasonTwoMeta?.label||"Campaign";
   const campaignName=seasonTwoMeta?.name||"Campaign";
   const campaignColor=seasonTwoMeta?.color||"#00E5FF";
+  const campaignModeLabel=seasonTwoWaiting?"Campaign Waiting":seasonTwoClosed?"Campaign Archive":"Campaign Live";
+  const switcherSeasons=["s3","s2","s1"]
+    .map((seasonId)=>SEASONS.find((season)=>season.id===seasonId))
+    .filter(Boolean);
+  const getSeasonStateLabel=(season)=>{
+    if(currentDate<season.start)return"Waiting";
+    if(currentDate>season.end)return"Sealed archive";
+    return"Live campaign";
+  };
+  const getSeasonSwitchLabel=(season)=>{
+    if(currentDate>season.end)return`${season.name} Archive`;
+    return season.name;
+  };
 
   return (
 <div className="fade-up season2-top-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
           <div className="season2-hero-block" style={{textAlign:"center",marginBottom:32}}>
             <p style={{color:campaignColor,fontWeight:800,fontSize:".7rem",letterSpacing:3,
-              textTransform:"uppercase",marginBottom:8}}>{campaignLabel}</p>
-            <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.4rem)",
-              background:`linear-gradient(135deg,${campaignColor},#C77DFF,#00FF94)`,
+              textTransform:"uppercase",marginBottom:8}}>{campaignModeLabel} · {campaignLabel}</p>
+            <h2 className="campaign-title-gradient" style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.4rem)",
+              backgroundImage:`linear-gradient(135deg,${campaignColor},#C77DFF,#00FF94)`,
               WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+              display:"inline-block",
+              "--campaign-title-color":campaignColor,
               marginBottom:8}}>
               🚀 {campaignName}
             </h2>
             <p style={{color:"var(--text2)",fontSize:".88rem",fontWeight:600}}>
-              {seasonTwoMeta&&todayStr()<seasonTwoMeta.start
+              {seasonTwoWaiting
                 ? `${campaignName} is on deck. The board stays sealed until opening night.`
                 : seasonTwoClosed
                   ? "The campaign file is sealed. Final standings are locked and the record now carries the season."
                   : `${campaignName} is live. Opening shots, swing nights, and pressure points are being written now.`}
             </p>
           </div>
+          <div className="campaign-season-switcher" aria-label="Campaign season switcher">
+            {switcherSeasons.map((season)=>{
+              const selected=season.id===selectedSeasonId;
+              return(
+                <button
+                  key={season.id}
+                  type="button"
+                  className={selected?"active":""}
+                  onClick={()=>setSelectedCampaignSeasonId?.(season.id)}
+                  aria-pressed={selected}
+                  style={{
+                    "--seasonc":season.color||campaignColor,
+                    "--seasonbg":`${season.color||campaignColor}18`,
+                    "--seasonglow":`${season.color||campaignColor}20`,
+                  }}
+                >
+                  <span className="season-switch-title">{getSeasonSwitchLabel(season)}</span>
+                  <span className="season-switch-state">{getSeasonStateLabel(season)}</span>
+                </button>
+              );
+            })}
+          </div>
           {(()=>{
             const s2=seasonTwoMeta||SEASONS.find(x=>x.id===SEASON_TWO_ID);
             const s2Sessions=sessions.filter(s=>s.date>=s2.start&&s.date<=s2.end);
-            const today=todayStr();
+            const today=currentDate;
             const seasonFinalDay=!seasonTwoClosed&&today===s2.end;
             const finalDayFiled=s2Sessions.some((session)=>session.date===s2.end);
             // Hoist all data before any early return so esbuild stays in JS mode
@@ -312,11 +355,11 @@ export default function Season2View({ ctx }) {
                     maxWidth:420,margin:"0 auto 20px",lineHeight:1.6}}>
                     Every old crown gets stripped, every quiet file opens again, and opening night writes the first real line.
                   </p>
-                  <button onClick={()=>go("season1")} style={{
+                  <button onClick={()=>setSelectedCampaignSeasonId?.("s1")||go("campaign")} style={{
                     background:"rgba(0,229,255,.12)",border:"1.5px solid rgba(0,229,255,.35)",
                     borderRadius:12,padding:"9px 22px",color:"#00E5FF",fontWeight:800,
                     fontSize:".84rem",cursor:"pointer"}}>
-                    Open Season 1 file
+                    Open Season 1 Archive
                   </button>
                 </div>
               </div>

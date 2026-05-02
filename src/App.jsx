@@ -979,6 +979,48 @@ const CSS = `
     transform-origin:top left;
     animation:none;
   }
+  .campaign-season-switcher{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    margin:0 auto 26px;
+    max-width:760px;
+  }
+  .campaign-season-switcher button{
+    border:1.5px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    background:rgba(255,255,255,.045);
+    color:rgba(255,255,255,.72);
+    cursor:pointer;
+    padding:12px 14px;
+    text-align:left;
+    transition:background .12s ease,border-color .12s ease,transform .12s ease;
+  }
+  .campaign-season-switcher button:hover{
+    transform:translateY(-1px);
+    border-color:var(--seasonc);
+    background:rgba(255,255,255,.07);
+  }
+  .campaign-season-switcher button.active{
+    border-color:var(--seasonc);
+    background:linear-gradient(135deg,var(--seasonbg),rgba(255,255,255,.04));
+    box-shadow:0 0 22px var(--seasonglow);
+  }
+  .campaign-season-switcher .season-switch-title{
+    display:block;
+    font-family:"Fredoka One",cursive;
+    font-size:.95rem;
+    line-height:1.1;
+    margin-bottom:7px;
+  }
+  .campaign-season-switcher .season-switch-state{
+    display:block;
+    font-size:.58rem;
+    font-weight:900;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--seasonc);
+  }
 
   @media(max-width:640px){
     .zone-view-shell,
@@ -990,6 +1032,13 @@ const CSS = `
       animation:none!important;
       opacity:1!important;
       transform:none!important;
+    }
+    .campaign-season-switcher{grid-template-columns:1fr!important;gap:8px!important;margin-bottom:22px!important;}
+    .campaign-season-switcher button{padding:11px 12px!important;}
+    .season2-top-shell .campaign-title-gradient{
+      background-image:none!important;
+      -webkit-text-fill-color:var(--campaign-title-color)!important;
+      color:var(--campaign-title-color)!important;
     }
     .state-react-card::after{
       animation:none!important;
@@ -1577,6 +1626,7 @@ export default function GameNight(){
   const [profileId,  setProfileId]  = useState(null);
   const [expandedSid,setExpandedSid]= useState(null);
   const [lbSeason,   setLbSeason]   = useState("s3");
+  const [selectedCampaignSeasonId,setSelectedCampaignSeasonId]=useState("s3");
   const [h2hA,       setH2hA]       = useState("");
   const [h2hB,       setH2hB]       = useState("");
   const [editingSess,setEditingSess] = useState(null);
@@ -1724,8 +1774,7 @@ export default function GameNight(){
     rivals:   {label:"RIVALS",        icon:"⚔️", color:"#FF4D8F"},
     records:  {label:"THE VAULT",     icon:"🏅",color:"#C77DFF"},
     charts:   {label:"INTEL",         icon:"📈",color:"#00FF94"},
-    season1:  {label:"S1 ARCHIVE",    icon:"🏆",color:"#FFD700"},
-    season2:  {label:"SEASON 3",      icon:"🚀",color:"#FF4D8F"},
+    campaign: {label:"CAMPAIGN",      icon:"🚀",color:"#FF4D8F"},
     faq:      {label:"BRIEFING ROOM", icon:"❓",color:"#7B8CDE"},
     profile:  {label:"COMBAT FILE",   icon:"👤",color:"#FF6B35"},
     admin:    {label:"COMMAND",       icon:"⚙️",color:"#FF5252"},
@@ -1745,6 +1794,15 @@ export default function GameNight(){
     }
   };
   const go=v=>{
+    if(v==="season1"){
+      setSelectedCampaignSeasonId("s1");
+      v="campaign";
+    }else if(v==="season2"){
+      setSelectedCampaignSeasonId("s2");
+      v="campaign";
+    }else if(v==="campaign"&&!selectedCampaignSeasonId){
+      setSelectedCampaignSeasonId(activeCampaignId||"s3");
+    }
     setMobileOpen(false);
     if(v!==view){
       setView(v);
@@ -2393,8 +2451,7 @@ export default function GameNight(){
     {id:"rivals",    l:"RIVALS"},
     {id:"records",   l:"THE VAULT"},
     {id:"charts",    l:"INTEL"},
-    {id:"season1",   l:"S1 ARCHIVE"},
-    {id:"season2",   l:activeCampaign?.name?.toUpperCase()||"CAMPAIGN"},
+    {id:"campaign",  l:"CAMPAIGN"},
     {id:"faq",       l:"BRIEFING"},
   ];
 
@@ -2724,7 +2781,7 @@ export default function GameNight(){
     0,
   );
   const seasonTwoClosedWinners=[...new Set(seasonTwoClosedSessions.filter(session=>session.winner).map(session=>session.winner))].length;
-  const activeNavView=view;
+  const activeNavView=(view==="season1"||view==="season2")?"campaign":view;
   const activeZone=LEVEL_MAP[activeNavView]||LEVEL_MAP.home;
   // ════════════════════════════════════════════════════
   return(<>
@@ -4131,13 +4188,16 @@ export default function GameNight(){
       )}
 
       {/* ══════════════════════════════════════════════
-          SEASON 2 VIEW
+          CAMPAIGN VIEW
       ══════════════════════════════════════════════ */}
-      {view==="season2"&&(
+      {view==="campaign"&&(
         <Season2View ctx={{
           todayStr,
           SEASON_TWO_ID,
-          campaignSeasonId:activeCampaignId,
+          campaignSeasonId:selectedCampaignSeasonId||activeCampaignId,
+          selectedCampaignSeasonId,
+          setSelectedCampaignSeasonId,
+          activeCampaignId,
           SEASONS,
           sessions,
           allStats,
