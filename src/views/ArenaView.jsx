@@ -45,11 +45,11 @@ export default function ArenaView({ ctx }) {
   const archiveBoardMode=seasonBoardClosed||seasonThreeWaiting;
 
   return (
-<div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
+<div className="fade-up arena-page" style={{minHeight:"calc(100vh - 120px)"}}>
           {/* Arena header */}
-          <div className="zone-arrival-slice" style={{"--arrive-delay":"50ms",marginBottom:28,position:"relative"}}>
+          <div className="zone-arrival-slice arena-hero" style={{"--arrive-delay":"50ms",marginBottom:28,position:"relative"}}>
             {/* Top coordinate bar */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+            <div className="arena-coordinate-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               marginBottom:12,padding:"0 2px"}}>
               <span style={{fontFamily:"Barlow Condensed",fontWeight:700,fontSize:".7rem",
                 letterSpacing:".25em",color:"rgba(255,215,0,.4)",textTransform:"uppercase"}}>
@@ -61,7 +61,7 @@ export default function ArenaView({ ctx }) {
               </span>
             </div>
             <div style={{textAlign:"center"}}>
-              <h2 style={{
+              <h2 className="arena-title" style={{
                 fontFamily:"Barlow Condensed",fontWeight:900,
                 fontSize:"clamp(2.4rem,10vw,4.2rem)",
                 letterSpacing:".1em",lineHeight:.9,
@@ -87,7 +87,7 @@ export default function ArenaView({ ctx }) {
           </div>
 
           {/* Arena range rail */}
-          <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+          <div className="arena-range-rail" style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
             {arenaRangeOptions.map((range)=>{
               const active=arenaRangeKey===range.id;
               return(
@@ -126,7 +126,7 @@ export default function ArenaView({ ctx }) {
           </div>
 
           {/* Search */}
-          <div style={{position:"relative",marginBottom:16}}>
+          <div className="arena-search" style={{position:"relative",marginBottom:16}}>
             <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
             <input className="search-inp" placeholder="Search callsign or gamertag..."
               value={lbSearch} onChange={e=>{
@@ -381,8 +381,8 @@ export default function ArenaView({ ctx }) {
                 },
               ];
             return(
-              <div style={{marginBottom:16}}>
-                <div style={{
+              <div className="arena-board-read" style={{marginBottom:16}}>
+                <div className="arena-board-lead" style={{
                   marginBottom:8,
                   background:`linear-gradient(135deg,${leaderPlayer.color}12,rgba(0,0,0,.4))`,
                   border:`1px solid ${leaderPlayer.color}33`,
@@ -405,7 +405,7 @@ export default function ArenaView({ ctx }) {
                     {pressureText}
                   </div>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8}}>
+                <div className="arena-pulse-cards" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8}}>
                   {pulseCards.map((card)=>(
                     <div key={card.label} style={{
                       background:`linear-gradient(135deg,${card.color}10,rgba(255,255,255,.03))`,
@@ -476,7 +476,7 @@ export default function ArenaView({ ctx }) {
           })()}
 
           {/* Sort pills */}
-          <div style={{display:"flex",gap:7,marginBottom:16,flexWrap:"wrap"}}>
+          <div className="arena-sort-pills" style={{display:"flex",gap:7,marginBottom:16,flexWrap:"wrap"}}>
             {[
               {id:"wins",l:"🏆 Wins"},
               {id:"kills",l:"💀 Kills"},

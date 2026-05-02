@@ -331,6 +331,9 @@ const CSS = `
     text-overflow:ellipsis;
     white-space:nowrap;
   }
+  .rival-evidence-mobile{
+    display:none;
+  }
   .rival-card-foot{
     display:flex;
     align-items:center;
@@ -342,6 +345,9 @@ const CSS = `
     color:var(--text2);
     font-size:.68rem;
     line-height:1.45;
+  }
+  .rival-mobile-pressure{
+    display:none;
   }
   .rival-ops-card-top{
     display:flex;
@@ -534,6 +540,116 @@ const CSS = `
     color:var(--text2);
   }
   @media(max-width:720px){
+    .arena-page .arena-hero{
+      margin-bottom:14px!important;
+    }
+    .arena-page .arena-coordinate-bar{
+      margin-bottom:8px!important;
+    }
+    .arena-page .arena-coordinate-bar span:last-child{
+      display:none!important;
+    }
+    .arena-page .arena-title{
+      font-size:clamp(2rem,12vw,3rem)!important;
+      letter-spacing:.08em!important;
+    }
+    .arena-page .arena-range-rail{
+      flex-wrap:nowrap!important;
+      overflow-x:auto!important;
+      gap:5px!important;
+      margin-left:-12px!important;
+      margin-right:-12px!important;
+      margin-bottom:10px!important;
+      padding:0 12px 4px!important;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    .arena-page .arena-range-rail::-webkit-scrollbar{
+      display:none;
+    }
+    .arena-page .arena-range-rail button{
+      flex:0 0 auto!important;
+      padding:7px 11px!important;
+      font-size:.65rem!important;
+      letter-spacing:.12em!important;
+    }
+    .arena-page .arena-range-rail button div:nth-child(2){
+      display:none!important;
+    }
+    .arena-page .arena-range-rail>div{
+      display:none!important;
+    }
+    .arena-page .arena-search{
+      margin-bottom:10px!important;
+    }
+    .arena-page .pressure-queue-shell{
+      gap:7px!important;
+      margin-bottom:11px!important;
+    }
+    .arena-page .pressure-queue-head{
+      display:none!important;
+    }
+    .arena-page .pressure-queue-grid{
+      grid-template-columns:1fr!important;
+      gap:0!important;
+    }
+    .arena-page .pressure-queue-card:nth-child(n+2){
+      display:none!important;
+    }
+    .arena-page .pressure-queue-card{
+      padding:10px 12px!important;
+      border-radius:9px!important;
+    }
+    .arena-page .pressure-queue-label{
+      margin-bottom:5px!important;
+      font-size:.5rem!important;
+      letter-spacing:.16em!important;
+    }
+    .arena-page .pressure-queue-headline{
+      font-size:.76rem!important;
+      line-height:1.28!important;
+      margin-bottom:0!important;
+    }
+    .arena-page .pressure-queue-detail{
+      display:none!important;
+    }
+    .arena-page .arena-board-read{
+      margin-bottom:10px!important;
+    }
+    .arena-page .arena-board-lead{
+      padding:11px 12px!important;
+      margin-bottom:0!important;
+    }
+    .arena-page .arena-board-lead .bc9{
+      font-size:.9rem!important;
+      line-height:1.22!important;
+    }
+    .arena-page .arena-board-lead .bc7:last-child{
+      font-size:.66rem!important;
+      line-height:1.45!important;
+    }
+    .arena-page .arena-pulse-cards{
+      display:none!important;
+    }
+    .arena-page .arena-sort-pills{
+      flex-wrap:nowrap!important;
+      overflow-x:auto!important;
+      margin-left:-12px!important;
+      margin-right:-12px!important;
+      margin-bottom:10px!important;
+      padding:0 12px 4px!important;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    .arena-page .arena-sort-pills::-webkit-scrollbar{
+      display:none;
+    }
+    .arena-page .arena-sort-pills .pill{
+      flex:0 0 auto!important;
+      padding:6px 11px!important;
+      font-size:.7rem!important;
+      box-shadow:none!important;
+    }
     .rival-heat-hero{
       margin-bottom:14px;
     }
@@ -563,7 +679,7 @@ const CSS = `
       display:none;
     }
     .rival-ops-track.is-active{
-      grid-auto-columns:minmax(270px,76vw);
+      grid-auto-columns:minmax(258px,74vw);
       scroll-snap-type:x mandatory;
       gap:10px;
     }
@@ -582,8 +698,8 @@ const CSS = `
       scroll-snap-align:start;
     }
     .rival-ops-card.heat-active{
-      min-height:164px;
-      padding:16px 15px;
+      min-height:158px;
+      padding:14px 14px;
       scroll-snap-align:start;
     }
     .rival-ops-card.heat-watch{
@@ -625,12 +741,25 @@ const CSS = `
       font-size:.55rem;
       letter-spacing:.08em;
     }
+    .rival-evidence-desktop{
+      display:none;
+    }
+    .rival-evidence-mobile{
+      display:inline;
+    }
     .rival-card-foot{
       align-items:flex-start;
       margin-bottom:7px;
     }
     .rival-card-pressure-line{
       font-size:.66rem;
+      line-height:1.38;
+    }
+    .rival-desktop-pressure{
+      display:none;
+    }
+    .rival-mobile-pressure{
+      display:block;
     }
     .rival-ops-card-top{
       gap:6px;
@@ -899,7 +1028,7 @@ const CSS = `
     .card-h,.lb-card,.rival-card,.comm-card{min-width:0!important;width:100%!important;}
     main{padding-left:12px!important;padding-right:12px!important;overflow-x:hidden!important;}
     .combat-picker-shell{
-      padding:12px!important;
+      padding:9px!important;
       border:1px solid rgba(255,255,255,.06);
       border-radius:10px;
       background:rgba(255,255,255,.025);
@@ -907,8 +1036,8 @@ const CSS = `
     .combat-selector{
       display:grid!important;
       grid-template-columns:1fr;
-      gap:10px!important;
-      max-height:248px;
+      gap:6px!important;
+      max-height:168px;
       overflow:auto;
       align-content:start;
       padding-right:2px;
@@ -918,9 +1047,9 @@ const CSS = `
       align-items:center!important;
       justify-content:flex-start!important;
       text-align:left!important;
-      font-size:.76rem!important;
-      padding:11px 13px!important;
-      min-height:50px!important;
+      font-size:.72rem!important;
+      padding:8px 11px!important;
+      min-height:40px!important;
       line-height:1.25!important;
       letter-spacing:.03em!important;
       border-radius:8px!important;
@@ -934,7 +1063,7 @@ const CSS = `
       max-width:100%;
       text-transform:none;
       font-weight:800;
-      line-height:1.3;
+      line-height:1.22;
       word-break:break-word;
     }
     .stat-strip-mob{grid-template-columns:repeat(2,1fr)!important;}
@@ -984,7 +1113,7 @@ const CSS = `
     .after-action-group{gap:12px!important;padding:16px 14px 0!important;margin-left:0!important;margin-right:0!important;}
     .after-action-mvp{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
     .after-action-rollup{margin-top:18px!important;padding-top:18px!important;font-size:.7rem!important;line-height:1.9!important;}
-    .combat-file-page .combat-file-selector{margin-bottom:22px!important;}
+    .combat-file-page .combat-file-selector{margin-bottom:13px!important;}
     .combat-file-page .combat-file-hero{padding:15px 14px!important;margin-bottom:14px!important;}
     .combat-file-page .combat-file-summary{
       display:grid!important;
@@ -1049,7 +1178,7 @@ const CSS = `
   }
   @media(max-width:400px){
     .bc9.hero-big{font-size:clamp(2.8rem,16vw,5rem)!important;}
-    .combat-selector{max-height:264px;}
+    .combat-selector{max-height:154px;}
     .combat-file-page .combat-file-summary{grid-template-columns:1fr!important;}
   }
 

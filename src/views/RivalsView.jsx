@@ -54,6 +54,12 @@ export default function RivalsView({ ctx }) {
     const leader = entry.leaderId === entry.playerA.id ? entry.playerA : entry.playerB;
     return `${dn(leader.username)} leads by ${entry.gap}`;
   };
+  const getMobilePressureLine = (entry, tone) => {
+    if (entry.gap <= 1) return "One top-two result can swing this.";
+    if (tone === "active") return "Recent clashes keep this hot.";
+    if (tone === "watch") return "Close enough to track next.";
+    return "History file, low heat.";
+  };
 
   const renderHeatCard = (entry, tone) => (
     <article key={entry.pairId} className={`rival-ops-card rivalry-evidence-card heat-${tone}`}>
@@ -73,15 +79,25 @@ export default function RivalsView({ ctx }) {
         </div>
       </div>
       <div className="rival-card-evidence-row">
-        <span>{entry.meetings} meetings</span>
-        <span>Last {formatDate(entry.lastMeetingDate)}</span>
-        <span>S2 {entry.seasonScore.scoreLine}</span>
+        <span>
+          <span className="rival-evidence-desktop">{entry.meetings} meetings</span>
+          <span className="rival-evidence-mobile">{entry.meetings} MTGS</span>
+        </span>
+        <span>
+          <span className="rival-evidence-desktop">Last {formatDate(entry.lastMeetingDate)}</span>
+          <span className="rival-evidence-mobile">{formatDate(entry.lastMeetingDate)}</span>
+        </span>
+        <span>
+          <span className="rival-evidence-desktop">S2 {entry.seasonScore.scoreLine}</span>
+          <span className="rival-evidence-mobile">{entry.seasonScore.scoreLine}</span>
+        </span>
       </div>
       <div className="rival-card-foot">
         <span className="bc7 rival-ops-card-pressure">{getLeaderLine(entry)}</span>
         <span className="bc7 rival-ops-card-chip">{entry.heatScore} heat</span>
       </div>
-      <div className="bc7 rival-card-pressure-line">{entry.pressureLine}</div>
+      <div className="bc7 rival-card-pressure-line rival-desktop-pressure">{entry.pressureLine}</div>
+      <div className="bc7 rival-card-pressure-line rival-mobile-pressure">{getMobilePressureLine(entry, tone)}</div>
     </article>
   );
 
