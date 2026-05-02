@@ -55,6 +55,7 @@ import {
   getRivals as selectGetRivals,
   getSeasonCampaignFile as selectGetSeasonCampaignFile,
   getSeasonOneWrap as selectGetSeasonOneWrap,
+  getSeasonOpenerFallout as selectGetSeasonOpenerFallout,
   getSeasonSessions as selectGetSeasonSessions,
   getSortedLeaderboard as selectGetSortedLeaderboard,
   sameRivalOpsState as selectSameRivalOpsState,
@@ -146,7 +147,118 @@ const CSS = `
   }
   @keyframes easterRain{0%{transform:translateY(-20px) rotate(0deg);opacity:.9}100%{transform:translateY(340px) rotate(540deg);opacity:0}}
   @keyframes borderRun{0%{background-position:0 0,100% 0,100% 100%,0 100%}100%{background-position:300px 0,100% 300px,-300px 100%,0 -300px}}
+  @keyframes allTimePulseLeft{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  @keyframes allTimePulseRight{0%{transform:translateX(-50%)}100%{transform:translateX(0)}}
+  .all-time-pulse{
+    margin:-8px -18px 34px;
+    padding:18px 18px 16px;
+    border-top:1px solid rgba(255,255,255,.06);
+    border-bottom:1px solid rgba(255,255,255,.04);
+    background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(0,0,0,.08));
+  }
+  .all-time-pulse-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:14px;
+    padding:0 2px 14px;
+  }
+  .all-time-pulse-label{
+    font-family:"Barlow Condensed",sans-serif;
+    font-weight:900;
+    font-size:.68rem;
+    letter-spacing:.28em;
+    color:rgba(0,229,255,.78);
+  }
+  .all-time-pulse-line{
+    font-size:.76rem;
+    color:var(--text3);
+    line-height:1.55;
+    font-weight:800;
+    margin-top:5px;
+  }
+  .all-time-pulse-link{
+    border:0;
+    background:transparent;
+    color:rgba(200,186,255,.62);
+    font-family:"Barlow Condensed",sans-serif;
+    font-weight:800;
+    letter-spacing:.16em;
+    font-size:.64rem;
+    text-transform:uppercase;
+    cursor:pointer;
+    padding:4px 0;
+  }
+  .all-time-pulse-link:hover,
+  .all-time-pulse-link:focus-visible{color:#00E5FF;outline:none;}
+  .all-time-pulse-viewport{
+    overflow:hidden;
+    padding:2px 0 3px;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%);
+  }
+  .all-time-pulse-row{
+    display:flex;
+    gap:18px;
+    width:max-content;
+    will-change:transform;
+    margin-left:-72px;
+    animation:allTimePulseLeft 46s linear infinite;
+  }
+  .all-time-pulse-row + .all-time-pulse-row{
+    margin-top:18px;
+    margin-left:-180px;
+    animation-name:allTimePulseRight;
+    animation-duration:52s;
+  }
+  .all-time-pulse-mobile-row{display:none;}
+  .all-time-pulse:hover .all-time-pulse-row,
+  .all-time-pulse:focus-within .all-time-pulse-row{animation-play-state:paused;}
+  .all-time-pulse-card{
+    width:260px;
+    min-height:118px;
+    flex:0 0 auto;
+    padding:17px 18px 16px;
+    background:
+      radial-gradient(circle at 18% 10%,var(--pulse-glow,rgba(0,229,255,.12)),transparent 38%),
+      linear-gradient(135deg,rgba(255,255,255,.055),rgba(0,0,0,.26));
+    border:1px solid rgba(255,255,255,.09);
+    border-left:3px solid var(--pulse-color,rgba(0,229,255,.5));
+    border-radius:0 18px 18px 0;
+    box-shadow:0 14px 34px rgba(0,0,0,.16);
+    opacity:.9;
+  }
+  .all-time-pulse-card-label{
+    font-family:"Barlow Condensed",sans-serif;
+    font-weight:800;
+    font-size:.58rem;
+    letter-spacing:.2em;
+    color:rgba(200,186,255,.62);
+    margin-bottom:12px;
+    text-transform:uppercase;
+  }
+  .all-time-pulse-card-value{
+    font-family:"Barlow Condensed",sans-serif;
+    font-weight:900;
+    color:var(--pulse-color,#00E5FF);
+    font-size:1.3rem;
+    line-height:1.08;
+    white-space:normal;
+  }
+  .all-time-pulse-card-note{
+    font-size:.72rem;
+    color:var(--text3);
+    line-height:1.5;
+    margin-top:8px;
+    font-weight:800;
+  }
   @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}}
+  @media(prefers-reduced-motion:reduce){
+    .all-time-pulse-viewport{overflow:visible!important;-webkit-mask-image:none!important;mask-image:none!important;}
+    .all-time-pulse-row{display:none!important;}
+    .all-time-pulse-mobile-row{display:flex!important;animation:none!important;width:auto!important;flex-wrap:wrap!important;}
+    .all-time-pulse-card{width:min(220px,100%)!important;}
+  }
 
   /* ── V74 GAME-FEEL SYSTEM ─────────────────────────────────── */
 
@@ -1129,8 +1241,60 @@ const CSS = `
     .home-mobile-shell .home-hero-block{margin-bottom:28px!important;}
     .home-mobile-shell .home-stat-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;border:none!important;overflow:visible!important;background:none!important;margin-bottom:26px!important;}
     .home-mobile-shell .home-stat-strip>div{border:1px solid rgba(255,255,255,.07)!important;border-radius:8px!important;background:rgba(255,255,255,.03)!important;padding:14px 10px 13px!important;}
-    .home-mobile-shell .home-pulse-grid{gap:12px!important;margin-bottom:30px!important;}
-    .home-mobile-shell .home-pulse-grid>div{min-height:auto!important;padding:16px 16px 17px!important;}
+    .home-mobile-shell .all-time-pulse{margin:-8px -12px 30px!important;padding:15px 12px 13px!important;}
+    .home-mobile-shell .all-time-pulse-head{align-items:flex-start!important;padding:0 2px 12px!important;}
+    .home-mobile-shell .all-time-pulse-line{font-size:.72rem!important;}
+    .home-mobile-shell .all-time-pulse-viewport{
+      overflow:hidden!important;
+      scroll-snap-type:none;
+      padding:1px 0 3px;
+      -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 7%,#000 90%,transparent 100%)!important;
+      mask-image:linear-gradient(90deg,transparent 0,#000 7%,#000 90%,transparent 100%)!important;
+      scrollbar-width:none;
+    }
+    .home-mobile-shell .all-time-pulse-viewport::-webkit-scrollbar{display:none;}
+    .home-mobile-shell .all-time-pulse-row{
+      display:flex!important;
+      width:max-content!important;
+      gap:10px!important;
+      will-change:transform;
+      margin-left:-56px!important;
+      animation-duration:40s!important;
+    }
+    .home-mobile-shell .all-time-pulse-row + .all-time-pulse-row{
+      margin-top:10px!important;
+      margin-left:-132px!important;
+      animation-name:allTimePulseRight!important;
+      animation-duration:46s!important;
+    }
+    .home-mobile-shell .all-time-pulse-mobile-row{display:none!important;}
+    .home-mobile-shell .all-time-pulse:hover .all-time-pulse-row,
+    .home-mobile-shell .all-time-pulse:focus-within .all-time-pulse-row{
+      animation-play-state:paused!important;
+    }
+    .home-mobile-shell .all-time-pulse-card{
+      width:44vw!important;
+      max-width:176px!important;
+      min-width:148px!important;
+      min-height:86px!important;
+      padding:12px 13px 12px!important;
+      border-radius:0 14px 14px 0!important;
+      scroll-snap-align:none;
+    }
+    .home-mobile-shell .all-time-pulse-card-label{
+      font-size:.5rem!important;
+      letter-spacing:.18em!important;
+      margin-bottom:8px!important;
+    }
+    .home-mobile-shell .all-time-pulse-card-value{
+      font-size:1rem!important;
+      line-height:1.08!important;
+    }
+    .home-mobile-shell .all-time-pulse-card-note{
+      font-size:.62rem!important;
+      line-height:1.36!important;
+      margin-top:6px!important;
+    }
     .home-stage-shell{margin-bottom:34px!important;}
     .home-stage-head{margin-bottom:18px!important;}
     .home-stage-row{gap:10px!important;}
@@ -1160,8 +1324,6 @@ const CSS = `
     .after-action-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;border:none!important;overflow:visible!important;margin-bottom:20px!important;}
     .after-action-stats>div{border:1px solid rgba(255,255,255,.07)!important;border-radius:8px!important;background:rgba(255,255,255,.03)!important;padding:12px 9px 11px!important;}
     .after-action-group{gap:12px!important;padding:16px 14px 0!important;margin-left:0!important;margin-right:0!important;}
-    .after-action-mvp{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
-    .after-action-rollup{margin-top:18px!important;padding-top:18px!important;font-size:.7rem!important;line-height:1.9!important;}
     .combat-file-page .combat-file-selector{margin-bottom:13px!important;}
     .combat-file-page .combat-file-hero{padding:15px 14px!important;margin-bottom:14px!important;}
     .combat-file-page .combat-file-summary{
@@ -1534,10 +1696,22 @@ const CSS = `
     padding-right:36px!important;
   }
 
-  /* ── Smooth scroll on iOS ── */
-  *{-webkit-overflow-scrolling:touch;}
-  .nav-desktop{-webkit-overflow-scrolling:touch;}
-`;
+	  /* ── Smooth scroll on iOS ── */
+	  *{-webkit-overflow-scrolling:touch;}
+	  .nav-desktop{-webkit-overflow-scrolling:touch;}
+	  @media(max-width:720px) and (prefers-reduced-motion:reduce){
+	    .home-mobile-shell .all-time-pulse-viewport{
+	      overflow:visible!important;
+	      -webkit-mask-image:none!important;
+	      mask-image:none!important;
+	    }
+	    .home-mobile-shell .all-time-pulse-mobile-row{
+	      animation:none!important;
+	      width:auto!important;
+	      flex-wrap:wrap!important;
+	    }
+	  }
+	`;
 
 const DEFAULT_LOBBY_LIMIT = 8;
 const gameStore = createStorageAdapter();
@@ -1845,6 +2019,7 @@ export default function GameNight(){
       isActiveWindow:dailyOrdersSchedule.isActive,
     });
   const getLatestDayConsequences=date=>selectGetLatestDayConsequences(sessions,players,date);
+  const getSeasonOpenerFallout=seasonId=>selectGetSeasonOpenerFallout(seasonId, sessions, players);
   const getLeaderboardShiftData=(seasonId="all",period=lbPeriod,sortKey=sortBy)=>
     selectGetLeaderboardShiftData(players,sessions,{seasonId,period,sortBy:sortKey});
   const getOnDeckPressure=(options)=>selectGetOnDeckPressure(sessions,players,options);
@@ -2325,7 +2500,7 @@ export default function GameNight(){
       (s.kills?.[pid]||0)>(s.kills?.[best]||0)?pid:best, s.attendees?.[0]);
     const tkPlayer=getPlayer(topKiller);
     const tkKills=s.kills?.[topKiller]||0;
-    const totalKills=Object.values(s.kills||{}).reduce((a,b)=>a+b,0);
+    const totalKills=Object.values(s.kills||{}).reduce((a,b)=>a+b,0)+(Number(s.unassignedKills)||0);
     const players_count=s.attendees?.length||0;
     const dd=new Date(s.date+"T12:00:00Z");
     const dateLabel=dd.toLocaleDateString("en",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
@@ -2463,7 +2638,7 @@ export default function GameNight(){
     return SPECIAL_DATE_MARKERS[date]||null;
   };
   const getLobbyTotalKills=(session)=>
-    Object.values(session?.kills||{}).reduce((sum,value)=>sum+value,0);
+    Object.values(session?.kills||{}).reduce((sum,value)=>sum+value,0)+(Number(session?.unassignedKills)||0);
   const getLobbyTopDamage=(session)=>{
     const attendeeIds=session?.attendees||[];
     if(!attendeeIds.length)return{player:null,pid:"",kills:0};
@@ -2650,7 +2825,7 @@ export default function GameNight(){
   const arenaScopeSessions=getScopedSessions(lbSeason,lbPeriod);
   const arenaScopeLatestDate=arenaScopeSessions.length?getLatestSessionDate(arenaScopeSessions):"";
   const arenaScopeKills=arenaScopeSessions.reduce(
-    (total,session)=>total+Object.values(session.kills||{}).reduce((sum,kills)=>sum+kills,0),
+    (total,session)=>total+getLobbyTotalKills(session),
     0,
   );
   const arenaScopeWinnerCount=[...new Set(arenaScopeSessions.filter((session)=>session.winner).map((session)=>session.winner))].length;
@@ -2777,7 +2952,7 @@ export default function GameNight(){
   const showSeasonThreeWaitingState=seasonThreeWaiting&&view==="home";
   const seasonTwoClosedSessions=filterSessionsBySeason(sessions,SEASON_TWO_ID);
   const seasonTwoClosedKills=seasonTwoClosedSessions.reduce(
-    (total,session)=>total+Object.values(session.kills||{}).reduce((sum,kills)=>sum+kills,0),
+    (total,session)=>total+getLobbyTotalKills(session),
     0,
   );
   const seasonTwoClosedWinners=[...new Set(seasonTwoClosedSessions.filter(session=>session.winner).map(session=>session.winner))].length;
@@ -3018,6 +3193,7 @@ export default function GameNight(){
           FEATURED_GAME,
           getLeaderboardShiftData,
           getLatestDayConsequences,
+          getSeasonOpenerFallout,
           getStorylines,
           getDayRecap,
           getDayStorylines,
@@ -3032,6 +3208,7 @@ export default function GameNight(){
             isEventActive,
             card,
           primaryBtn,
+          go,
           goProfile,
           Avatar,
         }}/>
@@ -3308,6 +3485,7 @@ export default function GameNight(){
           compareSessionsDesc,
           getLatestSessionDate,
           getLatestDayConsequences,
+          getSeasonOpenerFallout,
           getPlayer,
           getLatestDayHeatRun,
           getLobbyTotalKills,
@@ -3540,6 +3718,7 @@ export default function GameNight(){
           dn,
           getPlayerLevel,
           getPlayerFileState,
+          getSeasonOpenerFallout,
           compareSessionsDesc,
           Avatar,
           renderPlayerIntel,
@@ -4205,6 +4384,7 @@ export default function GameNight(){
           compareSessionsAsc,
           getLatestSessionDate,
           getLatestDayConsequences,
+          getSeasonOpenerFallout,
           buildSeasonCampaignFile,
           joinHumanList,
           dn,

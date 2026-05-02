@@ -20,10 +20,10 @@ export default function HomeView({ ctx }) {
     FEATURED_GAME,
     getLeaderboardShiftData,
     getLatestDayConsequences,
+    getSeasonOpenerFallout,
     getStorylines,
     getDayRecap,
     getDayStorylines,
-    getDailyMVP,
     getLobbyDateMarker,
     parseSessionIdNumber,
     getLiveStreaks,
@@ -32,8 +32,7 @@ export default function HomeView({ ctx }) {
     isEventActive,
     card,
     primaryBtn,
-    goProfile,
-    Avatar,
+    go,
   } = ctx;
 
   const joinHumanList = (items) => {
@@ -43,6 +42,9 @@ export default function HomeView({ ctx }) {
     if (list.length === 2) return `${list[0]} and ${list[1]}`;
     return `${list.slice(0, -1).join(", ")}, and ${list[list.length - 1]}`;
   };
+  const getLobbyTotalKills = (session) =>
+    Object.values(session?.kills || {}).reduce((sum, kills) => sum + kills, 0) +
+    (Number(session?.unassignedKills) || 0);
 
   return (
 <div className="fade-up home-mobile-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
@@ -69,7 +71,7 @@ export default function HomeView({ ctx }) {
             const homeTodayDate=todayStr?todayStr():latestDate;
             const currentSeasonClosed=Boolean(homeTodayDate&&currentSeason.end&&homeTodayDate>currentSeason.end);
             const seasonSess=sessions.filter(s=>s.date>=currentSeason.start&&s.date<=currentSeason.end);
-            const seasonKills=seasonSess.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
+            const seasonKills=seasonSess.reduce((n,s)=>n+getLobbyTotalKills(s),0);
             const seasonWinnerCount=[...new Set(seasonSess.filter((session)=>session.winner).map((session)=>session.winner))].length;
             const allStats_lb=allStats();
             const champion=allStats_lb.sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
@@ -162,7 +164,13 @@ export default function HomeView({ ctx }) {
               slide5P&&slide5St&&{label:"BEST WIN STREAK THIS SEASON",player:slide5P,stat:`${s2BestStreakV} consecutive wins`,sub:`${slide5St.wins}W from ${slide5St.appearances} lobbies in ${currentSeason.name}`,icon:"🔥"},
             ].filter(Boolean);
             const latestFallout=getLatestDayConsequences(latestDate);
+            const seasonOpenerFallout=currentSeason.id==="s3"?getSeasonOpenerFallout?.(currentSeason.id):null;
             const stories=getStorylines();
+            const isOpenerRepeat=(text="")=>
+              /split the win column|split .*session day|owned the win column|owned both|damage race|damage line|first crown line|ended level on wins|clear owner with|win lead/i.test(text);
+            const briefingStories=stories
+              .filter((story)=>!isOpenerRepeat(story.text))
+              .slice(0,3);
             const seasonShiftData=getLeaderboardShiftData(currentSeason.id,"wins");
             const leaderStageTitle=leaderP
               ? currentSeasonClosed
@@ -218,47 +226,45 @@ export default function HomeView({ ctx }) {
               }
               return "";
             })();
-            const briefingTitle=latestDayHeadline
-              ? `${falloutDateLabel} changed the pressure map. ${latestDayHeadline}`
-              :stories.length
-              ? "Live reads on the streaks, grudges, droughts, and pressure spikes shaping the room"
-              : "Fresh reads will lock in here as soon as the room has more data";
+            const briefingTitle=briefingStories.length
+              ? "Fresh reads sitting behind the opener file."
+              : "Fresh reads will lock in here as soon as the room has more data.";
             const recap=getDayRecap(latestDate);
-            const recapStorylines=latestDate?getDayStorylines(latestDate):[];
-            const mvp=getDailyMVP();
+            const recapStorylines=(latestDate?getDayStorylines(latestDate):[])
+              .filter((line)=>!isOpenerRepeat(line))
+              .slice(0,1);
             let dateLabel="";
             let recapTag="AFTER-ACTION REPORT";
             let recapTitle="No session report is locked in yet";
             let recapNotesLabel="FIELD NOTES";
             let recapFieldNotes=[];
-            let mvpCards=[];
             if(recap&&recap.lobbies){
               const dd=new Date(latestDate+"T12:00:00Z");
               dateLabel=dd.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
               const latestMarker=getLobbyDateMarker(latestDate);
               const specialTag=latestMarker?`${latestMarker.icon} ${latestMarker.label} · `:"";
               recapTag=`${specialTag}AFTER-ACTION REPORT`;
-              recapTitle=latestDayHeadline
-                ? latestDayHeadline
-                :`${recap.totalKills} confirmed kills across ${recap.lobbies} lobbies on the last session day`;
-              const recapConsequenceEntries=(latestFallout?.consequences||[]).slice(0,4);
+              recapTitle=currentSeason.id==="s3"&&latestDate===currentSeason.start
+                ? "May 1 is locked in as the Season 3 opener."
+                : latestDayHeadline
+                  ? latestDayHeadline
+                  :`${recap.totalKills} confirmed kills across ${recap.lobbies} lobbies on the last session day`;
+              const movementConsequenceTypes=new Set([
+                "climbed",
+                "benchmark",
+                "tightened-rivalry",
+                "rivalry-pressure",
+                "broke-drought",
+                "extended-streak",
+                "broke-streak",
+              ]);
+              const recapConsequenceEntries=(latestFallout?.consequences||[])
+                .filter((entry)=>movementConsequenceTypes.has(entry.type))
+                .slice(0,2);
               recapNotesLabel=recapConsequenceEntries.length
                 ?"CONSEQUENCE TRACKER"
                 :"FIELD NOTES";
               recapFieldNotes=recapConsequenceEntries.map((entry)=>entry.text);
-              const tw=mvp&&mvp.topWinner?players.find(p=>p.id===mvp.topWinner.id):null;
-              const tk=mvp&&mvp.topKiller?players.find(p=>p.id===mvp.topKiller.id):null;
-              const ta=mvp&&mvp.topAppear?players.find(p=>p.id===mvp.topAppear.id):null;
-              const kk=mvp&&mvp.killKing?players.find(p=>p.id===mvp.killKing.id):null;
-              const killKingLobby=mvp?.killKing?.killKingSid
-                ?`Lobby ${parseSessionIdNumber(mvp.killKing.killKingSid)||mvp.killKing.killKingSid}`
-                :"";
-              mvpCards=[
-                {icon:"🏆",label:"MOST WINS",       player:tw,stat:mvp?.topWinner?.wins+"W",       sub:"lobbies won",     c:"#FFD700"},
-                {icon:"💀",label:"MOST KILLS",       player:tk,stat:mvp?.topKiller?.kills+"K",      sub:"total kills",     c:"#FF4D8F"},
-                {icon:"☄️",label:"BEST SINGLE GAME", player:kk,stat:mvp?.killKing?.killKingK+"K",   sub:killKingLobby, c:"#FF6B35"},
-                {icon:"📅",label:"MOST APPEARANCES", player:ta,stat:mvp?.topAppear?.appearances+"G",sub:"lobbies played",  c:"#00E5FF"},
-              ].filter(c=>c.player);
             }
             const missionTitle=missionBoard.title;
             const missionStageSub=missionBoard.subline;
@@ -273,39 +279,45 @@ export default function HomeView({ ctx }) {
             const seasonClosed=Boolean(todayDate&&currentSeason.end&&todayDate>currentSeason.end);
             const seasonClosing=!seasonClosed&&seasonDaysLeft!=null&&seasonDaysLeft<=10;
             const seasonFinalDay=!seasonClosed&&todayDate===currentSeason.end;
-            const homePulseCards=[
-              latestDayHeadline
-                ?{
-                  label:"WHAT MATTERS NOW",
-                  value:latestFallout?.topWinners.length===1
-                    ?`${dn(latestFallout.topWinners[0].player?.username||"")} owned the last session day`
-                    :`${splitLeaders} split the last session day`,
-                  note:topKillers.length>1
-                    ?`${topKillerNames} matched the damage line at ${topKillCount} kills each, so the room closed with the win board and damage board pulling in different directions.`
-                    :`${dn(latestFallout.topKiller?.player?.username||"")} still dragged out ${latestFallout.topKiller?.kills} kills and kept the room's damage line in one pair of hands.`,
-                  color:"#FFD700",
-                }
-                :latestFallout?.reboundWin
-                  ?{
-                    label:"WHAT MATTERS NOW",
-                    value:`${dn(latestFallout.reboundWin.player.username)} hit back in Lobby ${parseSessionIdNumber(latestFallout.reboundWin.session.id)||latestFallout.reboundWin.session.id}`,
-                    note:`${latestFallout.reboundWin.priorDayLobbies} earlier lobbies went quiet before that response landed with ${latestFallout.reboundWin.kills} kills.`,
-                    color:"#00E5FF",
-                  }
-                  :recap
-                    ?{
-                      label:"WHAT MATTERS NOW",
-                      value:`${recap.lobbies} lobbies moved the room on ${falloutDateLabel}`,
-                      note:`${recap.totalKills} total kills and ${recap.winnersList.length} winning file${recap.winnersList.length===1?"":"s"} came out of the last session day.`,
-                      color:"#FFD700",
-                    }
-                    :{
-                      label:"WHAT MATTERS NOW",
-                      value:"The board is waiting on the next room",
-                      note:"Once the next set of results lands, this is where the pressure change gets called first.",
-                      color:"#FFD700",
-                    },
+            const allTimeRows=allStats();
+            const allTimeKills=allTimeRows.reduce((sum,row)=>sum+row.kills,0);
+            const allTimeWinsLeader=[...allTimeRows].sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0]||null;
+            const allTimeKillsLeader=[...allTimeRows].sort((a,b)=>b.kills-a.kills||b.wins-a.wins)[0]||null;
+            const mostPlayedFile=[...allTimeRows].sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins)[0]||null;
+            const seasonTwo=SEASONS.find((season)=>season.id==="s2");
+            const seasonTwoSessions=seasonTwo
+              ?sessions.filter((session)=>session.date>=seasonTwo.start&&session.date<=seasonTwo.end)
+              :[];
+            const seasonTwoChampion=seasonTwoSessions.length
+              ?allStats(seasonTwoSessions).filter((row)=>row.appearances>0).sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0]
+              :null;
+            const latestNightSessions=latestDate?sessions.filter((session)=>session.date===latestDate):[];
+            const latestNightLabel=latestDate
+              ?new Date(`${latestDate}T12:00:00Z`).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})
+              :"Waiting";
+            const allTimePulseCards=[
+              {label:"TOTAL LOBBIES",value:sessions.length,note:"filed sessions",color:"#00E5FF"},
+              {label:"TOTAL KILLS",value:allTimeKills,note:"recorded kills",color:"#FF4D8F"},
+              {label:"WINS LEADER",value:allTimeWinsLeader?`${dn(allTimeWinsLeader.username)} · ${allTimeWinsLeader.wins}W`:"Waiting",note:"all-time crown line",color:"#FFD700"},
+              {label:"KILLS LEADER",value:allTimeKillsLeader?`${dn(allTimeKillsLeader.username)} · ${allTimeKillsLeader.kills}K`:"Waiting",note:"all-time damage line",color:"#FF4D8F"},
+              {label:"MOST PLAYED FILE",value:mostPlayedFile?`${dn(mostPlayedFile.username)} · ${mostPlayedFile.appearances}G`:"Waiting",note:"highest attendance",color:"#00FF94"},
+              {label:"LIVE CAMPAIGN",value:`${currentSeason.name} · ${seasonSess.length} filed`,note:"current campaign file",color:"#C77DFF"},
+              {label:"SEASON 2 SEALED",value:seasonTwoChampion?`${dn(seasonTwoChampion.username)} · ${seasonTwoChampion.wins}W`:"Archive waiting",note:"final champion",color:"#00E5FF"},
+              {label:"LAST FILED NIGHT",value:`${latestNightLabel} · ${latestNightSessions.length}`,note:"lobbies filed",color:"#FF6B35"},
             ];
+            const renderPulseCards=(cards,copyKey)=>cards.map((item,index)=>(
+              <div
+                className="all-time-pulse-card"
+                key={`${copyKey}-${item.label}-${index}`}
+                style={{"--pulse-color":item.color,"--pulse-glow":`${item.color}22`}}
+              >
+                <div className="all-time-pulse-card-label">{item.label}</div>
+                <div className="all-time-pulse-card-value">{item.value}</div>
+                <div className="all-time-pulse-card-note">{item.note}</div>
+              </div>
+            ));
+            const allTimePulseRowOne=allTimePulseCards.slice(0,4);
+            const allTimePulseRowTwo=allTimePulseCards.slice(4);
             return(<>
               {/* Hero title — Easter / Fools / default */}
               <div className="home-hero-block zone-receive-follow" style={{"--receive-delay":"120ms",marginBottom:34,position:"relative"}}>
@@ -400,7 +412,9 @@ export default function HomeView({ ctx }) {
                   background:"linear-gradient(135deg,rgba(255,77,143,.1),rgba(0,0,0,.24))",
                 }}>
                   <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
-                    Season 3 file opened on May 1. The first board is live.
+                    {seasonOpenerFallout
+                      ? `Season 3 opened with ${seasonOpenerFallout.lobbies} lobbies, ${seasonOpenerFallout.players} players, and ${seasonOpenerFallout.kills} kills. ${joinHumanList(seasonOpenerFallout.winLeaders.map((entry)=>dn(entry.player?.username||entry.username||"")))} split the first crown line.`
+                      : "Season 3 file opened on May 1. The first board is live."}
                   </div>
                 </div>
               )}
@@ -436,31 +450,31 @@ export default function HomeView({ ctx }) {
                 </div>
               )}
 
-              <div key={`pulse-${latestDate||currentSeason.id}`} className="home-pulse-grid zone-receive-follow" style={{"--receive-delay":"220ms",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:34}}>
-                {homePulseCards.map((card,index)=>(
-                  <div key={card.label} className="state-react-card state-react-live" style={{
-                    background:index===0
-                      ?`linear-gradient(135deg,${card.color}14,rgba(0,0,0,.42))`
-                      :`linear-gradient(135deg,${card.color}09,rgba(0,0,0,.34))`,
-                    border:`1px solid ${card.color}${index===0?"36":"26"}`,
-                    borderLeft:`${index===0?4:3}px solid ${card.color}`,
-                    borderRadius:"0 8px 8px 0",
-                    padding:index===0?"17px 18px 18px":"15px 17px 16px",
-                    minHeight:index===0?118:110,
-                    boxShadow:index===0?`0 0 20px ${card.color}12`:"none",
-                  }}>
-                    <div className="bc7" style={{fontSize:".56rem",letterSpacing:".24em",color:`${card.color}bb`,marginBottom:9}}>
-                      {card.label}
-                    </div>
-                    <div className="bc9" style={{fontSize:index===0?"clamp(1rem,3vw,1.15rem)":"clamp(.94rem,3vw,1.05rem)",color:card.color,lineHeight:1.24,marginBottom:9}}>
-                      {card.value}
-                    </div>
-                    <div className="bc7" style={{fontSize:".75rem",color:"var(--text2)",lineHeight:1.72,maxWidth:index===0?null:360}}>
-                      {card.note}
-                    </div>
+              <section className="all-time-pulse zone-receive-follow" style={{"--receive-delay":"235ms"}} aria-label="All-Time Pulse">
+                <div className="all-time-pulse-head">
+                  <div>
+                    <div className="all-time-pulse-label">ALL-TIME PULSE</div>
+                    <div className="all-time-pulse-line">The room history keeps moving behind the live campaign.</div>
                   </div>
-                ))}
-              </div>
+                  <button type="button" className="all-time-pulse-link" onClick={()=>go?.("records")}>
+                    Open The Vault
+                  </button>
+                </div>
+                <div className="all-time-pulse-viewport">
+                  <div className="all-time-pulse-row" aria-hidden="true">
+                    {renderPulseCards(allTimePulseRowOne,"row-one-a")}
+                    {renderPulseCards(allTimePulseRowOne,"row-one-b")}
+                  </div>
+                  <div className="all-time-pulse-row" aria-hidden="true">
+                    {renderPulseCards(allTimePulseRowTwo,"row-two-a")}
+                    {renderPulseCards(allTimePulseRowTwo,"row-two-b")}
+                  </div>
+                  <div className="all-time-pulse-mobile-row">
+                    {renderPulseCards(allTimePulseCards,"mobile")}
+                    {renderPulseCards(allTimePulseCards,"mobile-loop")}
+                  </div>
+                </div>
+              </section>
 
               <HomeStage
                 tag="FIELD COMMAND"
@@ -473,9 +487,9 @@ export default function HomeView({ ctx }) {
               <HomeStage
                 tag="INTELLIGENCE BRIEFING"
                 title={briefingTitle}
-                sub={stories.length?`${stories.length} LIVE READS`:"SYNCING ROOM DATA"}
+                sub={briefingStories.length?`${briefingStories.length} FILE READS`:"SYNCING ROOM DATA"}
                 accent="#00FF94">
-                <BriefingFeed key={stories.map((story)=>`${story.icon}|${story.color}|${story.text}`).join("||")} stories={stories}/>
+                <BriefingFeed key={briefingStories.map((story)=>`${story.icon}|${story.color}|${story.text}`).join("||")} stories={briefingStories}/>
               </HomeStage>
 
               {recap&&recap.lobbies&&(
@@ -488,11 +502,11 @@ export default function HomeView({ ctx }) {
                     background:"rgba(255,255,255,.02)",
                     border:"1px solid rgba(255,255,255,.07)",
                     borderLeft:"3px solid rgba(255,215,0,.4)",
-                    borderRadius:"0 8px 8px 0",padding:"19px 20px 20px"}}>
+                    borderRadius:"0 8px 8px 0",padding:"16px 17px 17px"}}>
                     <div className="after-action-stats" style={{display:"grid",
                       gridTemplateColumns:"repeat(4,1fr)",
                       gap:1,border:"1px solid rgba(255,255,255,.06)",
-                      borderRadius:2,overflow:"hidden",marginBottom:18}}>
+                      borderRadius:2,overflow:"hidden",marginBottom:recapFieldNotes.length||recapStorylines.length?14:0}}>
                         {[
                           {l:"LOBBIES", v:recap.lobbies,         c:"#00E5FF"},
                           {l:"PLAYERS", v:recap.uniquePlayers,   c:"#C77DFF"},
@@ -540,52 +554,6 @@ export default function HomeView({ ctx }) {
                             <span style={{color:"#FFD700",marginRight:8}}>◆</span>{line}
                           </div>
                         ))}
-                      </div>
-                    )}
-                    {mvpCards.length>0&&(
-                      <div className="after-action-mvp" style={{display:"grid",
-                        gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginTop:2}}>
-                        {mvpCards.map((c,i)=>(
-                          <div key={i} onClick={()=>goProfile(c.player.id)} style={{
-                            padding:"13px 14px 14px",cursor:"pointer",
-                            background:`${c.c}08`,
-                            border:`1px solid ${c.c}1a`,
-                            borderLeft:`2px solid ${c.c}55`,
-                            borderRadius:"0 4px 4px 0",
-                            transition:"transform .1s"}}
-                            onMouseEnter={e=>e.currentTarget.style.transform="translateX(2px)"}
-                            onMouseLeave={e=>e.currentTarget.style.transform="translateX(0)"}>
-                            <div className="bc7" style={{fontSize:".58rem",letterSpacing:".16em",
-                              color:`${c.c}96`,marginBottom:8}}>{c.icon} {c.label}</div>
-                            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
-                              <Avatar p={c.player} size={24}/>
-                              <div className="bc9" style={{fontSize:".78rem",
-                                color:c.player.color,overflow:"hidden",
-                                textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
-                                {dn(c.player.username)}
-                              </div>
-                            </div>
-                            <div className="bc9" style={{fontSize:"1.1rem",color:c.c,
-                              lineHeight:1,textShadow:`0 0 10px ${c.c}44`}}>{c.stat}</div>
-                            {c.sub&&<div className="bc7" style={{fontSize:".6rem",
-                              color:"rgba(200,186,255,.7)",marginTop:6,letterSpacing:".055em",lineHeight:1.5}}>{c.sub}</div>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {recap.winnersList&&recap.winnersList.length>1&&(
-                      <div className="bc7 after-action-rollup" style={{fontSize:".74rem",color:"rgba(200,186,255,.74)",
-                        lineHeight:2.05,marginTop:20,paddingTop:20,
-                        borderTop:"1px solid rgba(255,255,255,.06)"}}>
-                        {recap.winnersList.slice(0,6).map((w,i)=>(
-                          <span key={i}>
-                            {i>0?" · ":""}
-                            <span style={{color:w.player?.color||"#fff",cursor:"pointer"}}
-                              onClick={()=>w.player&&goProfile(w.player.id)}>
-                              {dn(w.player?.username||"?")}{w.wins>1?` ×${w.wins}`:""}
-                            </span>
-                          </span>
-                        ))} claimed lobbies
                       </div>
                     )}
                   </div>
