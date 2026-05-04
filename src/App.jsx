@@ -3186,6 +3186,7 @@ export default function GameNight(){
           allStats,
           players,
           getStats,
+          getRecords,
           dn,
           getMissionBoardState,
           cd,

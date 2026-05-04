@@ -12,6 +12,7 @@ export default function HomeView({ ctx }) {
     allStats,
     players,
     getStats,
+    getRecords,
     dn,
     getMissionBoardState,
     cd,
@@ -292,12 +293,12 @@ export default function HomeView({ ctx }) {
             const allTimeWinsLeader=[...allTimeRows].sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0]||null;
             const allTimeKillsLeader=[...allTimeRows].sort((a,b)=>b.kills-a.kills||b.wins-a.wins)[0]||null;
             const mostPlayedFile=[...allTimeRows].sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins)[0]||null;
-            const seasonTwo=SEASONS.find((season)=>season.id==="s2");
-            const seasonTwoSessions=seasonTwo
-              ?sessions.filter((session)=>session.date>=seasonTwo.start&&session.date<=seasonTwo.end)
-              :[];
-            const seasonTwoChampion=seasonTwoSessions.length
-              ?allStats(seasonTwoSessions).filter((row)=>row.appearances>0).sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0]
+            const allTimeRecords=getRecords?.();
+            const bestSingleGamePlayer=allTimeRecords?.topGame?.pid
+              ?players.find((player)=>player.id===allTimeRecords.topGame.pid)
+              :null;
+            const longestWinRunPlayer=allTimeRecords?.bestStreak?.pid
+              ?players.find((player)=>player.id===allTimeRecords.bestStreak.pid)
               :null;
             const latestNightSessions=latestDate?sessions.filter((session)=>session.date===latestDate):[];
             const latestNightLabel=latestDate
@@ -309,8 +310,8 @@ export default function HomeView({ ctx }) {
               {label:"WINS LEADER",value:allTimeWinsLeader?`${dn(allTimeWinsLeader.username)} · ${allTimeWinsLeader.wins}W`:"Waiting",note:"all-time crown line",color:"#FFD700"},
               {label:"KILLS LEADER",value:allTimeKillsLeader?`${dn(allTimeKillsLeader.username)} · ${allTimeKillsLeader.kills}K`:"Waiting",note:"all-time damage line",color:"#FF4D8F"},
               {label:"MOST PLAYED FILE",value:mostPlayedFile?`${dn(mostPlayedFile.username)} · ${mostPlayedFile.appearances}G`:"Waiting",note:"highest attendance",color:"#00FF94"},
-              {label:"LIVE CAMPAIGN",value:`${currentSeason.name} · ${seasonSess.length} filed`,note:"current campaign file",color:"#C77DFF"},
-              {label:"SEASON 2 SEALED",value:seasonTwoChampion?`${dn(seasonTwoChampion.username)} · ${seasonTwoChampion.wins}W`:"Archive waiting",note:"final champion",color:"#00E5FF"},
+              {label:"BEST SINGLE GAME",value:bestSingleGamePlayer?`${dn(bestSingleGamePlayer.username)} · ${allTimeRecords.topGame.k}K`:"Waiting",note:allTimeRecords?.topGame?.sid?`highest lobby spike · ${allTimeRecords.topGame.sid}`:"highest lobby spike",color:"#C77DFF"},
+              {label:"LONGEST WIN RUN",value:longestWinRunPlayer?`${dn(longestWinRunPlayer.username)} · ${allTimeRecords.bestStreak.streak}W`:"Waiting",note:"cleanest consecutive run",color:"#FFD700"},
               {label:"LAST FILED NIGHT",value:`${latestNightLabel} · ${latestNightSessions.length}`,note:"lobbies filed",color:"#FF6B35"},
             ];
             const renderPulseCards=(cards,copyKey)=>cards.map((item,index)=>(
