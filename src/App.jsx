@@ -2017,6 +2017,7 @@ export default function GameNight(){
     selectGetDailyOrdersForPlayer(pid,players,sessions,{
       dayKey:dailyOrdersSchedule.dayKey,
       isActiveWindow:dailyOrdersSchedule.isActive,
+      orderWindow: live || getNextSession().toISOString().slice(0,10)===todayStr() ? "today" : "next-room",
     });
   const getLatestDayConsequences=date=>selectGetLatestDayConsequences(sessions,players,date);
   const getSeasonOpenerFallout=seasonId=>selectGetSeasonOpenerFallout(seasonId, sessions, players);
@@ -3231,13 +3232,18 @@ export default function GameNight(){
             </h2>
             <div style={{height:1,background:"linear-gradient(90deg,rgba(255,215,0,.44),transparent)",marginBottom:8}}/>
             <div className="bc7" style={{fontSize:".72rem",letterSpacing:".12em",color:"var(--text3)"}}>
-              Old campaigns, current royalty, names the room keeps forever
+              Sealed campaigns, current royalty, names the room keeps forever
             </div>
           </div>
 
 
           {/* Season Recaps */}
-          {SEASONS.map(season=>{
+          {SEASONS.filter((season)=>{
+            const now=new Date().toISOString().split("T")[0];
+            const seasonSessions=sessions.filter(s=>s.date>=season.start&&s.date<=season.end);
+            const finalDayFiled=seasonSessions.some((session)=>session.date===season.end);
+            return season.end<=now||finalDayFiled;
+          }).map(season=>{
             const sSess=sessions.filter(s=>s.date>=season.start&&s.date<=season.end);
             if(!sSess.length)return null;
             const sStats=allStats(sSess).filter(p=>p.appearances>0);
@@ -3253,7 +3259,7 @@ export default function GameNight(){
                 padding:20,marginBottom:14,animation:"fadeUp .4s ease both"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
                   <div>
-                    <span style={{fontSize:".68rem",color:season.color,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>{ended?"🏁 Campaign Closed":"📅 Campaign Live"}</span>
+                    <span style={{fontSize:".68rem",color:season.color,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>{ended?"🏁 Campaign Closed":"📅 Campaign Filed"}</span>
                     <h3 style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.2rem",marginTop:2}}>{season.name}: {season.label}</h3>
                     <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>{sSess.length} lobbies logged · {sStats.length} names on file</p>
                   </div>
@@ -3414,6 +3420,7 @@ export default function GameNight(){
           setLbPeriod,
           SORT_LABELS,
           sortBy,
+          setSortBy,
           filteredLB,
           lbSearch,
           players,

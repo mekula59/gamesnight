@@ -13,6 +13,7 @@ export default function Season2View({ ctx }) {
     compareSessionsAsc,
     getLatestSessionDate,
     getLatestDayConsequences,
+    getSeasonOpenerFallout,
     buildSeasonCampaignFile,
     joinHumanList,
     dn,
@@ -45,6 +46,8 @@ export default function Season2View({ ctx }) {
     if(currentDate>season.end)return`${season.name} Archive`;
     return season.name;
   };
+  const getLobbyTotalKills=(session)=>
+    Object.values(session?.kills||{}).reduce((sum,kills)=>sum+kills,0)+(Number(session?.unassignedKills)||0);
 
   return (
 <div className="fade-up season2-top-shell zone-view-shell" style={{minHeight:"calc(100vh - 120px)"}}>
@@ -101,7 +104,7 @@ export default function Season2View({ ctx }) {
             const byKills=[...s2Stats].sort((a,b)=>b.kills-a.kills);
             const byKd=[...s2Stats].filter((player)=>player.appearances>=5).sort((a,b)=>b.kd-a.kd||b.kills-a.kills);
             const byApp=[...s2Stats].sort((a,b)=>b.appearances-a.appearances);
-            const totalKills=s2Sessions.reduce((n,s)=>n+Object.values(s.kills||{}).reduce((a,b)=>a+b,0),0);
+            const totalKills=s2Sessions.reduce((n,s)=>n+getLobbyTotalKills(s),0);
             const uniqueWins=[...new Set(s2Sessions.filter(s=>s.winner).map(s=>s.winner))].length;
             const days=[...new Set(s2Sessions.map(s=>s.date))].length;
             const podium=byWins.slice(0,3);
@@ -114,6 +117,13 @@ export default function Season2View({ ctx }) {
             const killLeaderPlayer=killLeader?players.find(p=>p.id===killLeader.id):null;
             const attendanceLeaderPlayer=attendanceLeader?players.find(p=>p.id===attendanceLeader.id):null;
             const winsGap=seasonLeader&&seasonChaser?seasonLeader.wins-seasonChaser.wins:0;
+            const winLineLeaders=seasonLeader
+              ?byWins.filter((player)=>player.wins===seasonLeader.wins)
+              :[];
+            const winLineTied=winLineLeaders.length>1;
+            const winLineLeaderNames=joinHumanList(
+              winLineLeaders.map((entry)=>dn(players.find((player)=>player.id===entry.id)?.username||entry.username||"")),
+            );
             const attendanceTieCount=attendanceLeader
               ?byApp.filter((player)=>player.appearances===attendanceLeader.appearances).length
               :0;
@@ -177,6 +187,7 @@ export default function Season2View({ ctx }) {
               :"";
             const s2LatestDate=getLatestSessionDate(s2Sessions);
             const s2LatestFallout=s2LatestDate?getLatestDayConsequences(s2LatestDate):null;
+            const openerFallout=selectedSeasonId==="s3"?getSeasonOpenerFallout?.(selectedSeasonId):null;
             const s2LatestSplitLeaders=s2LatestFallout?.topWinners.length
               ?joinHumanList(s2LatestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")))
               :"";
@@ -192,8 +203,8 @@ export default function Season2View({ ctx }) {
               :seasonLeaderPlayer&&seasonChaserPlayer
                 ?seasonTwoClosed
                   ?`${dn(seasonLeaderPlayer.username)} finished first on ${seasonLeader.wins} wins. ${dn(seasonChaserPlayer.username)} closes the file ${winsGap} win${winsGap===1?"":"s"} back.`
-                  :winsGap===0
-                    ?`${dn(seasonLeaderPlayer.username)} and ${dn(seasonChaserPlayer.username)} are level on wins, and the file still has room to turn.`
+                  :winLineTied
+                    ?`${winLineLeaderNames} are level on wins. ${dn(seasonLeaderPlayer.username)} holds the current tiebreak edge, but the crown line is not clean yet.`
                     :`${dn(seasonLeaderPlayer.username)} has the front for now, but only ${winsGap} win${winsGap===1?"":"s"} separate the top two files.`
                 : `${uniqueWins} different winners have already left fingerprints on the season file.`;
             const quietPulse=quietWatchProfile&&quietWatchPlayer
@@ -210,9 +221,11 @@ export default function Season2View({ ctx }) {
             const s2NumberMarkers=[
               seasonLeaderPlayer&&seasonLeader
                 ?{
-                  label:"Top winner",
-                  value:`${dn(seasonLeaderPlayer.username)} · ${seasonLeader.wins}W`,
-                  note:winsGap>0&&seasonChaserPlayer
+                  label:winLineTied?"Win line tied":"Top winner",
+                  value:winLineTied?`${winLineLeaderNames} · ${seasonLeader.wins}W`:`${dn(seasonLeaderPlayer.username)} · ${seasonLeader.wins}W`,
+                  note:winLineTied
+                    ?`${dn(seasonLeaderPlayer.username)} holds the tiebreak edge on damage`
+                    :winsGap>0&&seasonChaserPlayer
                     ?`${winsGap} win${winsGap===1?"":"s"} clear of ${dn(seasonChaserPlayer.username)}`
                     :"front line still tight",
                   color:"#FFD700",
@@ -262,7 +275,7 @@ export default function Season2View({ ctx }) {
             const seasonDossier=s2Campaign?.openerWinner&&seasonLeaderPlayer
               ?seasonTwoClosed
                 ?`${dn(s2Campaign.openerWinner.username)} opened the file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file closed without one clean swing night."} ${dn(seasonLeaderPlayer.username)} sealed the season at ${seasonLeader.wins} wins.`
-                :`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on the night that changes how everybody reads it."} ${s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase has not gone quiet.`:`${dn(seasonLeaderPlayer.username)} has the front with ${seasonLeader.wins} wins, but the file is still loose enough for one good night to bend it again.`}`
+                :`${dn(s2Campaign.openerWinner.username)} opened the live file on ${formatLobbyDate(s2Campaign.opener.date,{weekday:"short",day:"numeric",month:"short"})}. ${s2TurningNight&&s2Campaign?.leader?`${dn(s2Campaign.leader.username)} gave the table its first real turn on ${formatLobbyDate(s2TurningNight.date,{weekday:"short",day:"numeric",month:"short"})}.`:s2LoudestDay?.topKiller?.player?`${dn(s2LoudestDay.topKiller.player.username)} still owns the loudest night on ${formatLobbyDate(s2LoudestDay.date,{weekday:"short",day:"numeric",month:"short"})}.`:"The file is still waiting on the night that changes how everybody reads it."} ${winLineTied?`${winLineLeaderNames} are tied on ${seasonLeader.wins} wins, with ${dn(seasonLeaderPlayer.username)} first only by tiebreak.`:s2LockNight?`${dn(seasonLeaderPlayer.username)} has held the top line since ${formatLobbyDate(s2LockNight.date,{weekday:"short",day:"numeric",month:"short"})}, but the chase has not gone quiet.`:`${dn(seasonLeaderPlayer.username)} has the front with ${seasonLeader.wins} wins, but the file is still loose enough for one good night to bend it again.`}`
               :`${uniqueWins} different winners have already left fingerprints on the ${campaignName} file.`;
             const seasonMemoryCards=[
               {
@@ -477,6 +490,92 @@ export default function Season2View({ ctx }) {
                   </div>
                 </div>
 
+                {openerFallout&&(
+                  <div style={{
+                    display:"grid",
+                    gap:12,
+                    marginBottom:28,
+                    padding:"18px 18px 20px",
+                    border:"1px solid rgba(255,77,143,.18)",
+                    borderLeft:"3px solid rgba(255,77,143,.42)",
+                    borderRadius:"0 12px 12px 0",
+                    background:"linear-gradient(135deg,rgba(255,77,143,.055),rgba(0,229,255,.025),rgba(0,0,0,.2))",
+                  }}>
+                    <div>
+                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".24em",color:"rgba(255,77,143,.58)",marginBottom:6}}>
+                        OPENER MEMORY
+                      </div>
+                      <div className="bc9" style={{fontSize:"clamp(.95rem,3vw,1.14rem)",color:"rgba(255,77,143,.86)",lineHeight:1.25}}>
+                        May 1 stays as the campaign origin file.
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:8}}>
+                      {[
+                        {
+                          label:"First crown line",
+                          value:`${joinHumanList(openerFallout.winLeaders.map((entry)=>dn(entry.player?.username||entry.username||"")))} split 3W`,
+                          note:`${openerFallout.lobbies} lobbies left the top row tied.`,
+                          color:"#FFD700",
+                        },
+                        {
+                          label:"Damage front",
+                          value:`${dn(openerFallout.damageLeader?.player?.username||"")} · ${openerFallout.damageLeader?.kills||0}K`,
+                          note:"The first damage lead is clear.",
+                          color:"#FF4D8F",
+                        },
+                        {
+                          label:"Cleanest run",
+                          value:`${dn(openerFallout.cleanestRun?.player?.username||"")} · ${openerFallout.cleanestRun?.length||0} straight`,
+                          note:openerFallout.cleanestRun?.start&&openerFallout.cleanestRun?.end
+                            ?`Lobby ${parseSessionIdNumber(openerFallout.cleanestRun.start.id)||openerFallout.cleanestRun.start.id} to Lobby ${parseSessionIdNumber(openerFallout.cleanestRun.end.id)||openerFallout.cleanestRun.end.id}.`
+                            :"No run held long enough to lead the file.",
+                          color:"#00E5FF",
+                        },
+                        {
+                          label:"Best single-game line",
+                          value:`${openerFallout.bestSingleGame.kills}K ceiling`,
+                          note:openerFallout.bestSingleGame.shared
+                            ?`${joinHumanList(openerFallout.bestSingleGame.entries.map((entry)=>dn(entry.player?.username||"")))} both reached it.`
+                            :`${dn(openerFallout.bestSingleGame.primary?.player?.username||"")} reached it first.`,
+                          color:"#C77DFF",
+                        },
+                        {
+                          label:"Zero-kill win",
+                          value:openerFallout.zeroKillWin?.player
+                            ?`${dn(openerFallout.zeroKillWin.player.username)} in Lobby ${parseSessionIdNumber(openerFallout.zeroKillWin.session.id)||openerFallout.zeroKillWin.session.id}`
+                            :"None filed",
+                          note:"The opener already has one survival close on record.",
+                          color:"#00FF94",
+                        },
+                        {
+                          label:"Volatility read",
+                          value:`${openerFallout.players} players, ${openerFallout.winners} winners`,
+                          note:"The board opened wide instead of settling early.",
+                          color:"#FF6B35",
+                        },
+                      ].map((item)=>(
+                        <div key={item.label} style={{
+                          padding:"12px 13px",
+                          background:`linear-gradient(135deg,${item.color}10,rgba(0,0,0,.28))`,
+                          border:`1px solid ${item.color}24`,
+                          borderLeft:`3px solid ${item.color}`,
+                          borderRadius:"0 8px 8px 0",
+                        }}>
+                          <div className="bc7" style={{fontSize:".52rem",letterSpacing:".18em",color:`${item.color}bb`,marginBottom:6}}>
+                            {item.label}
+                          </div>
+                          <div className="bc9" style={{fontSize:".9rem",lineHeight:1.2,color:item.color,marginBottom:5}}>
+                            {item.value}
+                          </div>
+                          <div className="bc7" style={{fontSize:".66rem",lineHeight:1.55,color:"var(--text2)"}}>
+                            {item.note}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
                   {seasonMemoryCards.map((card)=>(
                     <div key={card.label} style={{
@@ -552,13 +651,13 @@ export default function Season2View({ ctx }) {
                 {/* S2 Award cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:14,marginBottom:28}}>
                   {[
-                    {icon:"👑",color:"#00E5FF",title:seasonTwoClosed?`${campaignName} Champion`:"Current Wins Leader",player:byWins[0],stat:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Crown line still open",desc:seasonLeaderPlayer&&seasonChaserPlayer
+                    {icon:"👑",color:"#00E5FF",title:winLineTied?"Crown Line Tied":seasonTwoClosed?`${campaignName} Champion`:"Current Wins Leader",player:byWins[0],stat:winLineTied?`${seasonLeader.wins}W each`:byWins[0]?`${byWins[0].wins}W · ${byWins[0].kills}K`:"Crown line still open",desc:seasonLeaderPlayer&&seasonChaserPlayer
                       ?seasonTwoClosed
                         ?`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} when the final standings locked.`
-                        :winsGap===0
-                          ?`The live crown is dead even with ${dn(seasonChaserPlayer.username)}. The next clean finish changes the page.`
-                          :winsGap===1
-                            ?`${dn(seasonChaserPlayer.username)} is only one win behind and still within one loud night of the lead.`
+                        :winLineTied
+                          ?`${winLineLeaderNames} are level on wins. ${dn(seasonLeaderPlayer.username)} sits first only by the current tiebreak.`
+                        :winsGap===1
+                          ?`${dn(seasonChaserPlayer.username)} is only one win behind and still within one loud night of the lead.`
                             :`${winsGap} wins clear of ${dn(seasonChaserPlayer.username)} while the chase still has teeth.`
                       :"Currently carrying the season crown"},
                     {icon:"💀",color:"#FF4D8F",title:seasonTwoClosed?`${campaignName} Reaper`:"Current Kill Leader",player:byKills[0],stat:byKills[0]?`${byKills[0].kills} total kills`:seasonTwoClosed?"Damage board sealed":"Damage board still open",desc:killLeaderPlayer&&seasonLeaderPlayer

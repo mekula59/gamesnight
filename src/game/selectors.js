@@ -925,6 +925,8 @@ export const getRivalryBoard = (sessions, players, options = {}) => {
         recentMeetings: row.recentMeetings.slice(-5).reverse(),
         seasonMeetings: row.seasonMeetings,
         seasonScore: {
+          seasonId: activeSeason?.id || "",
+          label: activeSeason?.id ? activeSeason.id.toUpperCase() : "SEASON",
           playerAWins: row.seasonPlayerAWins,
           playerBWins: row.seasonPlayerBWins,
           scoreLine: `${row.seasonPlayerAWins}-${row.seasonPlayerBWins}`,
@@ -1132,8 +1134,7 @@ export const getWeeklyAwards = (sessions, players) => {
 export const getWeeklyMissions = (sessions) => {
   const weeklySessions = getPeriodSessions(sessions, "week");
   const weeklyKills = weeklySessions.reduce(
-    (total, session) =>
-      total + Object.values(session.kills || {}).reduce((sum, kills) => sum + kills, 0),
+    (total, session) => total + getLobbyTotalKills(session),
     0,
   );
   const uniqueWinners = [
@@ -1289,7 +1290,7 @@ export const getRecords = (sessions, players) => {
     topDayKill,
     first: firstSession,
     totalSessions: sessions.length,
-    totalKills: Object.values(killMap).reduce((sum, kills) => sum + kills, 0),
+    totalKills: allStats(players, sessions).reduce((sum, player) => sum + player.kills, 0),
   };
 };
 
@@ -1408,8 +1409,7 @@ export const getDayRecap = (date, sessions, players) => {
   }
 
   const totalKills = daySessions.reduce(
-    (sum, session) =>
-      sum + Object.values(session.kills || {}).reduce((killsSum, kills) => killsSum + kills, 0),
+    (sum, session) => sum + getLobbyTotalKills(session),
     0,
   );
   const uniquePlayers = [...new Set(daySessions.flatMap((session) => session.attendees || []))];
@@ -1420,16 +1420,17 @@ export const getDayRecap = (date, sessions, players) => {
     }
   });
 
-  const sortedWinnerEntries = sortWinLeaderEntries(
-    Object.entries(winMap).map(([pid, wins]) => ({
+  const sortedWinnerEntries = Object.entries(winMap)
+    .map(([pid, wins]) => ({
       pid,
       wins,
       kills: daySessions.reduce((sum, session) => sum + (session.kills?.[pid] || 0), 0),
-    })),
-    players,
-    (entry) => entry.wins,
-    (entry) => entry.kills,
-  );
+    }))
+    .sort(
+      (left, right) =>
+        right.wins - left.wins ||
+        right.kills - left.kills,
+    );
   const topWinnerEntry = sortedWinnerEntries[0] || null;
 
   let killKingValue = 0;
@@ -1479,6 +1480,158 @@ export const getDayRecap = (date, sessions, players) => {
     killKingsList: sortedKillKingsList,
     lobbies: daySessions.length,
     winnersList,
+  };
+};
+
+const joinNames = (names) => {
+  const list = names.filter(Boolean);
+  if (!list.length) return "";
+  if (list.length === 1) return list[0];
+  if (list.length === 2) return `${list[0]} and ${list[1]}`;
+  return `${list.slice(0, -1).join(", ")}, and ${list[list.length - 1]}`;
+};
+
+export const getSeasonOpenerFallout = (seasonId, sessions, players) => {
+  const season = SEASONS.find((entry) => entry.id === seasonId);
+  if (!season || !sessions.length || !players.length) {
+    return null;
+  }
+
+  const openerSessions = [...sessions]
+    .filter((session) => session.date === season.start)
+    .sort(compareSessionsAsc);
+  if (!openerSessions.length) {
+    return null;
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const getPlayer = (playerId) => getPlayerById(playerIndex, playerId);
+  const stats = allStats(players, openerSessions).filter((player) => player.appearances > 0);
+  const maxWins = Math.max(...stats.map((player) => player.wins), 0);
+  const maxKills = Math.max(...stats.map((player) => player.kills), 0);
+  const winLeaders = stats
+    .filter((player) => player.wins === maxWins && maxWins > 0)
+    .sort((left, right) => right.kills - left.kills || left.username.localeCompare(right.username))
+    .map((player) => ({ ...player, player: getPlayer(player.id) }));
+  const damageLeader = stats
+    .filter((player) => player.kills === maxKills && maxKills > 0)
+    .sort((left, right) => right.wins - left.wins || left.username.localeCompare(right.username))[0] || null;
+  const bestSingleKills = Math.max(
+    ...openerSessions.flatMap((session) => Object.values(session.kills || {})),
+    0,
+  );
+  const bestSingleGames = [];
+  openerSessions.forEach((session) => {
+    Object.entries(session.kills || {}).forEach(([playerId, kills]) => {
+      if (kills === bestSingleKills && kills > 0) {
+        bestSingleGames.push({
+          playerId,
+          player: getPlayer(playerId),
+          kills,
+          sessionId: session.id,
+          session,
+        });
+      }
+    });
+  });
+  const cleanestRun = getLongestWinRun(openerSessions, playerIndex);
+  const zeroKillWinSession = openerSessions.find((session) =>
+    session.winner && Number(session.kills?.[session.winner] || 0) === 0,
+  ) || null;
+  const uniquePlayers = [...new Set(openerSessions.flatMap((session) => session.attendees || []))];
+  const uniqueWinners = [...new Set(openerSessions.filter((session) => session.winner).map((session) => session.winner))];
+  const totalKills = openerSessions.reduce((sum, session) => sum + getLobbyTotalKills(session), 0);
+  const winLeaderNames = joinNames(winLeaders.map((entry) => entry.player?.username || entry.username));
+  const bestSingleNames = joinNames(bestSingleGames.map((entry) => entry.player?.username || ""));
+  const damagePlayer = damageLeader ? getPlayer(damageLeader.id) : null;
+  const cleanestRunPlayer = cleanestRun?.player || null;
+  const zeroKillPlayer = zeroKillWinSession ? getPlayer(zeroKillWinSession.winner) : null;
+  const firstWinLeader = winLeaders[0] || null;
+  const topAttendance = [...stats].sort(
+    (left, right) => right.appearances - left.appearances || right.wins - left.wins || right.kills - left.kills,
+  )[0] || null;
+
+  const playerReads = {};
+  stats.forEach((row) => {
+    const player = getPlayer(row.id);
+    if (!player) return;
+    if (damageLeader?.id === row.id && winLeaders.some((entry) => entry.id === row.id)) {
+      playerReads[row.id] = `Opened ${season.name} tied on wins and clear on damage.`;
+      return;
+    }
+    if (topAttendance?.id === row.id && winLeaders.some((entry) => entry.id === row.id)) {
+      playerReads[row.id] = `Played every opener lobby and left level for the lead.`;
+      return;
+    }
+    if (zeroKillWinSession?.winner === row.id) {
+      playerReads[row.id] = "Opened the file with a zero-kill close.";
+      return;
+    }
+    if (row.wins === 0 && row.kills >= 8) {
+      playerReads[row.id] = "Damage stayed present, but the opener did not bring a win.";
+      return;
+    }
+    if (row.wins === 0) {
+      playerReads[row.id] = `Saw the opener board, but the first ${season.name} win is still missing.`;
+      return;
+    }
+    if (cleanestRun?.player?.id === row.id) {
+      playerReads[row.id] = `Built the opener's cleanest run at ${cleanestRun.length} straight wins.`;
+      return;
+    }
+    playerReads[row.id] = `Left the opener with ${row.wins} win${row.wins === 1 ? "" : "s"} and ${row.kills} kills on file.`;
+  });
+
+  return {
+    seasonId,
+    seasonName: season.name,
+    date: season.start,
+    lobbies: openerSessions.length,
+    players: uniquePlayers.length,
+    winners: uniqueWinners.length,
+    kills: totalKills,
+    sessions: openerSessions,
+    winLeaders,
+    damageLeader: damageLeader ? { ...damageLeader, player: damagePlayer } : null,
+    bestSingleGame: {
+      kills: bestSingleKills,
+      entries: bestSingleGames,
+      primary: bestSingleGames[0] || null,
+      shared: bestSingleGames.length > 1,
+    },
+    cleanestRun: cleanestRun
+      ? {
+          player: cleanestRunPlayer,
+          length: cleanestRun.length,
+          start: cleanestRun.start,
+          end: cleanestRun.end,
+          totalKills: cleanestRun.totalKills,
+        }
+      : null,
+    zeroKillWin: zeroKillWinSession
+      ? {
+          player: zeroKillPlayer,
+          session: zeroKillWinSession,
+          kills: 0,
+        }
+      : null,
+    consequenceReads: [
+      winLeaders.length > 1
+        ? `${winLeaderNames} split the first crown line`
+        : firstWinLeader
+          ? `${firstWinLeader.player?.username || firstWinLeader.username} took the first crown line`
+          : "",
+      damagePlayer ? `${damagePlayer.username} took the first damage front` : "",
+      zeroKillPlayer ? `${zeroKillPlayer.username} opened with a zero-kill win` : "",
+      cleanestRunPlayer ? `${cleanestRunPlayer.username} built the first clean run at ${cleanestRun.length} straight` : "",
+      bestSingleGames.length > 1
+        ? `${bestSingleNames} shared the ${bestSingleKills}K single-game ceiling`
+        : bestSingleGames[0]?.player
+          ? `${bestSingleGames[0].player.username} set the ${bestSingleKills}K single-game ceiling`
+          : "",
+      `${uniquePlayers.length} players and ${uniqueWinners.length} winners kept the opener unsettled`,
+    ].filter(Boolean),
+    playerReads,
   };
 };
 
@@ -2820,7 +2973,8 @@ export const getPlayerFileState = (
 };
 
 const getLobbyTotalKills = (session) =>
-  Object.values(session?.kills || {}).reduce((sum, value) => sum + value, 0);
+  Object.values(session?.kills || {}).reduce((sum, value) => sum + value, 0) +
+  (Number(session?.unassignedKills) || 0);
 
 export const getLeaderboardShiftData = (
   players,
@@ -3927,6 +4081,7 @@ export const getDailyOrdersForPlayer = (
     maxOrders = 2,
     dayKey = todayStr(),
     isActiveWindow = true,
+    orderWindow = "today",
   } = {},
 ) => {
   if (!isActiveWindow || !playerId || !players.length || !sessions.length) {
@@ -4037,6 +4192,7 @@ export const getDailyOrdersForPlayer = (
   })();
 
   const candidates = [];
+  const actionWindow = orderWindow === "next-room" ? "in the next room" : "today";
   const getVariant = (category, variants) =>
     pickDailyVariant(variants, `${variantKey}:${category}`);
   const pushOrder = (order) => {
@@ -4058,8 +4214,8 @@ export const getDailyOrdersForPlayer = (
       label: "KEEP IT GOING",
       text:
         liveStreak.streak >= 3
-          ? `Win again today and keep the ${liveStreak.streak}-room streak alive.`
-          : "Win again today and turn this hot finish into a real run.",
+          ? `Win again ${actionWindow} and keep the ${liveStreak.streak}-room streak alive.`
+          : `Win again ${actionWindow} and turn this hot finish into a real run.`,
       note:
         liveStreak.streak >= 3
           ? "Another clean close turns this from noise into control."
@@ -4078,17 +4234,17 @@ export const getDailyOrdersForPlayer = (
         const rivalryVariant = getVariant("rivalry-answer", [
           {
             label: "TAKE THE RIVAL EDGE",
-            text: `Finish ahead of ${rival.username} today and move this dead level duel your way.`,
+            text: `Finish ahead of ${rival.username} ${actionWindow} and move this dead level duel your way.`,
             note: "The next clean result decides who walks in ahead.",
           },
           {
             label: "BREAK THE DEADLOCK",
-            text: `Beat ${rival.username} today and turn this level duel into your lead.`,
+            text: `Beat ${rival.username} ${actionWindow} and turn this level duel into your lead.`,
             note: "Right now the rivalry is waiting on one room to tilt it.",
           },
           {
             label: "LAND THE NEXT SHOT",
-            text: `Take the next room over ${rival.username} today and own the first edge in this tied file.`,
+            text: `Finish over ${rival.username} ${actionWindow} and own the first edge in this tied file.`,
             note: "When a duel sits level this long, the next swing carries extra weight.",
           },
         ]);
@@ -4104,8 +4260,8 @@ export const getDailyOrdersForPlayer = (
       } else if (playerWins < rivalWins && gap <= 2) {
         const rivalryVariant = getVariant("rivalry-answer", [
           {
-            label: "HIT BACK TODAY",
-            text: `Finish ahead of ${rival.username} today and cut the duel from ${rivalWins}-${playerWins}.`,
+            label: "HIT BACK",
+            text: `Finish ahead of ${rival.username} ${actionWindow} and cut the duel from ${rivalWins}-${playerWins}.`,
             note:
               gap === 1
                 ? "One room is enough to pull this rivalry level."
@@ -4113,7 +4269,7 @@ export const getDailyOrdersForPlayer = (
           },
           {
             label: "CLOSE THE GAP",
-            text: `Beat ${rival.username} today and pull this rivalry tighter.`,
+            text: `Beat ${rival.username} ${actionWindow} and pull this rivalry tighter.`,
             note:
               gap === 1
                 ? "A single clean result wipes out the gap."
@@ -4121,7 +4277,7 @@ export const getDailyOrdersForPlayer = (
           },
           {
             label: "ANSWER THE RIVALRY",
-            text: `Take a room over ${rival.username} today and stop this duel from drifting further away.`,
+            text: `Take a room over ${rival.username} ${actionWindow} and stop this duel from drifting further away.`,
             note:
               gap === 1
                 ? "The edge is thin enough to flip tonight."
@@ -4172,8 +4328,8 @@ export const getDailyOrdersForPlayer = (
       label: benchmarkLabel,
       text:
         winMilestoneGap === 1
-          ? `Take 1 win today and reach ${milestoneLabel}.`
-          : `Take ${winMilestoneGap} wins today and reach ${milestoneTargetText}.`,
+          ? `Take 1 win ${actionWindow} and reach ${milestoneLabel}.`
+          : `Take ${winMilestoneGap} wins ${actionWindow} and reach ${milestoneTargetText}.`,
       note:
         nextWinMilestone === 3
           ? "That is the first number that makes this file feel settled."
@@ -4190,7 +4346,7 @@ export const getDailyOrdersForPlayer = (
       icon: "🎯",
       color: "#FF4D8F",
       label: "HIT THE DAMAGE MARK",
-      text: `Put up ${killMilestoneGap} more kill${killMilestoneGap === 1 ? "" : "s"} today and reach ${nextKillMilestone}.`,
+      text: `Put up ${killMilestoneGap} more kill${killMilestoneGap === 1 ? "" : "s"} ${actionWindow} and reach ${nextKillMilestone}.`,
       note:
         killMilestoneGap <= 4
           ? "One loud room can settle that number tonight."
@@ -4201,11 +4357,11 @@ export const getDailyOrdersForPlayer = (
   if (weekRow.appearances >= 4 && weekRow.wins === 0) {
     const weeklyStartVariant = getVariant("first-weekly-win", [
       {
-        text: "Take your first weekly win today.",
+        text: `Take your first weekly win ${actionWindow}.`,
         note: "One breakthrough close changes the whole weekly mood around this file.",
       },
       {
-        text: "Get on the weekly board with a win today.",
+        text: `Get on the weekly board with a win ${actionWindow}.`,
         note: "The longer that first close waits, the more the room notices.",
       },
     ]);
@@ -4224,27 +4380,27 @@ export const getDailyOrdersForPlayer = (
     const droughtVariant = getVariant("drought-break", [
       {
         label: "END THE DRY SPELL",
-        text: `Win today and end the ${drought}-lobby dry spell.`,
+        text: `Win ${actionWindow} and end the ${drought}-lobby dry spell.`,
         note: "A drought this loud follows a name into every room.",
       },
       {
         label: "END THE QUIET",
-        text: `Take one room today so this ${drought}-lobby quiet run stops leading the file.`,
+        text: `Take one room ${actionWindow} so this ${drought}-lobby quiet run stops leading the file.`,
         note: "Right now the silence is doing more talking than the highs.",
       },
       {
         label: "STOP THE SLIDE",
-        text: `Close a room today and stop the ${drought}-lobby slide.`,
+        text: `Close a room ${actionWindow} and stop the ${drought}-lobby slide.`,
         note: "The longer it sits there, the louder it gets.",
       },
       {
         label: "BREAK THE HOLD",
-        text: `Take a win today and stop this ${drought}-lobby run from owning the file.`,
+        text: `Take a win ${actionWindow} and stop this ${drought}-lobby run from owning the file.`,
         note: "When the dry run becomes the headline, one clean room matters twice as much.",
       },
       {
         label: "TURN THE FILE",
-        text: `Win today and make the room talk about the response instead of the ${drought}-lobby wait.`,
+        text: `Win ${actionWindow} and make the room talk about the response instead of the ${drought}-lobby wait.`,
         note: "A file under this much quiet pressure changes fast when it finally answers back.",
       },
     ]);
@@ -4266,7 +4422,7 @@ export const getDailyOrdersForPlayer = (
       icon: "📈",
       color: player.color,
       label: "TAKE THE NEXT SPOT",
-      text: `Finish ${seasonBenchmark.winGap === 1 ? "1 win" : `${seasonBenchmark.winGap} wins`} better than ${seasonBenchmark.target.username} today and pull level in ${currentSeasonName}.`,
+      text: `Finish ${seasonBenchmark.winGap === 1 ? "1 win" : `${seasonBenchmark.winGap} wins`} better than ${seasonBenchmark.target.username} ${actionWindow} and pull level in ${currentSeasonName}.`,
       note:
         seasonBenchmark.winGap === 1
           ? "One good night puts those files side by side."
@@ -4280,8 +4436,8 @@ export const getDailyOrdersForPlayer = (
       color: player.color,
       label: "MOVE UP THE FILE",
       text: allTimeBenchmark.sameWins
-        ? `Outkill ${allTimeBenchmark.target.username} by ${Math.max(allTimeBenchmark.killGap, 0)} today and take the all-time tiebreak.`
-        : `Finish ${allTimeBenchmark.winGap === 1 ? "1 win" : `${allTimeBenchmark.winGap} wins`} better than ${allTimeBenchmark.target.username} today and pull level all time.`,
+        ? `Outkill ${allTimeBenchmark.target.username} by ${Math.max(allTimeBenchmark.killGap, 0)} ${actionWindow} and take the all-time tiebreak.`
+        : `Finish ${allTimeBenchmark.winGap === 1 ? "1 win" : `${allTimeBenchmark.winGap} wins`} better than ${allTimeBenchmark.target.username} ${actionWindow} and pull level all time.`,
       note: "One good night is enough to make that file blink.",
     });
   }
@@ -4309,8 +4465,8 @@ export const getDailyOrdersForPlayer = (
         color: "#FFAB40",
         label: "PROTECT THE LEAD",
         text: chase.sameWins
-          ? `Finish ahead of ${chase.target.username} today and keep the ${scopeLabel} lead in your hands.`
-          : `Finish ahead of ${chase.target.username} today to keep the ${scopeLabel} lead intact.`,
+          ? `Finish ahead of ${chase.target.username} ${actionWindow} and keep the ${scopeLabel} lead in your hands.`
+          : `Finish ahead of ${chase.target.username} ${actionWindow} to keep the ${scopeLabel} lead intact.`,
         note: chase.sameWins
           ? "The lead is live right now. One rough room gives it away."
           : chase.winGap === 0
@@ -4327,17 +4483,17 @@ export const getDailyOrdersForPlayer = (
       icon: "📍",
       color: "#00E5FF",
       label: "MAKE IT REAL",
-      text: `Win again today and turn this ${recentWins}-in-5 run into something the room has to respect.`,
+      text: `Win again ${actionWindow} and turn this ${recentWins}-in-5 run into something the room has to respect.`,
       note: "The next good room decides whether this is form or just a flash.",
     });
   } else if (!candidates.some((entry) => entry.category === "drought-break") && form.length >= 4 && recentWins === 0) {
     const resetVariant = getVariant("form-reset", [
       {
-        text: `Win today and break the quiet run from the last ${form.length} logged lobbies.`,
+        text: `Win ${actionWindow} and break the quiet run from the last ${form.length} logged lobbies.`,
         note: "Right now the silence is louder than the highs.",
       },
       {
-        text: `Take one room today and stop the last ${form.length} rooms from defining this file.`,
+        text: `Take one room ${actionWindow} and stop the last ${form.length} rooms from defining this file.`,
         note: "A flat run never stays invisible for long.",
       },
     ]);
@@ -4355,11 +4511,11 @@ export const getDailyOrdersForPlayer = (
   if (daysSinceSeen != null && daysSinceSeen >= 3 && currentRow.appearances >= 5) {
     const returnVariant = getVariant("return-to-file", [
       {
-        text: "Show up today and put this file back in the room.",
+        text: `Show up ${actionWindow} and put this file back in the room.`,
         note: "Long gaps let the board move on without you.",
       },
       {
-        text: `Get back on file today after ${daysSinceSeen} day${daysSinceSeen === 1 ? "" : "s"} away.`,
+        text: `Get back on file ${actionWindow} after ${daysSinceSeen} day${daysSinceSeen === 1 ? "" : "s"} away.`,
         note: "Time away never stays neutral for long.",
       },
     ]);
@@ -4383,8 +4539,8 @@ export const getDailyOrdersForPlayer = (
       {
         text:
           latestDayWins >= 2
-            ? "Back up the last session day with another strong finish today."
-            : `Put up another loud damage line today after ${latestDayKills} kills on the last session day.`,
+            ? `Back up the latest filed day with another strong finish ${actionWindow}.`
+            : `Put up another loud damage line ${actionWindow} after ${latestDayKills} kills on the latest filed day.`,
         note:
           latestDayWins >= 2
             ? "Back to back strong days turn heat into control."
@@ -4393,8 +4549,8 @@ export const getDailyOrdersForPlayer = (
       {
         text:
           latestDayWins >= 2
-            ? `Win again today so that ${latestDayWins}-win day starts to look like the new read.`
-            : `Follow that ${latestDayKills}-kill day with another heavy room today.`,
+            ? `Win again ${actionWindow} so that ${latestDayWins}-win day starts to look like the new read.`
+            : `Follow that ${latestDayKills}-kill day with another heavy room ${actionWindow}.`,
         note:
           latestDayWins >= 2
             ? "The freshest pressure always gets the most attention."

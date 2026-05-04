@@ -205,6 +205,7 @@ export default function HomeView({ ctx }) {
               ?joinHumanList(topKillers.map((entry)=>dn(entry.player?.username||"")))
               :"";
             const topKillCount=topKillers[0]?.kills||latestFallout?.topKiller?.kills||0;
+            const recap=getDayRecap(latestDate);
             const latestDayHeadline=(()=>{
               if(!latestFallout?.topWinners.length||!topKillers.length)return "";
               if(latestFallout.topWinners.length===1&&topKillers.length>1){
@@ -226,10 +227,17 @@ export default function HomeView({ ctx }) {
               }
               return "";
             })();
+            const latestFiledIsCampaignOpener=currentSeason.id==="s3"&&latestDate===currentSeason.start;
+            const latestFiledRead=latestDate&&recap?.lobbies
+              ? latestFiledIsCampaignOpener
+                ? seasonOpenerFallout
+                  ? `Season 3 opened with ${seasonOpenerFallout.lobbies} lobbies, ${seasonOpenerFallout.players} players, and ${seasonOpenerFallout.kills} kills. ${joinHumanList(seasonOpenerFallout.winLeaders.map((entry)=>dn(entry.player?.username||entry.username||"")))} split the first crown line.`
+                  : "Season 3 file opened on May 1. The first board is live."
+                : latestDayHeadline || `${recap.lobbies} lobbies, ${recap.uniquePlayers} players, and ${recap.totalKills} kills are now filed from ${falloutDateLabel}.`
+              : "";
             const briefingTitle=briefingStories.length
-              ? "Fresh reads sitting behind the opener file."
+              ? "Fresh reads sitting behind the latest filed night."
               : "Fresh reads will lock in here as soon as the room has more data.";
-            const recap=getDayRecap(latestDate);
             const recapStorylines=(latestDate?getDayStorylines(latestDate):[])
               .filter((line)=>!isOpenerRepeat(line))
               .slice(0,1);
@@ -401,7 +409,7 @@ export default function HomeView({ ctx }) {
                 ))}
               </div>
 
-              {currentSeason.id==="s3"&&seasonSess.length>0&&(
+              {currentSeason.id==="s3"&&seasonSess.length>0&&latestFiledRead&&(
                 <div className="zone-receive-follow" style={{
                   "--receive-delay":"185ms",
                   margin:"-14px 0 28px",
@@ -411,10 +419,13 @@ export default function HomeView({ ctx }) {
                   borderRadius:"0 8px 8px 0",
                   background:"linear-gradient(135deg,rgba(255,77,143,.1),rgba(0,0,0,.24))",
                 }}>
+                  {!latestFiledIsCampaignOpener&&(
+                    <div className="bc7" style={{fontSize:".52rem",letterSpacing:".22em",color:"rgba(255,77,143,.72)",marginBottom:5}}>
+                      LATEST FILED NIGHT
+                    </div>
+                  )}
                   <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
-                    {seasonOpenerFallout
-                      ? `Season 3 opened with ${seasonOpenerFallout.lobbies} lobbies, ${seasonOpenerFallout.players} players, and ${seasonOpenerFallout.kills} kills. ${joinHumanList(seasonOpenerFallout.winLeaders.map((entry)=>dn(entry.player?.username||entry.username||"")))} split the first crown line.`
-                      : "Season 3 file opened on May 1. The first board is live."}
+                    {latestFiledRead}
                   </div>
                 </div>
               )}
@@ -475,6 +486,25 @@ export default function HomeView({ ctx }) {
                   </div>
                 </div>
               </section>
+
+              {currentSeason.id==="s3"&&seasonOpenerFallout&&!latestFiledIsCampaignOpener&&(
+                <div className="zone-receive-follow" style={{
+                  "--receive-delay":"245ms",
+                  margin:"-12px 0 24px",
+                  padding:"9px 12px",
+                  border:"1px solid rgba(255,77,143,.14)",
+                  borderLeft:"3px solid rgba(255,77,143,.38)",
+                  borderRadius:"0 7px 7px 0",
+                  background:"rgba(255,255,255,.018)",
+                }}>
+                  <div className="bc7" style={{fontSize:".52rem",letterSpacing:".2em",color:"rgba(255,77,143,.58)",marginBottom:4}}>
+                    CAMPAIGN ORIGIN
+                  </div>
+                  <div className="bc7" style={{fontSize:".68rem",lineHeight:1.55,color:"var(--text3)"}}>
+                    May 1 opened Season 3 with {seasonOpenerFallout.lobbies} lobbies and {seasonOpenerFallout.kills} kills. The current read now starts from the latest filed night.
+                  </div>
+                </div>
+              )}
 
               <HomeStage
                 tag="FIELD COMMAND"
