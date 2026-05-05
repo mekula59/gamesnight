@@ -1781,9 +1781,103 @@ function Avatar({p,size=44,glow=false,intel=null}){
   );
 }
 
+const ROUTE_TO_VIEW = {
+  "": "home",
+  home: "home",
+  arena: "leaderboard",
+  leaderboard: "leaderboard",
+  "combat-file": "profile",
+  profile: "profile",
+  "war-room": "lobbies",
+  lobbies: "lobbies",
+  rivals: "rivals",
+  vault: "records",
+  records: "records",
+  "legends-wing": "hof",
+  legends: "hof",
+  hof: "hof",
+  intel: "charts",
+  charts: "charts",
+  campaign: "campaign",
+  briefing: "faq",
+  faq: "faq",
+  command: "admin",
+  admin: "admin",
+};
+
+const VIEW_TO_ROUTE = {
+  home: "home",
+  leaderboard: "arena",
+  profile: "combat-file",
+  lobbies: "war-room",
+  rivals: "rivals",
+  records: "vault",
+  hof: "legends-wing",
+  charts: "intel",
+  campaign: "campaign",
+  faq: "briefing",
+  admin: "command",
+};
+
+const parseAppRoute = () => {
+  if (typeof window === "undefined") {
+    return { view: "home", campaignSeasonId: "s3", valid: true };
+  }
+  const raw = window.location.hash.replace(/^#\/?/, "").trim().toLowerCase();
+  const parts = raw.split("/").filter(Boolean);
+  const route = parts[0] || "home";
+
+  if (route === "season1") {
+    return { view: "campaign", campaignSeasonId: "s1", valid: true };
+  }
+  if (route === "season2") {
+    return { view: "campaign", campaignSeasonId: "s2", valid: true };
+  }
+
+  const view = ROUTE_TO_VIEW[route];
+  if (!view) {
+    return { view: "home", campaignSeasonId: "s3", valid: false };
+  }
+
+  if (view === "campaign") {
+    const seasonRoute = parts[1] || "s3";
+    const campaignSeasonId =
+      seasonRoute === "season1" || seasonRoute === "season-1" ? "s1" :
+      seasonRoute === "season2" || seasonRoute === "season-2" ? "s2" :
+      seasonRoute === "season3" || seasonRoute === "season-3" ? "s3" :
+      ["s1", "s2", "s3", "s4"].includes(seasonRoute) ? seasonRoute :
+      "s3";
+    return { view, campaignSeasonId, valid: true };
+  }
+
+  return { view, campaignSeasonId: "s3", valid: true };
+};
+
+const getRouteHash = (view, campaignSeasonId = "s3") => {
+  if (view === "campaign") {
+    return campaignSeasonId && campaignSeasonId !== "s3"
+      ? `#/campaign/${campaignSeasonId}`
+      : "#/campaign";
+  }
+  return `#/${VIEW_TO_ROUTE[view] || "home"}`;
+};
+
+const writeRouteHash = (view, campaignSeasonId, mode = "push") => {
+  if (typeof window === "undefined") return;
+  const nextHash = getRouteHash(view, campaignSeasonId);
+  if (window.location.hash === nextHash) return;
+  const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+  if (mode === "replace") {
+    window.history.replaceState(null, "", nextUrl);
+  } else {
+    window.history.pushState(null, "", nextUrl);
+  }
+};
+
 export default function GameNight(){
   const foolsDay=isFoolsDay();
-  const [view,       setView]      = useState("home");
+  const initialRoute=parseAppRoute();
+  const [view,       setView]      = useState(()=>initialRoute.view);
   const [adminMode,  setAdminMode] = useState(false);
   const [showLogin,  setShowLogin] = useState(false);
   const [adminInput, setAdminInput]= useState("");
@@ -1802,7 +1896,7 @@ export default function GameNight(){
   const [profileId,  setProfileId]  = useState(null);
   const [expandedSid,setExpandedSid]= useState(null);
   const [lbSeason,   setLbSeason]   = useState("s3");
-  const [selectedCampaignSeasonId,setSelectedCampaignSeasonId]=useState("s3");
+  const [selectedCampaignSeasonId,setSelectedCampaignSeasonId]=useState(()=>initialRoute.campaignSeasonId);
   const [h2hA,       setH2hA]       = useState("");
   const [h2hB,       setH2hB]       = useState("");
   const [editingSess,setEditingSess] = useState(null);
@@ -1898,6 +1992,36 @@ export default function GameNight(){
   },[]);
 
   useEffect(()=>{
+    if(typeof window==="undefined")return;
+    const route=parseAppRoute();
+    if(!route.valid) writeRouteHash("home","s3","replace");
+    const handleRouteChange=()=>{
+      const next=parseAppRoute();
+      if(!next.valid){
+        setView("home");
+        setSelectedCampaignSeasonId("s3");
+        writeRouteHash("home","s3","replace");
+        return;
+      }
+      setMobileOpen(false);
+      setSelectedCampaignSeasonId(next.campaignSeasonId);
+      setView((current)=>{
+        if(current!==next.view){
+          setZonePulse((count)=>count+1);
+          scrollToTop("auto");
+        }
+        return next.view;
+      });
+    };
+    window.addEventListener("hashchange",handleRouteChange);
+    window.addEventListener("popstate",handleRouteChange);
+    return()=>{
+      window.removeEventListener("hashchange",handleRouteChange);
+      window.removeEventListener("popstate",handleRouteChange);
+    };
+  },[]);
+
+  useEffect(()=>{
     let active=true;
     const bootRivalOps=async()=>{
       const persisted=await readRivalOpsState(store);
@@ -1969,16 +2093,26 @@ export default function GameNight(){
       window.scrollTo({top:0,behavior});
     }
   };
+  const setCampaignSeasonAndRoute=(seasonId)=>{
+    const nextSeasonId=seasonId||"s3";
+    setSelectedCampaignSeasonId(nextSeasonId);
+    if(view==="campaign") writeRouteHash("campaign",nextSeasonId);
+  };
   const go=v=>{
+    let routeCampaignSeasonId=selectedCampaignSeasonId||"s3";
     if(v==="season1"){
-      setSelectedCampaignSeasonId("s1");
+      routeCampaignSeasonId="s1";
+      setSelectedCampaignSeasonId(routeCampaignSeasonId);
       v="campaign";
     }else if(v==="season2"){
-      setSelectedCampaignSeasonId("s2");
+      routeCampaignSeasonId="s2";
+      setSelectedCampaignSeasonId(routeCampaignSeasonId);
       v="campaign";
-    }else if(v==="campaign"&&!selectedCampaignSeasonId){
-      setSelectedCampaignSeasonId(activeCampaignId||"s3");
+    }else if(v==="campaign"){
+      routeCampaignSeasonId="s3";
+      setSelectedCampaignSeasonId(routeCampaignSeasonId);
     }
+    writeRouteHash(v,routeCampaignSeasonId);
     setMobileOpen(false);
     if(v!==view){
       setView(v);
@@ -4403,7 +4537,7 @@ export default function GameNight(){
           SEASON_TWO_ID,
           campaignSeasonId:selectedCampaignSeasonId||activeCampaignId,
           selectedCampaignSeasonId,
-          setSelectedCampaignSeasonId,
+          setSelectedCampaignSeasonId:setCampaignSeasonAndRoute,
           activeCampaignId,
           SEASONS,
           sessions,
