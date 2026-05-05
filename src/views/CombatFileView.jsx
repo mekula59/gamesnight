@@ -9,6 +9,7 @@ export default function CombatFileView({ ctx }) {
     getStats,
     getRank,
     getBadges,
+    getPlayerLobbyWipeSummary,
     getLiveDayStreak,
     filterSessionsBySeason,
     activeCampaignId,
@@ -26,6 +27,7 @@ export default function CombatFileView({ ctx }) {
     dn,
     getPlayerLevel,
     getPlayerFileState,
+    getSeasonOpenerFallout,
     compareSessionsDesc,
     Avatar,
     renderPlayerIntel,
@@ -40,12 +42,21 @@ export default function CombatFileView({ ctx }) {
 
   const st = getStats(p.id);
   const fileState = getPlayerFileState(p.id);
+  const openerFallout = activeCampaignId === "s3" ? getSeasonOpenerFallout?.(activeCampaignId) : null;
+  const openerRead = openerFallout?.playerReads?.[p.id] || "";
   const rank = getRank(p.id);
   const badges = getBadges(p.id);
+  const lobbyWipeSummary = getPlayerLobbyWipeSummary?.(p.id);
   const liveDayStreak = getLiveDayStreak(p.id);
   const campaignName = activeCampaign?.name || "current campaign";
   const campaignShort = activeCampaign?.id ? activeCampaign.id.toUpperCase() : "SEASON";
   const campaignSess = filterSessionsBySeason(sessions, activeCampaignId);
+  const playerCampaignSessions = campaignSess.filter((session) => session.attendees?.includes(p.id));
+  const playerHasPostOpenerCampaignFile = Boolean(
+    activeCampaign?.start &&
+      playerCampaignSessions.some((session) => session.date > activeCampaign.start),
+  );
+  const showOpenerReadHigh = Boolean(openerRead && !playerHasPostOpenerCampaignFile);
   const campaignSt = getStats(p.id, campaignSess);
   const form = getFormGuide(p.id, 5);
   const drought = getDrought(p.id);
@@ -248,6 +259,17 @@ export default function CombatFileView({ ctx }) {
             </div>
           </div>
 
+          {showOpenerReadHigh&&(
+            <div style={{ position: "relative", zIndex: 1, marginTop: 10, padding: "9px 11px", border: `1px solid ${p.color}1f`, borderLeft: `3px solid ${p.color}66`, borderRadius: "0 6px 6px 0", background: "rgba(255,255,255,.025)" }}>
+              <div className="bc7" style={{ fontSize: ".52rem", letterSpacing: ".18em", color: `${p.color}aa`, marginBottom: 5 }}>
+                SEASON 3 OPENER
+              </div>
+              <div className="bc7" style={{ fontSize: ".76rem", lineHeight: 1.5, color: "var(--text2)" }}>
+                {openerRead}
+              </div>
+            </div>
+          )}
+
           <div className="living-core-stats living-dossier-stats" style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 1, border: `1px solid ${p.color}14`, borderRadius: 2, overflow: "hidden", marginTop: 12 }}>
             {coreStats.map((item) => (
               <div key={item.label} style={{ padding: "12px 8px 11px", textAlign: "center", background: "rgba(255,255,255,.025)", borderRight: "1px solid rgba(255,255,255,.04)" }}>
@@ -328,6 +350,16 @@ export default function CombatFileView({ ctx }) {
             <div className="bc7" style={{ fontSize: ".64rem", color: "var(--text3)", lineHeight: 1.6 }}>
               {fileState?.weakness || weaknessLine}
             </div>
+            {openerRead&&playerHasPostOpenerCampaignFile&&(
+              <div style={{ marginTop: 9, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,.06)" }}>
+                <div className="bc7" style={{ fontSize: ".5rem", letterSpacing: ".18em", color: "rgba(255,77,143,.5)", marginBottom: 4 }}>
+                  CAMPAIGN ORIGIN
+                </div>
+                <div className="bc7" style={{ fontSize: ".62rem", color: "var(--text3)", lineHeight: 1.55 }}>
+                  {openerRead}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -391,6 +423,11 @@ export default function CombatFileView({ ctx }) {
         {badges.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div className="bc7" style={{ fontSize: ".58rem", letterSpacing: ".22em", color: "var(--text3)", marginBottom: 10 }}>COMMENDATIONS · CLICK ANY BADGE TO REVEAL UNLOCK CONDITION</div>
+            {lobbyWipeSummary?.count > 1 && (
+              <div className="bc7" style={{ fontSize: ".7rem", color: "#00FF94", margin: "-4px 0 9px", letterSpacing: ".08em" }}>
+                {lobbyWipeSummary.count} Lobby Wipes on file
+              </div>
+            )}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {badges.map((b, bi) => <BadgeFlip key={bi} b={b} playerColor={p.color} />)}
             </div>

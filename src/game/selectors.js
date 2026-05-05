@@ -157,6 +157,82 @@ export const buildPlayerIndex = (players) =>
 export const getPlayerById = (playerIndex, playerId) =>
   playerId ? playerIndex[playerId] ?? null : null;
 
+const getLobbyParticipantIds = (session) => {
+  const ids = new Set();
+  (session.attendees || []).forEach((playerId) => {
+    if (playerId) ids.add(playerId);
+  });
+  (session.placements || []).forEach((playerId) => {
+    if (playerId) ids.add(playerId);
+  });
+  return [...ids];
+};
+
+const compareLobbyWipes = (left, right) =>
+  right.kills - left.kills ||
+  right.lobbySize - left.lobbySize ||
+  right.date.localeCompare(left.date) ||
+  parseSessionIdNumber(right.sessionId) - parseSessionIdNumber(left.sessionId);
+
+export const getLobbyWipeEvents = (sessions, players = []) => {
+  const playerIndex = buildPlayerIndex(players);
+  return [...sessions]
+    .sort(compareSessionsAsc)
+    .map((session) => {
+      const winnerId = session.winner || "";
+      const placements = session.placements || [];
+      const participants = getLobbyParticipantIds(session);
+      const kills = session.kills || null;
+      const winnerKills = kills?.[winnerId];
+      const winnerIsUnambiguous =
+        Boolean(winnerId) &&
+        participants.includes(winnerId) &&
+        (!placements.length || placements[0] === winnerId);
+
+      if (
+        !winnerIsUnambiguous ||
+        participants.length < 5 ||
+        !kills ||
+        !Object.prototype.hasOwnProperty.call(kills, winnerId) ||
+        winnerKills !== participants.length - 1
+      ) {
+        return null;
+      }
+
+      return {
+        id: `lobby-wipe-${session.id}-${winnerId}`,
+        playerId: winnerId,
+        player: getPlayerById(playerIndex, winnerId),
+        kills: winnerKills,
+        lobbySize: participants.length,
+        sessionId: session.id,
+        session,
+        date: session.date,
+      };
+    })
+    .filter(Boolean);
+};
+
+export const getBestLobbyWipe = (sessions, players = []) =>
+  getLobbyWipeEvents(sessions, players).sort(compareLobbyWipes)[0] || null;
+
+export const getPlayerLobbyWipeSummary = (playerId, sessions, players = []) => {
+  const events = getLobbyWipeEvents(sessions, players)
+    .filter((event) => event.playerId === playerId)
+    .sort(compareLobbyWipes);
+  return {
+    playerId,
+    count: events.length,
+    events,
+    best: events[0] || null,
+    latest: [...events].sort(compareSessionsDescByEvent)[0] || null,
+  };
+};
+
+const compareSessionsDescByEvent = (left, right) =>
+  right.date.localeCompare(left.date) ||
+  parseSessionIdNumber(right.sessionId) - parseSessionIdNumber(left.sessionId);
+
 const sortKillKingEntries = (entries, players) => {
   const hostId = players.find((player) => player.host)?.id || "";
   return [...entries].sort((left, right) => {
@@ -442,6 +518,7 @@ export const getBadges = (playerId, sessions) => {
   const stats = getStats(playerId, sessions);
   const badges = [];
   const streak = getStreak(playerId, sessions);
+  const lobbyWipeSummary = getPlayerLobbyWipeSummary(playerId, sessions);
 
   if (streak >= 3) {
     badges.push({ icon: "🔥", label: `Best Run ${streak}`, hot: true });
@@ -473,6 +550,17 @@ export const getBadges = (playerId, sessions) => {
     badges.push({ icon: "🌟", label: "Big Game" });
   } else if (stats.biggestGame >= 6) {
     badges.push({ icon: "🗡️", label: "Assassin" });
+  }
+  if (lobbyWipeSummary.count > 0) {
+    badges.push({
+      icon: "🧹",
+      label: "LOBBY WIPE",
+      hot: true,
+      how:
+        lobbyWipeSummary.count > 1
+          ? `${lobbyWipeSummary.count} Lobby Wipes on file. Won a 5+ player lobby while taking every possible kill.`
+          : "Won a 5+ player lobby while taking every possible kill.",
+    });
   }
   if (stats.winRate >= 50 && stats.appearances >= 3) {
     badges.push({ icon: "🎯", label: "50% WR" });
@@ -1254,6 +1342,7 @@ export const getRecords = (sessions, players) => {
   )[0] || ["", 0];
 
   const firstSession = [...sessions].sort(compareSessionsAsc)[0];
+  const bestLobbyWipe = getBestLobbyWipe(sessions, players);
 
   const killMap = {};
   sessions.forEach((session) => {
@@ -1288,6 +1377,7 @@ export const getRecords = (sessions, players) => {
     topWinner,
     topKiller,
     topDayKill,
+    bestLobbyWipe,
     first: firstSession,
     totalSessions: sessions.length,
     totalKills: allStats(players, sessions).reduce((sum, player) => sum + player.kills, 0),
@@ -1635,6 +1725,149 @@ export const getSeasonOpenerFallout = (seasonId, sessions, players) => {
   };
 };
 
+export const getCampaignFronts = (seasonId, sessions, players) => {
+  const season = SEASONS.find((entry) => entry.id === seasonId);
+  if (!season || !sessions.length || !players.length) {
+    return {
+      seasonId,
+      mode: "waiting",
+      fronts: [],
+    };
+  }
+
+  const currentDate = todayStr();
+  const mode = currentDate < season.start
+    ? "waiting"
+    : currentDate > season.end
+      ? "archive"
+      : "live";
+  const seasonSessions = filterSessionsBySeason(sessions, seasonId);
+  if (!seasonSessions.length) {
+    return {
+      seasonId,
+      mode,
+      fronts: [],
+    };
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const displayName = (playerId) => getPlayerById(playerIndex, playerId)?.username || "Unknown";
+  const stats = allStats(players, seasonSessions).filter((player) => player.appearances > 0);
+  const byWins = [...stats].sort((left, right) => right.wins - left.wins || right.kills - left.kills);
+  const byKills = [...stats].sort((left, right) => right.kills - left.kills || right.wins - left.wins);
+  const byPresence = [...stats].sort((left, right) => right.appearances - left.appearances || right.wins - left.wins || right.kills - left.kills);
+  const noWinFiles = [...stats]
+    .filter((player) => player.wins === 0)
+    .sort((left, right) => right.appearances - left.appearances || right.kills - left.kills);
+  const uniqueWinners = new Set(seasonSessions.filter((session) => session.winner).map((session) => session.winner));
+  const leader = byWins[0] || null;
+  const chaser = byWins[1] || null;
+  const damageLeader = byKills[0] || null;
+  const damageChaser = byKills[1] || null;
+  const presenceLeader = byPresence[0] || null;
+  const presenceChaser = byPresence[1] || null;
+  const breakthrough = noWinFiles[0] || null;
+  const winLine = leader
+    ? byWins.filter((player) => player.wins === leader.wins)
+    : [];
+  const crownIds = winLine.length > 1 ? winLine.map((player) => player.id) : [leader?.id, chaser?.id].filter(Boolean);
+  const crownGap = leader && chaser ? leader.wins - chaser.wins : 0;
+  const killGap = damageLeader && damageChaser ? damageLeader.kills - damageChaser.kills : 0;
+  const attendanceGap = presenceLeader && presenceChaser ? presenceLeader.appearances - presenceChaser.appearances : 0;
+  const fronts = [];
+
+  if (leader) {
+    fronts.push({
+      id: "crown",
+      label: "CROWN FRONT",
+      tone: "crown",
+      headline: winLine.length > 1
+        ? `${joinNames(winLine.map((player) => displayName(player.id)))} share the win line.`
+        : `${displayName(leader.id)} holds the win line.`,
+      detail: winLine.length > 1
+        ? `${displayName(leader.id)} sits first by the current tiebreak, not a clean lead.`
+        : chaser
+          ? `${displayName(chaser.id)} is ${crownGap} win${crownGap === 1 ? "" : "s"} back.`
+          : "No second file has reached the chase yet.",
+      playerIds: crownIds,
+      statLine: winLine.length > 1 ? `${leader.wins}W each` : `${leader.wins}W to ${chaser?.wins || 0}W`,
+      source: "season_wins",
+    });
+  }
+
+  if (damageLeader) {
+    fronts.push({
+      id: "damage",
+      label: "DAMAGE FRONT",
+      tone: "damage",
+      headline: `${displayName(damageLeader.id)} owns the damage lane.`,
+      detail: damageChaser
+        ? `${displayName(damageChaser.id)} is ${killGap} kill${killGap === 1 ? "" : "s"} back.`
+        : "No second damage file has separated yet.",
+      playerIds: [damageLeader.id, damageChaser?.id].filter(Boolean),
+      statLine: `${damageLeader.kills}K to ${damageChaser?.kills || 0}K`,
+      source: "season_kills",
+    });
+  }
+
+  if (presenceLeader) {
+    fronts.push({
+      id: "presence",
+      label: "PRESENCE FRONT",
+      tone: "presence",
+      headline: `${displayName(presenceLeader.id)} has the fullest file.`,
+      detail: presenceChaser
+        ? attendanceGap === 0
+          ? `${displayName(presenceChaser.id)} is level on attendance.`
+          : `${displayName(presenceChaser.id)} is ${attendanceGap} lobby${attendanceGap === 1 ? "" : "ies"} behind.`
+        : "The attendance front has one clear marker.",
+      playerIds: [presenceLeader.id, presenceChaser?.id].filter(Boolean),
+      statLine: `${presenceLeader.appearances}G to ${presenceChaser?.appearances || 0}G`,
+      source: "season_appearances",
+    });
+  }
+
+  if (breakthrough && breakthrough.appearances >= 2) {
+    fronts.push({
+      id: "breakthrough",
+      label: "BREAKTHROUGH FRONT",
+      tone: "breakthrough",
+      headline: `${displayName(breakthrough.id)} is the loudest no-win file.`,
+      detail: `${breakthrough.appearances} lobbies and ${breakthrough.kills} kills without a Season 3 win.`,
+      playerIds: [breakthrough.id],
+      statLine: `${breakthrough.appearances}G · 0W · ${breakthrough.kills}K`,
+      source: "season_no_win_files",
+    });
+  }
+
+  if (leader && damageLeader) {
+    const winnerShare = seasonSessions.length
+      ? Math.round((uniqueWinners.size / seasonSessions.length) * 100)
+      : 0;
+    const volatilityState = crownGap <= 1 || uniqueWinners.size >= Math.max(4, Math.ceil(seasonSessions.length * 0.25))
+      ? "The board is active, not settled."
+      : crownGap >= 4 && killGap >= 8
+        ? "The main lines are starting to separate."
+        : "The board is open, but the first gaps are showing.";
+    fronts.push({
+      id: "volatility",
+      label: "VOLATILITY FRONT",
+      tone: "volatility",
+      headline: volatilityState,
+      detail: `${uniqueWinners.size} winners across ${seasonSessions.length} lobbies keeps the file moving.`,
+      playerIds: [leader.id, damageLeader.id].filter(Boolean),
+      statLine: `${uniqueWinners.size} winners · ${winnerShare}% spread`,
+      source: "season_spread",
+    });
+  }
+
+  return {
+    seasonId,
+    mode,
+    fronts,
+  };
+};
+
 export const getLatestDayConsequences = (
   sessions,
   players,
@@ -1721,6 +1954,7 @@ export const getLatestDayConsequences = (
         player: getPlayer(zeroKillWinSession.winner),
       }
     : null;
+  const lobbyWipes = getLobbyWipeEvents(latestSessions, players);
 
   const reboundCandidates = latestSessions
     .map((session, index) => {
@@ -2045,6 +2279,18 @@ export const getLatestDayConsequences = (
     });
   }
 
+  if (lobbyWipes.length) {
+    const wipe = [...lobbyWipes].sort(compareLobbyWipes)[0];
+    pushConsequence(consequences, {
+      type: "lobby-wipe",
+      icon: "🧹",
+      color: "#00FF94",
+      priority: 98,
+      text: `${getLobbyLabel(wipe.sessionId)} ended as a full wipe. ${wipe.player?.username || "The winner"} won it with every possible kill.`,
+      shortText: `${wipe.player?.username || "The winner"} wiped ${getLobbyLabel(wipe.sessionId)} with ${wipe.kills} kills in a ${wipe.lobbySize}-player room.`,
+    });
+  }
+
   consequences.sort((left, right) => right.priority - left.priority);
 
   return {
@@ -2055,6 +2301,7 @@ export const getLatestDayConsequences = (
     topKiller,
     topKillers,
     zeroKillWin,
+    lobbyWipes,
     reboundWin,
     legendCrossers,
     killCrossers,

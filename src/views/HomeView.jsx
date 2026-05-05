@@ -300,6 +300,9 @@ export default function HomeView({ ctx }) {
             const longestWinRunPlayer=allTimeRecords?.bestStreak?.pid
               ?players.find((player)=>player.id===allTimeRecords.bestStreak.pid)
               :null;
+            const bestLobbyWipePlayer=allTimeRecords?.bestLobbyWipe?.playerId
+              ?players.find((player)=>player.id===allTimeRecords.bestLobbyWipe.playerId)
+              :null;
             const latestNightSessions=latestDate?sessions.filter((session)=>session.date===latestDate):[];
             const latestNightLabel=latestDate
               ?new Date(`${latestDate}T12:00:00Z`).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})
@@ -312,7 +315,7 @@ export default function HomeView({ ctx }) {
               {label:"MOST PLAYED FILE",value:mostPlayedFile?`${dn(mostPlayedFile.username)} · ${mostPlayedFile.appearances}G`:"Waiting",note:"highest attendance",color:"#00FF94"},
               {label:"BEST SINGLE GAME",value:bestSingleGamePlayer?`${dn(bestSingleGamePlayer.username)} · ${allTimeRecords.topGame.k}K`:"Waiting",note:allTimeRecords?.topGame?.sid?`highest lobby spike · ${allTimeRecords.topGame.sid}`:"highest lobby spike",color:"#C77DFF"},
               {label:"LONGEST WIN RUN",value:longestWinRunPlayer?`${dn(longestWinRunPlayer.username)} · ${allTimeRecords.bestStreak.streak}W`:"Waiting",note:"cleanest consecutive run",color:"#FFD700"},
-              {label:"LAST FILED NIGHT",value:`${latestNightLabel} · ${latestNightSessions.length}`,note:"lobbies filed",color:"#FF6B35"},
+              {label:"BEST LOBBY WIPE",value:bestLobbyWipePlayer?`${dn(bestLobbyWipePlayer.username)} · ${allTimeRecords.bestLobbyWipe.kills}K`:"Waiting",note:allTimeRecords?.bestLobbyWipe?`${allTimeRecords.bestLobbyWipe.lobbySize}-player room · ${allTimeRecords.bestLobbyWipe.sessionId}`:"full room clear",color:"#00FF94"},
             ];
             const renderPulseCards=(cards,copyKey)=>cards.map((item,index)=>(
               <div

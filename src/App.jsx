@@ -40,6 +40,7 @@ import {
   getLatestDayConsequences as selectGetLatestDayConsequences,
   getLatestSessionDate as selectGetLatestSessionDate,
   getLeaderboardShiftData as selectGetLeaderboardShiftData,
+  getPlayerLobbyWipeSummary as selectGetPlayerLobbyWipeSummary,
   getLiveStreaks as selectGetLiveStreaks,
   getMilestones as selectGetMilestones,
   getMissionBoardState as selectGetMissionBoardState,
@@ -2002,6 +2003,7 @@ export default function GameNight(){
   const getRank=pid=>selectGetRank(pid,players,sessions);
   const getStreak=(pid,src=sessions)=>selectGetStreak(pid,src);
   const getBadges=pid=>selectGetBadges(pid,sessions);
+  const getPlayerLobbyWipeSummary=pid=>selectGetPlayerLobbyWipeSummary(pid,sessions,players);
   const getPlayerLevel=pid=>selectGetPlayerLevel(pid,sessions);
   const getPlayerFileState=pid=>selectGetPlayerFileState(pid,players,sessions,{seasonId:activeCampaignId});
   const getDailyMVP=()=>selectGetDailyMVP(sessions,players);
@@ -2128,6 +2130,17 @@ export default function GameNight(){
       addCandidate("🫥","#C77DFF",8,[
         `${dn(latestFallout.zeroKillWin.player.username)} stole Lobby ${zeroKillSessionNo} without landing a kill. That is pure survival nerve.`,
         `Lobby ${zeroKillSessionNo} went to ${dn(latestFallout.zeroKillWin.player.username)} with zero kills on the sheet. Some wins come from damage. That one came from nerve.`,
+      ]);
+    }
+
+    if(latestFallout?.lobbyWipes?.length){
+      const wipe=[...latestFallout.lobbyWipes].sort((a,b)=>
+        b.kills-a.kills||b.lobbySize-a.lobbySize||b.date.localeCompare(a.date)||parseSessionIdNumber(b.sessionId)-parseSessionIdNumber(a.sessionId),
+      )[0];
+      const wipeLobbyNo=parseSessionIdNumber(wipe.sessionId)||wipe.sessionId;
+      addCandidate("🧹","#00FF94",10,[
+        `${dn(wipe.player?.username||"The winner")} wiped Lobby ${wipeLobbyNo} with ${wipe.kills} kills in a ${wipe.lobbySize}-player room.`,
+        `Lobby ${wipeLobbyNo} was a full wipe. ${dn(wipe.player?.username||"The winner")} took every possible kill and the crown.`,
       ]);
     }
 
@@ -3343,7 +3356,7 @@ export default function GameNight(){
 
           {/* Rare Commendations */}
           {(()=>{
-            const rareNames=new Set(["Invincible","S1 Champion","S2 Champion","First Blood S2","S1 Record Breaker","1K Kills","500 Kills","Rampage"]);
+            const rareNames=new Set(["Invincible","S1 Champion","S2 Champion","First Blood S2","S1 Record Breaker","1K Kills","500 Kills","Rampage","LOBBY WIPE"]);
             const rareBadges=BADGE_CATALOGUE.filter((badge)=>rareNames.has(badge.name));
             return(
               <div style={{...card({border:"2px solid rgba(199,125,255,.2)"}),padding:18,marginBottom:16}}>
@@ -3715,6 +3728,7 @@ export default function GameNight(){
           getStats,
           getRank,
           getBadges,
+          getPlayerLobbyWipeSummary,
           getLiveDayStreak,
           filterSessionsBySeason,
           activeCampaignId,
