@@ -53,6 +53,7 @@ import {
   getRivalryBoard as selectGetRivalryBoard,
   reconcileRivalOpsState as selectReconcileRivalOpsState,
   getRivals as selectGetRivals,
+  getCampaignFronts as selectGetCampaignFronts,
   getSeasonCampaignFile as selectGetSeasonCampaignFile,
   getSeasonOneWrap as selectGetSeasonOneWrap,
   getSeasonOpenerFallout as selectGetSeasonOpenerFallout,
@@ -2021,6 +2022,7 @@ export default function GameNight(){
     });
   const getLatestDayConsequences=date=>selectGetLatestDayConsequences(sessions,players,date);
   const getSeasonOpenerFallout=seasonId=>selectGetSeasonOpenerFallout(seasonId, sessions, players);
+  const getCampaignFronts=seasonId=>selectGetCampaignFronts(seasonId, sessions, players);
   const getLeaderboardShiftData=(seasonId="all",period=lbPeriod,sortKey=sortBy)=>
     selectGetLeaderboardShiftData(players,sessions,{seasonId,period,sortBy:sortKey});
   const getOnDeckPressure=(options)=>selectGetOnDeckPressure(sessions,players,options);
@@ -2884,24 +2886,24 @@ export default function GameNight(){
   const arenaRangeMeta=(()=>{
     if(arenaRangeKey==="today"){
       return{
-        strap:"LATEST DAY · LAST ROOM STILL HOT",
+        strap:"LATEST FILED DAY",
         summary:arenaScopeLatestDate
           ?`${arenaScopeSessions.length} lobbies filed on ${formatLobbyDate(arenaScopeLatestDate,{weekday:"short",day:"numeric",month:"short"})}`
           :"Waiting on the latest room",
         scopeLabel:"Latest day board",
         emptyTitle:"The freshest day file is still waiting to land.",
-        emptyNote:"Once the next set of rooms closes, the newest pressure board wakes up here.",
+        emptyNote:"Once the next set of rooms closes, the newest official board appears here.",
       };
     }
     if(arenaRangeKey==="week"){
       return{
-        strap:"THIS WEEK · MOMENTUM ON THE TABLE",
+        strap:"THIS WEEK · OFFICIAL BOARD",
         summary:arenaWeekFirstDate&&arenaScopeLatestDate
           ?`${arenaScopeSessions.length} lobbies from ${formatLobbyDate(arenaWeekFirstDate,{day:"numeric",month:"short"})} to ${formatLobbyDate(arenaScopeLatestDate,{day:"numeric",month:"short"})}`
           :"This week is still waiting on its first file",
         scopeLabel:"This week board",
         emptyTitle:"This week has not opened a clean file yet.",
-        emptyNote:"The first room of the week sets the pace. This board fills the moment it lands.",
+        emptyNote:"The first room of the week opens this board.",
       };
     }
     if(arenaRangeKey==="season"){
@@ -2909,17 +2911,17 @@ export default function GameNight(){
       return{
         strap:seasonClosed
           ?`${arenaCurrentSeason.name.toUpperCase()} · FINAL BOARD`
-          :`${arenaCurrentSeason.name.toUpperCase()} · CAMPAIGN PRESSURE`,
+          :`${arenaCurrentSeason.name.toUpperCase()} · LIVE OFFICIAL BOARD`,
         summary:`${arenaScopeSessions.length} lobbies, ${arenaScopeKills} kills, ${arenaScopeWinnerCount} winning file${arenaScopeWinnerCount===1?"":"s"}`,
         scopeLabel:`${arenaCurrentSeason.name} board`,
         emptyTitle:`${arenaCurrentSeason.name} has not opened its file yet.`,
         emptyNote:seasonClosed
           ?"This season has no filed rooms in the archive."
-          :"Once the opener lands, the seasonal pressure board starts moving here.",
+          :"Once the opener lands, the season board starts here.",
       };
     }
     return{
-      strap:"ALL TIME · LEGACY PRESSURE OPEN",
+      strap:"ALL TIME · OFFICIAL RECORD",
       summary:`${sessions.length} lobbies on record · ${arenaScopeWinnerCount} winners with history on file`,
       scopeLabel:"All-time board",
       emptyTitle:"The archive is still waiting on its first room.",
@@ -3233,10 +3235,56 @@ export default function GameNight(){
             </h2>
             <div style={{height:1,background:"linear-gradient(90deg,rgba(255,215,0,.44),transparent)",marginBottom:8}}/>
             <div className="bc7" style={{fontSize:".72rem",letterSpacing:".12em",color:"var(--text3)"}}>
-              Sealed campaigns, current royalty, names the room keeps forever
+              Permanent records, sealed crowns, names the room keeps forever
             </div>
           </div>
 
+          {/* Permanent Honors */}
+          {(()=>{
+            const allTimeRows=allStats().filter((player)=>player.appearances>0);
+            const winsLeader=[...allTimeRows].sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
+            const killsLeader=[...allTimeRows].sort((a,b)=>b.kills-a.kills||b.wins-a.wins)[0];
+            const mostPlayed=[...allTimeRows].sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins)[0];
+            const records=getRecords();
+            const topGamePlayer=records?.topGame?.pid?players.find((player)=>player.id===records.topGame.pid):null;
+            const honors=[
+              {icon:"🏆",label:"All-Time Wins Leader",player:winsLeader,value:winsLeader?`${winsLeader.wins}W`:"Waiting",color:"#FFD700"},
+              {icon:"💀",label:"All-Time Kills Leader",player:killsLeader,value:killsLeader?`${killsLeader.kills}K`:"Waiting",color:"#FF4D8F"},
+              {icon:"📅",label:"Most Played File",player:mostPlayed,value:mostPlayed?`${mostPlayed.appearances}G`:"Waiting",color:"#00FF94"},
+              {icon:"☄️",label:"Highest Single Game",player:topGamePlayer,value:records?.topGame?`${records.topGame.k}K in ${records.topGame.sid}`:"Waiting",color:"#C77DFF"},
+            ];
+            return(
+              <div style={{...card({border:"2px solid rgba(255,215,0,.24)",background:"linear-gradient(135deg,rgba(255,215,0,.08),var(--card))"}),padding:20,marginBottom:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
+                  <div>
+                    <div className="bc7" style={{fontSize:".62rem",letterSpacing:".28em",color:"#FFD700"}}>PERMANENT HONORS</div>
+                    <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4}}>All-time marks only. No live campaign movement.</div>
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+                  {honors.map((honor)=>(
+                    <div key={honor.label} onClick={()=>honor.player&&goProfile(honor.player.id)} style={{
+                      background:"rgba(0,0,0,.34)",
+                      border:`1px solid ${honor.color}33`,
+                      borderLeft:`3px solid ${honor.color}`,
+                      borderRadius:"0 12px 12px 0",
+                      padding:"12px 14px",
+                      cursor:honor.player?"pointer":"default",
+                    }}>
+                      <div className="bc7" style={{fontSize:".58rem",letterSpacing:".18em",color:`${honor.color}cc`,marginBottom:8}}>{honor.icon} {honor.label}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        {honor.player&&<Avatar p={honor.player} size={30}/>}
+                        <div style={{minWidth:0}}>
+                          <div style={{fontFamily:"Fredoka One",color:honor.color,fontSize:".95rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{honor.player?dn(honor.player.username):"Waiting"}</div>
+                          <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".98rem"}}>{honor.value}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Season Recaps */}
           {SEASONS.filter((season)=>{
@@ -3293,72 +3341,35 @@ export default function GameNight(){
             );
           })}
 
-          <div className="hof-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(265px,1fr))",gap:16,marginBottom:36}}>
-            {allStats().sort((a,b)=>b.wins-a.wins||b.kills-a.kills).map((player,idx)=>{
-              const rank=getRank(player.id);
-              const badges=getBadges(player.id);
-              const streak=getStreak(player.id);
-              const podCl=idx===0?"podium-1":idx===1?"podium-2":idx===2?"podium-3":"";
-              return(
-                <div key={player.id} className={`card-h${podCl?" "+podCl:""}`}
-                onClick={()=>goProfile(player.id)}
-                style={{
-                  ...card({borderTop:`4px solid ${player.color}`,boxShadow:`0 0 28px ${player.color}14`}),
-                  padding:20,position:"relative",overflow:"hidden",cursor:"pointer",
-                  animation:`fadeUp .38s ease ${Math.min(idx,8)*.04}s both`}}>
-                  {idx<3&&(
-                    <div style={{position:"absolute",top:8,right:10,fontSize:"1.5rem",
-                      animation:idx===0?"floatY 3s ease-in-out infinite":"none"}}>
-                      {["👑","🥈","🥉"][idx]}
-                    </div>
-                  )}
-                  {streak>=3&&(
-                    <div className="fire" style={{position:"absolute",top:8,left:10,
-                      fontSize:".8rem",background:"rgba(255,107,53,.2)",borderRadius:50,padding:"2px 7px",
-                      border:"1px solid rgba(255,107,53,.4)",color:"#FF6B35",fontWeight:800}}>
-                      🔥 {streak} streak
-                    </div>
-                  )}
-                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,marginTop:streak>=3?20:0}}>
-                    <Avatar p={player} size={52} glow/>
-                    <div>
-                      <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.05rem"}}>{player.host?"👑 ":""}{dn(player.username)}</div>
-                      <div style={{fontSize:".72rem",color:rank.color,fontWeight:700,marginTop:2}}>{rank.title}</div>
-                    </div>
+          {/* Rare Commendations */}
+          {(()=>{
+            const rareNames=new Set(["Invincible","S1 Champion","S2 Champion","First Blood S2","S1 Record Breaker","1K Kills","500 Kills","Rampage"]);
+            const rareBadges=BADGE_CATALOGUE.filter((badge)=>rareNames.has(badge.name));
+            return(
+              <div style={{...card({border:"2px solid rgba(199,125,255,.2)"}),padding:18,marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                  <span style={{fontSize:"1.35rem"}}>🎖️</span>
+                  <div>
+                    <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.1rem"}}>Rare Commendations</h3>
+                    <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>Permanent honors and record badges. The full reference sits below.</p>
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
-                    {[
-                      {l:"Wins",     v:player.wins,           c:"#FFD700",i:"🏆"},
-                      {l:"Kills",    v:player.kills,          c:"#FF4D8F",i:"💀"},
-                      {l:"K/G",      v:player.kd,             c:"#00E5FF",i:"⚡"},
-                      {l:"Win Rate", v:player.winRate+"%",    c:"#00FF94",i:"🎯"},
-                      {l:"Lobbies",  v:player.appearances,    c:"#FFAB40",i:"📅"},
-                      {l:"Best Game",v:player.biggestGame+"k",c:"#C77DFF",i:"🌟"},
-                    ].map((s,i)=>(
-                      <div key={i} style={{background:"rgba(0,0,0,.38)",borderRadius:8,padding:"7px 10px"}}>
-                        <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:700,marginBottom:1}}>{s.i} {s.l}</div>
-                        <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:"1.08rem"}}>{s.v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {badges.length>0&&(
-                    <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {badges.map((b,i)=>(
-                        <span key={i} style={{background:"rgba(255,255,255,.09)",borderRadius:50,
-                          padding:"3px 9px",fontSize:".68rem",fontWeight:700,
-                          color:"#fff",border:"1px solid rgba(255,255,255,.18)"}}>
-                          {b.hot?<span className="fire" style={{display:"inline-block"}}>{b.icon}</span>:b.icon} {b.label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {player.appearances===0&&(
-                    <p style={{fontSize:".72rem",color:"var(--text3)",fontStyle:"italic",marginTop:6}}>Awaiting first battle…</p>
-                  )}
                 </div>
-              );
-            })}
-          </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {rareBadges.map((badge)=>(
+                    <span key={badge.name} style={{
+                      background:"rgba(255,255,255,.06)",
+                      border:"1px solid rgba(255,255,255,.12)",
+                      borderRadius:999,
+                      padding:"7px 10px",
+                      color:"var(--text2)",
+                      fontSize:".74rem",
+                      fontWeight:800,
+                    }}>{badge.icon} {badge.name}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Rank Titles FAQ */}
           <div style={{...card({border:"2px solid rgba(199,125,255,.25)"}),padding:24,marginBottom:16}}>
@@ -3431,11 +3442,7 @@ export default function GameNight(){
           sessions,
           foolsDay,
           leaderboardShiftData,
-          selectGetLiveStreaks,
           arenaScopeSessions,
-          getOnDeckPressure,
-          lbSeason,
-          lbPeriod,
           dn,
           getArenaStats,
           getRank,
@@ -3451,7 +3458,6 @@ export default function GameNight(){
           renderPlayerIntel,
           goProfile,
           spotlight,
-          getPressureQueue,
           activeCampaign,
           activeCampaignClosed,
           seasonThreeWaiting,
@@ -4392,6 +4398,7 @@ export default function GameNight(){
           compareSessionsAsc,
           getLatestSessionDate,
           getLatestDayConsequences,
+          getCampaignFronts,
           getSeasonOpenerFallout,
           buildSeasonCampaignFile,
           joinHumanList,

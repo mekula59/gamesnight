@@ -13,6 +13,7 @@ export default function Season2View({ ctx }) {
     compareSessionsAsc,
     getLatestSessionDate,
     getLatestDayConsequences,
+    getCampaignFronts,
     getSeasonOpenerFallout,
     buildSeasonCampaignFile,
     joinHumanList,
@@ -188,6 +189,10 @@ export default function Season2View({ ctx }) {
             const s2LatestDate=getLatestSessionDate(s2Sessions);
             const s2LatestFallout=s2LatestDate?getLatestDayConsequences(s2LatestDate):null;
             const openerFallout=selectedSeasonId==="s3"?getSeasonOpenerFallout?.(selectedSeasonId):null;
+            const campaignFronts=getCampaignFronts?.(selectedSeasonId)||null;
+            const showCampaignFronts=Boolean(
+              campaignFronts?.mode==="live"&&campaignFronts.fronts?.length&&s2Sessions.length,
+            );
             const s2LatestSplitLeaders=s2LatestFallout?.topWinners.length
               ?joinHumanList(s2LatestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")))
               :"";
@@ -454,48 +459,120 @@ export default function Season2View({ ctx }) {
                     <div style={{fontSize:".6rem",color:"rgba(0,229,255,.6)",fontWeight:800,
                       letterSpacing:".26em",textTransform:"uppercase"}}>Season pulse</div>
                     <div style={{fontSize:".8rem",color:"var(--text2)",fontWeight:700,lineHeight:1.7}}>
-                      {seasonPulse}
+                      {showCampaignFronts
+                        ? `${campaignName} has ${s2Sessions.length} lobbies filed, ${uniqueWins} winners, and ${totalKills} kills on record.`
+                        : seasonPulse}
                     </div>
-                    <div style={{fontSize:".6rem",color:"rgba(199,125,255,.64)",fontWeight:800,
-                      letterSpacing:".26em",textTransform:"uppercase"}}>Campaign dossier</div>
-                    <div style={{fontSize:".78rem",color:"var(--text2)",fontWeight:700,lineHeight:1.7}}>
-                      {seasonDossier}
-                    </div>
-                    <div style={{fontSize:".78rem",color:"var(--text3)",fontWeight:700,lineHeight:1.7}}>
-                      {quietPulse}
-                    </div>
-                    {s2NumberMarkers.length>0&&(
-                      <div className="season2-marker-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:8,marginTop:4}}>
-                        {s2NumberMarkers.map((marker)=>(
-                          <div key={marker.label} style={{
-                            background:`linear-gradient(135deg,${marker.color}10,rgba(0,0,0,.26))`,
-                            border:`1px solid ${marker.color}26`,
-                            borderLeft:`3px solid ${marker.color}`,
-                            borderRadius:"0 8px 8px 0",
-                            padding:"11px 12px",
-                          }}>
-                            <div className="bc7" style={{fontSize:".55rem",letterSpacing:".18em",color:`${marker.color}bb`,marginBottom:5,textTransform:"uppercase"}}>
-                              {marker.label}
-                            </div>
-                            <div className="bc9" style={{fontSize:".84rem",lineHeight:1.2,color:marker.color,marginBottom:4}}>
-                              {marker.value}
-                            </div>
-                            <div className="bc7" style={{fontSize:".64rem",lineHeight:1.55,color:"var(--text3)"}}>
-                              {marker.note}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                {openerFallout&&(
+                {showCampaignFronts&&(
                   <div style={{
                     display:"grid",
                     gap:12,
                     marginBottom:28,
-                    padding:"18px 18px 20px",
+                    padding:"18px",
+                    border:"1px solid rgba(255,255,255,.1)",
+                    borderLeft:`3px solid ${campaignColor}`,
+                    borderRadius:"0 12px 12px 0",
+                    background:`linear-gradient(135deg,${campaignColor}0f,rgba(0,0,0,.28))`,
+                  }}>
+                    <div>
+                      <div className="bc7" style={{fontSize:".6rem",letterSpacing:".24em",color:`${campaignColor}cc`,marginBottom:6}}>
+                        CAMPAIGN FRONTS
+                      </div>
+                      <div className="bc9" style={{fontSize:"clamp(.98rem,3vw,1.15rem)",color:campaignColor,lineHeight:1.25}}>
+                        Season 3 lanes from the official file.
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8}}>
+                      {campaignFronts.fronts.map((front)=>{
+                        const color={
+                          crown:"#FFD700",
+                          damage:"#FF4D8F",
+                          presence:"#00FF94",
+                          breakthrough:"#C77DFF",
+                          volatility:"#FF6B35",
+                        }[front.tone]||campaignColor;
+                        return(
+                          <div key={front.id} style={{
+                            padding:"12px 13px",
+                            background:`linear-gradient(135deg,${color}10,rgba(0,0,0,.28))`,
+                            border:`1px solid ${color}24`,
+                            borderLeft:`3px solid ${color}`,
+                            borderRadius:"0 8px 8px 0",
+                          }}>
+                            <div className="bc7" style={{fontSize:".52rem",letterSpacing:".18em",color:`${color}bb`,marginBottom:6}}>
+                              {front.label}
+                            </div>
+                            <div className="bc9" style={{fontSize:".9rem",lineHeight:1.2,color,marginBottom:5}}>
+                              {front.headline}
+                            </div>
+                            <div className="bc7" style={{fontSize:".66rem",lineHeight:1.55,color:"var(--text2)",marginBottom:8}}>
+                              {front.detail}
+                            </div>
+                            <div className="bc7" style={{fontSize:".56rem",letterSpacing:".14em",color:"var(--text3)"}}>
+                              {front.statLine}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {(showCampaignFronts||seasonTwoClosed)&&(
+                  <div style={{marginBottom:28}}>
+                    <h3 style={{fontFamily:"Fredoka One",fontSize:"1.15rem",color:"#00E5FF",marginBottom:14}}>
+                      📊 Full {campaignName} Standings
+                    </h3>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {byWins.map((p,i)=>{
+                        const player=players.find(x=>x.id===p.id);
+                        if(!player)return null;
+                        return(
+                          <div key={i} onClick={()=>goProfile(player.id)} style={{
+                            display:"flex",alignItems:"center",gap:12,
+                            background:"var(--card)",border:`1.5px solid ${i<3?"rgba(0,229,255,.3)":"var(--border)"}`,
+                            borderRadius:13,padding:"10px 14px",cursor:"pointer",
+                            animation:`fadeUp .3s ease ${i*.03}s both`}}>
+                            <div style={{fontFamily:"Fredoka One",fontSize:"1rem",
+                              color:i===0?"#00E5FF":i===1?"#C0C0C0":i===2?"#CD7F32":"var(--text3)",
+                              width:22,textAlign:"center",flexShrink:0}}>
+                              {i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`}
+                            </div>
+                            <Avatar p={player} size={34}/>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontFamily:"Fredoka One",color:player.color,fontSize:".92rem",
+                                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                {player.host?"👑 ":""}{dn(player.username)}
+                              </div>
+                            </div>
+                            <div style={{display:"flex",gap:14,flexShrink:0}}>
+                              {[
+                                {l:"W",v:p.wins,c:"#FFD700"},
+                                {l:"K",v:p.kills,c:"#FF4D8F"},
+                                {l:"GP",v:p.appearances,c:"#00E5FF"},
+                              ].map((s,j)=>(
+                                <div key={j} style={{textAlign:"center",minWidth:28}}>
+                                  <div style={{fontFamily:"Fredoka One",fontSize:".95rem",color:s.c,lineHeight:1}}>{s.v}</div>
+                                  <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:800}}>{s.l}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {showCampaignFronts&&openerFallout&&(
+                  <div style={{
+                    display:"grid",
+                    gap:9,
+                    marginBottom:28,
+                    padding:"12px 14px",
                     border:"1px solid rgba(255,77,143,.18)",
                     borderLeft:"3px solid rgba(255,77,143,.42)",
                     borderRadius:"0 12px 12px 0",
@@ -509,53 +586,30 @@ export default function Season2View({ ctx }) {
                         May 1 stays as the campaign origin file.
                       </div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:8}}>
+                    <div style={{display:"grid",gap:6}}>
                       {[
                         {
                           label:"First crown line",
                           value:`${joinHumanList(openerFallout.winLeaders.map((entry)=>dn(entry.player?.username||entry.username||"")))} split 3W`,
-                          note:`${openerFallout.lobbies} lobbies left the top row tied.`,
                           color:"#FFD700",
                         },
                         {
                           label:"Damage front",
                           value:`${dn(openerFallout.damageLeader?.player?.username||"")} · ${openerFallout.damageLeader?.kills||0}K`,
-                          note:"The first damage lead is clear.",
                           color:"#FF4D8F",
                         },
                         {
                           label:"Cleanest run",
                           value:`${dn(openerFallout.cleanestRun?.player?.username||"")} · ${openerFallout.cleanestRun?.length||0} straight`,
-                          note:openerFallout.cleanestRun?.start&&openerFallout.cleanestRun?.end
-                            ?`Lobby ${parseSessionIdNumber(openerFallout.cleanestRun.start.id)||openerFallout.cleanestRun.start.id} to Lobby ${parseSessionIdNumber(openerFallout.cleanestRun.end.id)||openerFallout.cleanestRun.end.id}.`
-                            :"No run held long enough to lead the file.",
                           color:"#00E5FF",
-                        },
-                        {
-                          label:"Best single-game line",
-                          value:`${openerFallout.bestSingleGame.kills}K ceiling`,
-                          note:openerFallout.bestSingleGame.shared
-                            ?`${joinHumanList(openerFallout.bestSingleGame.entries.map((entry)=>dn(entry.player?.username||"")))} both reached it.`
-                            :`${dn(openerFallout.bestSingleGame.primary?.player?.username||"")} reached it first.`,
-                          color:"#C77DFF",
-                        },
-                        {
-                          label:"Zero-kill win",
-                          value:openerFallout.zeroKillWin?.player
-                            ?`${dn(openerFallout.zeroKillWin.player.username)} in Lobby ${parseSessionIdNumber(openerFallout.zeroKillWin.session.id)||openerFallout.zeroKillWin.session.id}`
-                            :"None filed",
-                          note:"The opener already has one survival close on record.",
-                          color:"#00FF94",
-                        },
-                        {
-                          label:"Volatility read",
-                          value:`${openerFallout.players} players, ${openerFallout.winners} winners`,
-                          note:"The board opened wide instead of settling early.",
-                          color:"#FF6B35",
                         },
                       ].map((item)=>(
                         <div key={item.label} style={{
-                          padding:"12px 13px",
+                          display:"flex",
+                          justifyContent:"space-between",
+                          alignItems:"center",
+                          gap:10,
+                          padding:"8px 10px",
                           background:`linear-gradient(135deg,${item.color}10,rgba(0,0,0,.28))`,
                           border:`1px solid ${item.color}24`,
                           borderLeft:`3px solid ${item.color}`,
@@ -564,86 +618,11 @@ export default function Season2View({ ctx }) {
                           <div className="bc7" style={{fontSize:".52rem",letterSpacing:".18em",color:`${item.color}bb`,marginBottom:6}}>
                             {item.label}
                           </div>
-                          <div className="bc9" style={{fontSize:".9rem",lineHeight:1.2,color:item.color,marginBottom:5}}>
+                          <div className="bc9" style={{fontSize:".84rem",lineHeight:1.2,color:item.color,textAlign:"right"}}>
                             {item.value}
-                          </div>
-                          <div className="bc7" style={{fontSize:".66rem",lineHeight:1.55,color:"var(--text2)"}}>
-                            {item.note}
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
-                  {seasonMemoryCards.map((card)=>(
-                    <div key={card.label} style={{
-                      background:`linear-gradient(135deg,${card.color}10,rgba(0,0,0,.32))`,
-                      border:`1px solid ${card.color}30`,
-                      borderLeft:`3px solid ${card.color}`,
-                      borderRadius:"0 8px 8px 0",
-                      padding:"14px 16px",
-                    }}>
-                      <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${card.color}bb`,marginBottom:8}}>
-                        {card.label}
-                      </div>
-                      <div className="bc9" style={{fontSize:".94rem",color:card.color,lineHeight:1.2,marginBottom:7}}>
-                        {card.value}
-                      </div>
-                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.65}}>
-                        {card.note}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* S2 Podium */}
-                {podium.length>=1&&(
-                  <div style={{marginBottom:28}}>
-                    <h3 style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:"#00E5FF",
-                      marginBottom:16,textAlign:"center"}}>🥇 {campaignName} Standings</h3>
-                    <div style={{display:"flex",gap:12,justifyContent:"center",alignItems:"flex-end",flexWrap:"wrap"}}>
-                      {podium.map((p,i)=>{
-                        const player=players.find(x=>x.id===p.id);
-                        if(!player)return null;
-                        const medals=["🥇","🥈","🥉"];
-                        const heights=["140px","110px","90px"];
-                        const sizes=[68,54,46];
-                        return(
-                          <div key={i} style={{
-                            display:"flex",flexDirection:"column",alignItems:"center",gap:8,
-                            cursor:"pointer",animation:`popIn .4s ease ${i*.12}s both`}}
-                            onClick={()=>goProfile(player.id)}>
-                            <div style={{width:sizes[i],height:sizes[i],borderRadius:"50%",
-                              background:`linear-gradient(135deg,${player.color},${player.color}88)`,
-                              display:"flex",alignItems:"center",justifyContent:"center",
-                              fontFamily:"Fredoka One",fontSize:i===0?"1.6rem":"1.2rem",color:"#fff",
-                              boxShadow:`0 0 ${i===0?30:16}px ${player.color}66`,
-                              border:`2px solid ${player.color}`}}>
-                              {player.username[0]}
-                            </div>
-                            <div style={{fontFamily:"Fredoka One",fontSize:i===0?"1rem":".88rem",
-                              color:player.color,textAlign:"center",maxWidth:90,
-                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              {player.host?"👑 ":""}{dn(player.username)}
-                            </div>
-                            <div style={{
-                              background:i===0?"linear-gradient(135deg,#00E5FF,#00FF94)":i===1?"rgba(192,192,192,.2)":"rgba(205,127,50,.2)",
-                              border:`1.5px solid ${i===0?"#00E5FF":i===1?"#C0C0C0":"#CD7F32"}`,
-                              borderRadius:"12px 12px 0 0",
-                              width:i===0?100:80,height:heights[i],
-                              display:"flex",flexDirection:"column",alignItems:"center",
-                              justifyContent:"flex-start",paddingTop:12,gap:4}}>
-                              <div style={{fontSize:"1.6rem"}}>{medals[i]}</div>
-                              <div style={{fontFamily:"Fredoka One",
-                                color:i===0?"#160d2e":i===1?"#C0C0C0":"#CD7F32",
-                                fontSize:i===0?"1.1rem":".9rem"}}>{p.wins}W</div>
-                              <div style={{fontSize:".7rem",color:i===0?"rgba(22,13,46,.7)":"var(--text3)",fontWeight:700}}>{p.kills}K</div>
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
                   </div>
                 )}
@@ -680,7 +659,7 @@ export default function Season2View({ ctx }) {
                     ...(mostImproved?.player?[{icon:"📈",color:"#00FF94",title:"Most Improved",player:mostImproved.player,stat:`${mostImproved.earlyWR}% to ${mostImproved.lateWR}% WR`,desc:`Sharpest late-season climb in the ${campaignName} file at +${mostImproved.gain}% win rate.`}]:[]),
                     ...(topGame.pid?[{icon:"☄️",color:"#C77DFF",title:"Best Single Game",player:players.find(p=>p.id===topGame.pid),stat:`${topGame.k} kills in ${topGameLobby}`,desc:`${formatLobbyDate(topGame.date,{weekday:"short",day:"numeric",month:"short"})} · the single room every ${campaignName} damage spike gets measured against.`}]:[]),
                     ...(topDayKillPlayer?[{icon:"🌋",color:"#FF4D8F",title:"Most Kills in a Day",player:topDayKillPlayer,stat:`${topDayKill.k} kills`,desc:`${formatLobbyDate(topDayKill.date,{weekday:"short",day:"numeric",month:"short"})} · the loudest damage day in the ${campaignName} file.`}]:[]),
-                  ].map((a,i)=>{
+                  ].filter((a)=>!showCampaignFronts||["Crown Line Tied","Current Wins Leader","Current Kill Leader","Most Loyal"].includes(a.title)).map((a,i)=>{
                     if(!a.player)return null;
                     const playerObj=a.player.username?a.player:players.find(p=>p.id===a.player?.id);
                     if(!playerObj)return null;
@@ -711,50 +690,30 @@ export default function Season2View({ ctx }) {
                   })}
                 </div>
 
-                {/* Full S2 leaderboard */}
-                <div style={{marginBottom:8}}>
-                  <h3 style={{fontFamily:"Fredoka One",fontSize:"1.15rem",color:"#00E5FF",marginBottom:14}}>
-                    📊 Full {campaignName} Leaderboard
-                  </h3>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {byWins.map((p,i)=>{
-                      const player=players.find(x=>x.id===p.id);
-                      if(!player)return null;
-                      return(
-                        <div key={i} onClick={()=>goProfile(player.id)} style={{
-                          display:"flex",alignItems:"center",gap:12,
-                          background:"var(--card)",border:`1.5px solid ${i<3?"rgba(0,229,255,.3)":"var(--border)"}`,
-                          borderRadius:13,padding:"10px 14px",cursor:"pointer",
-                          animation:`fadeUp .3s ease ${i*.03}s both`}}>
-                          <div style={{fontFamily:"Fredoka One",fontSize:"1rem",
-                            color:i===0?"#00E5FF":i===1?"#C0C0C0":i===2?"#CD7F32":"var(--text3)",
-                            width:22,textAlign:"center",flexShrink:0}}>
-                            {i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`}
-                          </div>
-                          <Avatar p={player} size={34}/>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontFamily:"Fredoka One",color:player.color,fontSize:".92rem",
-                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              {player.host?"👑 ":""}{dn(player.username)}
-                            </div>
-                          </div>
-                          <div style={{display:"flex",gap:14,flexShrink:0}}>
-                            {[
-                              {l:"W",v:p.wins,c:"#FFD700"},
-                              {l:"K",v:p.kills,c:"#FF4D8F"},
-                              {l:"GP",v:p.appearances,c:"#00E5FF"},
-                            ].map((s,j)=>(
-                              <div key={j} style={{textAlign:"center",minWidth:28}}>
-                                <div style={{fontFamily:"Fredoka One",fontSize:".95rem",color:s.c,lineHeight:1}}>{s.v}</div>
-                                <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:800}}>{s.l}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                {!showCampaignFronts&&(
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:28}}>
+                  {seasonMemoryCards.map((card)=>(
+                    <div key={card.label} style={{
+                      background:`linear-gradient(135deg,${card.color}10,rgba(0,0,0,.32))`,
+                      border:`1px solid ${card.color}30`,
+                      borderLeft:`3px solid ${card.color}`,
+                      borderRadius:"0 8px 8px 0",
+                      padding:"14px 16px",
+                    }}>
+                      <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${card.color}bb`,marginBottom:8}}>
+                        {card.label}
+                      </div>
+                      <div className="bc9" style={{fontSize:".94rem",color:card.color,lineHeight:1.2,marginBottom:7}}>
+                        {card.value}
+                      </div>
+                      <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.65}}>
+                        {card.note}
+                      </div>
+                    </div>
+                  ))}
                 </div>
+                )}
+
               </div>
             );
           })()}
