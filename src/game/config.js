@@ -124,6 +124,7 @@ export const BADGE_CATALOGUE = [
   { icon: "🌟", name: "Big Game", desc: "10 or more kills in one lobby", how: "Drop 10 kills in a single lobby" },
   { icon: "🎯", name: "50% Win Rate", desc: "Won at least half your lobbies", how: "Hold 50% or better win rate across 3 or more games" },
   { icon: "🗡️", name: "Assassin", desc: "6 or more kills in a single lobby", how: "Drop 6 kills in one lobby" },
+  { icon: "🧹", name: "LOBBY WIPE", desc: "Won a 5+ player lobby while taking every possible kill", how: "Win a lobby of 5 or more players with kills equal to every other player in the room" },
   { icon: "🧱", name: "Iron Wall", desc: "Reliable top-end finisher", how: "Finish top 3 in 10 or more lobbies" },
   { icon: "📆", name: "Marathon", desc: "Played 15 or more lobbies in one day", how: "Stay in the room for 15 lobbies on a single session date" },
   { icon: "🤝", name: "Never 1st", desc: "Stayed loyal without touching the crown", how: "Play 20 or more lobbies without a win" },
