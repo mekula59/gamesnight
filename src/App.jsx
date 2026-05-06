@@ -2358,10 +2358,13 @@ export default function GameNight(){
 
     if(latestFallout?.mekulaTeriqPressure&&latestFallout.mekulaTeriqPressure.totalDelta>0){
       const rivalry=latestFallout.mekulaTeriqPressure;
-      addCandidate("⚔️","#FF4D8F",7,[
+      const rivalryReads=[
         `${dn(rivalry.leader.username)} pushed the duel board against ${dn(rivalry.trailer.username)} to ${rivalry.leaderWins}-${rivalry.trailerWins} across ${rivalry.total} top-two meetings.`,
-        `${dn(rivalry.leader.username)} added ${rivalry.leaderDelta} more top-two wins over ${dn(rivalry.trailer.username)}. That rivalry is now sitting at ${rivalry.leaderWins}-${rivalry.trailerWins}.`,
-      ]);
+      ];
+      if(rivalry.leaderDelta>0){
+        rivalryReads.push(`${dn(rivalry.leader.username)} added ${rivalry.leaderDelta} more top-two wins over ${dn(rivalry.trailer.username)}. That rivalry is now sitting at ${rivalry.leaderWins}-${rivalry.trailerWins}.`);
+      }
+      addCandidate("⚔️","#FF4D8F",7,rivalryReads);
     }
 
     const seasonWins=[...campaignStats].sort((a,b)=>b.wins-a.wins||b.kills-a.kills);
