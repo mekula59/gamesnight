@@ -7,6 +7,7 @@ export default function WarRoomView({ ctx }) {
     compareSessionsDesc,
     getLatestSessionDate,
     getLatestDayConsequences,
+    getSeasonOpenerFallout,
     getPlayer,
     getLatestDayHeatRun,
     getLobbyTotalKills,
@@ -46,8 +47,9 @@ export default function WarRoomView({ ctx }) {
   const latestLobby = archiveSessions[0] || null;
   const latestArchiveDate = getLatestSessionDate();
   const latestIsCampaignOpener=Boolean(activeCampaign?.start&&latestArchiveDate===activeCampaign.start);
+  const openerFallout=latestIsCampaignOpener?getSeasonOpenerFallout?.(activeCampaign.id):null;
   const latestConsequences = getLatestDayConsequences(latestArchiveDate);
-  const latestConsequenceLines = (latestConsequences?.summary || []).slice(0, 2);
+  const latestConsequenceLines = (openerFallout?.consequenceReads || latestConsequences?.summary || []).slice(0, 2);
   const latestWinner = latestLobby ? getPlayer(latestLobby.winner) : null;
   const liveHeat = getLatestDayHeatRun(latestArchiveDate) || null;
   const heatPlayer = liveHeat?.player || null;
@@ -136,6 +138,30 @@ export default function WarRoomView({ ctx }) {
               ? `${activeCampaign.name} opened on ${formatLobbyDate(latestArchiveDate,{weekday:"short",day:"numeric",month:"short"})}. Read the newest campaign file first, then pull any older report.`
               : "The full session archive. Read the freshest rooms first, filter one operative or one day, and open any report to see how the room actually broke."}
           </p>
+          {openerFallout&&(
+            <div style={{
+              display:"grid",
+              gap:7,
+              marginTop:14,
+              padding:"12px 13px",
+              border:"1px solid rgba(255,77,143,.22)",
+              borderLeft:"3px solid rgba(255,77,143,.68)",
+              borderRadius:"0 8px 8px 0",
+              background:"linear-gradient(135deg,rgba(255,77,143,.08),rgba(0,0,0,.22))",
+            }}>
+              <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:"rgba(255,77,143,.78)",textTransform:"uppercase"}}>
+                Season 3 opener filed
+              </div>
+              <div style={{display:"grid",gap:6}}>
+                {openerFallout.consequenceReads.slice(0,5).map((line)=>(
+                  <div key={line} className="bc7" style={{fontSize:".72rem",lineHeight:1.55,color:"var(--text2)"}}>
+                    <span style={{ color: "#00FF94", marginRight: 7 }}>▸</span>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div
             className="warroom-hero-grid"
             style={{

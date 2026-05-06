@@ -75,18 +75,26 @@ export default function VaultView({ ctx }) {
             {[...new Set(sessions.map((s) => s.date))].sort().reverse().map((date, i) => {
               const daySess = sessions.filter((s) => s.date === date);
               let kkMax = 0;
-              let kkPid = null;
-              let kkSid = "";
+              const kkEntries = [];
               daySess.forEach((s) => {
                 Object.entries(s.kills || {}).forEach(([pid, k]) => {
                   if (k > kkMax) {
                     kkMax = k;
-                    kkPid = pid;
-                    kkSid = s.id;
+                    kkEntries.length = 0;
+                    kkEntries.push({ pid, sid: s.id });
+                  } else if (k > 0 && k === kkMax) {
+                    kkEntries.push({ pid, sid: s.id });
                   }
                 });
               });
-              const kkP = kkPid ? players.find((x) => x.id === kkPid) : null;
+              const kkPlayers = kkEntries
+                .map((entry) => ({ ...entry, player: players.find((x) => x.id === entry.pid) || null }))
+                .filter((entry) => entry.player);
+              const kkP = kkPlayers[0]?.player || null;
+              const kkNames = kkPlayers.length
+                ? kkPlayers.map((entry) => dn(entry.player.username)).join(", ")
+                : "";
+              const kkLobbyLine = kkEntries.map((entry) => entry.sid).join(", ");
               const dd = new Date(`${date}T12:00:00Z`);
               const dayLabel = dd.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
               const specialTag = getLobbyDateMarker(date)?.icon ? `${getLobbyDateMarker(date).icon} ` : "";
@@ -100,9 +108,9 @@ export default function VaultView({ ctx }) {
                   {kkP && <Avatar p={kkP} size={26} intel={renderPlayerIntel(kkP)} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="bc9" style={{ fontSize: ".84rem", lineHeight: 1.2, color: kkP?.color || "var(--text3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: kkP ? "pointer" : "default" }} onClick={() => kkP && goProfile(kkP.id)}>
-                      {kkP ? dn(kkP.username) : "Night stayed quiet"}
+                      {kkP ? kkNames : "Night stayed quiet"}
                     </div>
-                    {kkMax > 0 && <div className="bc7" style={{ fontSize: ".62rem", color: "#FF4D8F", lineHeight: 1, marginTop: 2 }}>{kkMax}K · {kkSid}</div>}
+                    {kkMax > 0 && <div className="bc7" style={{ fontSize: ".62rem", color: "#FF4D8F", lineHeight: 1, marginTop: 2 }}>{kkMax}K{kkPlayers.length > 1 ? " shared" : ""} · {kkLobbyLine}</div>}
                   </div>
                 </div>
               );

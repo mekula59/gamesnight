@@ -88,8 +88,8 @@ export default function RivalsView({ ctx }) {
           <span className="rival-evidence-mobile">{formatDate(entry.lastMeetingDate)}</span>
         </span>
         <span>
-          <span className="rival-evidence-desktop">S2 {entry.seasonScore.scoreLine}</span>
-          <span className="rival-evidence-mobile">{entry.seasonScore.scoreLine}</span>
+          <span className="rival-evidence-desktop">{entry.seasonScore.label || "SEASON"} {entry.seasonScore.scoreLine}</span>
+          <span className="rival-evidence-mobile">{entry.seasonScore.label || "SEASON"} {entry.seasonScore.scoreLine}</span>
         </span>
       </div>
       <div className="rival-card-foot">

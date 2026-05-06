@@ -7,6 +7,7 @@ export default function ArenaView({ ctx }) {
     setLbPeriod,
     SORT_LABELS,
     sortBy,
+    setSortBy,
     filteredLB,
     lbSearch,
     players,
@@ -16,11 +17,7 @@ export default function ArenaView({ ctx }) {
     sessions,
     foolsDay,
     leaderboardShiftData,
-    selectGetLiveStreaks,
     arenaScopeSessions,
-    getOnDeckPressure,
-    lbSeason,
-    lbPeriod,
     dn,
     getArenaStats,
     getRank,
@@ -36,7 +33,6 @@ export default function ArenaView({ ctx }) {
     renderPlayerIntel,
     goProfile,
     spotlight,
-    getPressureQueue,
     activeCampaign,
     activeCampaignClosed,
     seasonThreeWaiting,
@@ -125,358 +121,8 @@ export default function ArenaView({ ctx }) {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="arena-search" style={{position:"relative",marginBottom:16}}>
-            <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
-            <input className="search-inp" placeholder="Search callsign or gamertag..."
-              value={lbSearch} onChange={e=>{
-                const nextValue=e.target.value;
-                const query=nextValue.trim().toLowerCase();
-                setLbSearch(nextValue);
-                if(!query){setSpotlight(null);return;}
-                const m=players.find(p=>p.username.toLowerCase().includes(query));
-                setSpotlight(m?m.id:null);
-              }}/>
-            {lbSearch&&<button onClick={()=>{setLbSearch("");setSpotlight(null);}} style={{
-              position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
-              background:"rgba(255,255,255,.12)",border:"none",borderRadius:50,
-              width:22,height:22,cursor:"pointer",color:"#fff",fontSize:".72rem"}}>✕</button>}
-          </div>
-
-          {!archiveBoardMode&&(()=>{
-            const pressureQueue=getPressureQueue({seasonId:lbSeason==="all"?undefined:lbSeason,limit:3});
-            return(
-              <div className="pressure-queue-shell">
-                <div className="pressure-queue-head">
-                  <h2 className="pressure-queue-title">Pressure Queue</h2>
-                </div>
-                {pressureQueue.items.length ? (
-                  <div className="pressure-queue-grid">
-                    {pressureQueue.items.map((item)=>(
-                      <div key={item.id} className="pressure-queue-card" style={{
-                        borderColor:`${item.color}24`,
-                        borderLeft:`3px solid ${item.color}`,
-                        background:`linear-gradient(135deg,${item.color}10,rgba(0,0,0,.28))`,
-                      }}>
-                        <div className="pressure-queue-label" style={{color:`${item.color}cc`}}>
-                          {item.label}
-                        </div>
-                        <div className="pressure-queue-headline">
-                          {item.headline}
-                        </div>
-                        <div className="pressure-queue-detail">
-                          {item.detail}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="pressure-queue-empty">
-                    {pressureQueue.emptyLine}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {archiveBoardMode&&(
-            <div style={{
-              marginBottom:14,
-              padding:"10px 12px",
-              borderRadius:10,
-              border:"1px solid rgba(0,229,255,.18)",
-              borderLeft:"3px solid rgba(0,229,255,.56)",
-              background:"linear-gradient(135deg,rgba(0,229,255,.08),rgba(0,0,0,.24))",
-            }}>
-              <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
-                {seasonBoardClosed
-                  ?`${activeCampaign?.name||"This season"} is locked. This board is final record, not active movement.`
-                  :"No May lobbies have been filed yet. Arena is showing the latest official archive."}
-              </div>
-            </div>
-          )}
-
-          {sortedLB.length>0&&(()=>{
-            const boardLeader=sortedLB[0];
-            const boardChaser=sortedLB[1];
-            const leaderPlayer=players.find((player)=>player.id===boardLeader.id);
-            const chasePlayer=boardChaser?players.find((player)=>player.id===boardChaser.id):null;
-            if(!leaderPlayer)return null;
-            const scopeLabel=arenaRangeMeta.scopeLabel;
-            const climbPlayer=leaderboardShiftData.biggestRise?.player||null;
-            const slidePlayer=leaderboardShiftData.biggestSlide?.player||null;
-            const liveArenaHeat=selectGetLiveStreaks(arenaScopeSessions,players)[0]||null;
-            const liveArenaHeatPlayer=liveArenaHeat?players.find((player)=>player.id===liveArenaHeat.id):null;
-            const arenaOnDeck=getOnDeckPressure({seasonId:lbSeason,period:lbPeriod,limit:3});
-            const arenaOnDeckLead=arenaOnDeck.topItem?.shortText||"Nothing is sitting one room away yet.";
-            const arenaOnDeckTrail=arenaOnDeck.summary.slice(1,3);
-            const arenaOnDeckNote=arenaOnDeckTrail.length
-              ? arenaOnDeckTrail.join(" · ")
-              : liveArenaHeatPlayer
-                ? `${dn(liveArenaHeatPlayer.username)} is still carrying a ${liveArenaHeat.streak}W run into the next room.`
-                : "The next room has not put a clean flip on deck yet.";
-            const pressureText=(()=>{
-              if(archiveBoardMode&&boardChaser&&chasePlayer){
-                const gap=boardLeader.wins-boardChaser.wins;
-                return gap===0
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level in this archived scope.`
-                  :`${dn(leaderPlayer.username)} is ${gap} win${gap===1?"":"s"} clear of ${dn(chasePlayer.username)} in this archived scope.`;
-              }
-              if(seasonBoardClosed&&boardChaser&&chasePlayer){
-                const gap=boardLeader.wins-boardChaser.wins;
-                return gap===0
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} finished level on wins.`
-                  :`${dn(leaderPlayer.username)} finished ${gap} win${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
-              }
-              if(!boardChaser||!chasePlayer){
-                if(arenaRangeKey==="today"){
-                  return `${dn(leaderPlayer.username)} owned the last session day without anyone else getting a clean second line on them.`;
-                }
-                if(arenaRangeKey==="week"){
-                  return `${dn(leaderPlayer.username)} is setting the pace this week with nobody close enough yet to call it safe.`;
-                }
-                return `${dn(leaderPlayer.username)} owns this board for now.`;
-              }
-              if(sortBy==="kills"){
-                const gap=boardLeader.kills-boardChaser.kills;
-                return gap===0
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level on kills right now.`
-                  :`${dn(leaderPlayer.username)} is ${gap} kill${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
-              }
-              if(sortBy==="kd"){
-                const gap=(parseFloat(boardLeader.kd)-parseFloat(boardChaser.kd)).toFixed(1);
-                return gap==="0.0"
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are locked on efficiency.`
-                  :`${dn(leaderPlayer.username)} is ${gap} K/G ahead of ${dn(chasePlayer.username)}.`;
-              }
-              if(sortBy==="winrate"){
-                const gap=boardLeader.winRate-boardChaser.winRate;
-                return gap===0
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are tied on win rate.`
-                  :`${dn(leaderPlayer.username)} is ${gap}% ahead of ${dn(chasePlayer.username)} on win rate.`;
-              }
-              if(sortBy==="appearances"){
-                const gap=boardLeader.appearances-boardChaser.appearances;
-                return gap===0
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level on attendance.`
-                  :`${dn(leaderPlayer.username)} has ${gap} more lobby${gap===1?"":"ies"} logged than ${dn(chasePlayer.username)}.`;
-              }
-              if(sortBy==="carry"){
-                const gap=boardLeader.carry-boardChaser.carry;
-                return gap===0
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are even on carry score.`
-                  :`${dn(leaderPlayer.username)} leads carry score by ${gap}.`;
-              }
-              if(sortBy==="consistency"){
-                const gap=boardLeader.consistency-boardChaser.consistency;
-                return gap===0
-                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level on consistency.`
-                  :`${dn(leaderPlayer.username)} is ${gap}% steadier than ${dn(chasePlayer.username)} right now.`;
-              }
-              const gap=boardLeader.wins-boardChaser.wins;
-              return gap===0
-                ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are tied on wins.`
-                :`${dn(leaderPlayer.username)} is ${gap} win${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
-            })();
-            const leadValue=(()=>{
-              if(archiveBoardMode){
-                return boardChaser&&chasePlayer
-                  ?seasonBoardClosed
-                    ?`${dn(leaderPlayer.username)} finished ${activeCampaign?.name||"the season"} ahead of ${dn(chasePlayer.username)}`
-                    :`${dn(leaderPlayer.username)} leads the latest archived board over ${dn(chasePlayer.username)}`
-                  :seasonBoardClosed
-                    ?`${dn(leaderPlayer.username)} finished ${activeCampaign?.name||"the season"} alone on top`
-                    :`${dn(leaderPlayer.username)} leads the latest archived board`;
-              }
-              if(arenaRangeKey==="today"){
-                return boardChaser&&chasePlayer
-                  ?`${dn(leaderPlayer.username)} owned the last session day over ${dn(chasePlayer.username)}`
-                  :`${dn(leaderPlayer.username)} owned the last session day`;
-              }
-              if(arenaRangeKey==="week"){
-                return boardChaser&&chasePlayer
-                  ?`${dn(leaderPlayer.username)} is setting this week over ${dn(chasePlayer.username)}`
-                  :`${dn(leaderPlayer.username)} is setting the week alone`;
-              }
-              if(arenaRangeKey==="season"){
-                return boardChaser&&chasePlayer
-                  ?`${dn(leaderPlayer.username)} has to hold off ${dn(chasePlayer.username)}`
-                  :`${dn(leaderPlayer.username)} is alone on the season front line`;
-              }
-              return boardChaser&&chasePlayer
-                ?`${dn(leaderPlayer.username)} has to hold off ${dn(chasePlayer.username)}`
-                :`${dn(leaderPlayer.username)} is alone on the front line`;
-            })();
-            const moveValue=climbPlayer
-              ?leaderboardShiftData.biggestRise?.label==="NEW"
-                ? arenaRangeKey==="week"
-                  ?`${dn(climbPlayer.username)} forced onto this week's board`
-                  :arenaRangeKey==="today"
-                    ?`${dn(climbPlayer.username)} forced onto the latest-day board`
-                    :`${dn(climbPlayer.username)} forced onto the board`
-                : arenaRangeKey==="week"
-                  ?`${dn(climbPlayer.username)} jumped ${leaderboardShiftData.biggestRise?.label} on this week's board`
-                  :arenaRangeKey==="today"
-                    ?`${dn(climbPlayer.username)} climbed ${leaderboardShiftData.biggestRise?.label} on the latest-day board`
-                    :`${dn(climbPlayer.username)} climbed ${leaderboardShiftData.biggestRise?.label}`
-              :arenaRangeKey==="today"
-                ?"The last day held its order"
-                :arenaRangeKey==="week"
-                  ?"This week has not broken open yet"
-                  :"No fresh jump on the latest session day";
-            const moveNote=climbPlayer
-              ?arenaRangeKey==="week"
-                ?`${dn(climbPlayer.username)} made the sharpest weekly move since ${new Date(leaderboardShiftData.latestScopeDate+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})}.`
-                :arenaRangeKey==="today"
-                  ?`${dn(climbPlayer.username)} made the sharpest move inside the latest session day.`
-                  :`${dn(climbPlayer.username)} made the sharpest push since ${new Date(leaderboardShiftData.latestScopeDate+"T12:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short"})}.`
-              :arenaRangeKey==="today"
-                ?"The last day closed without a surprise climb, so the pressure stayed on the same shoulders."
-                :arenaRangeKey==="week"
-                  ?"The week's order is still stable enough for one heavy room to redraw it."
-                  :"The order held through the latest file.";
-            const pulseCards=archiveBoardMode
-              ?[
-                {
-                  label:seasonBoardClosed?"FINAL FRONT":"ARCHIVE FRONT",
-                  color:leaderPlayer.color,
-                  value:leadValue,
-                  note:pressureText,
-                },
-                {
-                  label:seasonBoardClosed?"LOCKED MOVEMENT":"LAST MOVEMENT",
-                  color:climbPlayer?.color||"#00E5FF",
-                  value:moveValue,
-                  note:climbPlayer
-                    ?`${dn(climbPlayer.username)} made the sharpest move in the latest archived scope.`
-                    :"The archived order held without a surprise move.",
-                },
-                {
-                  label:"ARCHIVE NOTE",
-                  color:"#00E5FF",
-                  value:seasonBoardClosed?"Final standings are locked":"Waiting on May data",
-                  note:seasonBoardClosed
-                    ?`${activeCampaign?.name||"This season"} movement is now archive context until a new season file opens.`
-                    :"The next Arena movement starts when the first official May lobby is filed.",
-                },
-              ]
-              :[
-                {
-                  label:"FRONT SPOT",
-                  color:leaderPlayer.color,
-                  value:leadValue,
-                  note:pressureText,
-                },
-                {
-                  label:arenaRangeKey==="today"?"LAST DAY SWING":"BIGGEST MOVE",
-                  color:climbPlayer?.color||"#00E5FF",
-                  value:moveValue,
-                  note:moveNote,
-                },
-                {
-                  label:"ON DECK",
-                  color:arenaOnDeck.topItem?.color||liveArenaHeatPlayer?.color||slidePlayer?.color||"#FF6B35",
-                  value:arenaOnDeckLead,
-                  note:arenaOnDeckNote,
-                },
-              ];
-            return(
-              <div className="arena-board-read" style={{marginBottom:16}}>
-                <div className="arena-board-lead" style={{
-                  marginBottom:8,
-                  background:`linear-gradient(135deg,${leaderPlayer.color}12,rgba(0,0,0,.4))`,
-                  border:`1px solid ${leaderPlayer.color}33`,
-                  borderLeft:`3px solid ${leaderPlayer.color}`,
-                  borderRadius:"0 10px 10px 0",
-                  padding:"14px 16px",
-                }}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:6}}>
-                    <span className="bc9" style={{fontSize:".64rem",letterSpacing:".24em",color:`${leaderPlayer.color}bb`}}>
-                      {archiveBoardMode?seasonBoardClosed?"FINAL BOARD":"OFFICIAL BOARD":"PRESSURE BOARD"}
-                    </span>
-                    <span className="bc7" style={{fontSize:".6rem",letterSpacing:".14em",color:"var(--text3)"}}>
-                      {scopeLabel.toUpperCase()} · SORTED BY {SORT_LABELS[sortBy].toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="bc9" style={{fontSize:"clamp(1rem,3vw,1.2rem)",color:leaderPlayer.color,marginBottom:4}}>
-                    {leaderPlayer.host?"👑 ":""}{dn(leaderPlayer.username)} has the front spot.
-                  </div>
-                  <div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",lineHeight:1.6}}>
-                    {pressureText}
-                  </div>
-                </div>
-                <div className="arena-pulse-cards" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8}}>
-                  {pulseCards.map((card)=>(
-                    <div key={card.label} style={{
-                      background:`linear-gradient(135deg,${card.color}10,rgba(255,255,255,.03))`,
-                      border:`1px solid ${card.color}2f`,
-                      borderLeft:`3px solid ${card.color}`,
-                      borderRadius:"0 8px 8px 0",
-                      padding:"12px 14px",
-                    }}>
-                      <div className="bc7" style={{fontSize:".56rem",letterSpacing:".2em",color:`${card.color}bb`,marginBottom:7}}>
-                        {card.label}
-                      </div>
-                      <div className="bc9" style={{fontSize:".92rem",color:card.color,lineHeight:1.2,marginBottom:6}}>
-                        {card.value}
-                      </div>
-                      <div className="bc7" style={{fontSize:".7rem",color:"var(--text2)",lineHeight:1.55}}>
-                        {card.note}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Spotlight card */}
-          {spotlight&&(()=>{
-            const p=players.find(x=>x.id===spotlight);if(!p)return null;
-            const st=getArenaStats(p.id);
-            const rank=getRank(p.id);
-            const badges=getBadges(p.id);
-            const streak=getArenaStreak(p.id);
-            return(
-              <div style={{...card({border:`2px solid ${p.color}`,background:`linear-gradient(135deg,${p.color}16,var(--card))`}),
-                padding:22,marginBottom:18,animation:"popIn .3s ease both"}}>
-                <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,flexWrap:"wrap"}}>
-                  <Avatar p={p} size={60} glow/>
-                  <div>
-                    <div style={{fontFamily:"Fredoka One",fontSize:"1.5rem",color:p.color}}>{p.host?"👑 ":""}{dn(p.username)}</div>
-                    <div style={{fontSize:".82rem",color:rank.color,fontWeight:700}}>{rank.title}</div>
-                    {streak>=2&&<div style={{fontSize:".76rem",color:"#FF6B35",fontWeight:800,marginTop:2}} className="fire">🔥 {streak}-game streak!</div>}
-                  </div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:9,marginBottom:12}}>
-                  {[
-                    {l:"Wins",     v:st.wins,           c:"#FFD700",i:"🏆"},
-                    {l:"Kills",    v:st.kills,          c:"#FF4D8F",i:"💀"},
-                    {l:"K/G",      v:st.kd,             c:"#00E5FF",i:"⚡"},
-                    {l:"Win Rate", v:st.winRate+"%",    c:"#00FF94",i:"🎯"},
-                    {l:"Lobbies",  v:st.appearances,    c:"#FFAB40",i:"📅"},
-                    {l:"Carry",    v:getArenaCarry(p.id),c:"#FF6B35",i:"🎖️"},
-                    {l:"Consistency",v:getArenaConsistency(p.id)+"%",c:"#00FF94",i:"🧱"},
-                  ].map((s,i)=>(
-                    <div key={i} style={{background:"rgba(0,0,0,.35)",borderRadius:9,padding:"8px 12px"}}>
-                      <div style={{fontSize:".62rem",color:"var(--text3)",fontWeight:700,marginBottom:1}}>{s.i} {s.l}</div>
-                      <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:"1.2rem"}}>{s.v}</div>
-                    </div>
-                  ))}
-                </div>
-                {badges.length>0&&(
-                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                    {badges.map((b,i)=>(
-                      <span key={i} style={{background:"rgba(255,255,255,.09)",borderRadius:50,padding:"3px 9px",fontSize:".7rem",fontWeight:700,color:"#fff",border:"1px solid rgba(255,255,255,.18)"}}>{b.icon} {b.label}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
           {/* Sort pills */}
-          <div className="arena-sort-pills" style={{display:"flex",gap:7,marginBottom:16,flexWrap:"wrap"}}>
+          <div className="arena-sort-pills" style={{display:"flex",gap:7,marginBottom:12,flexWrap:"wrap"}}>
             {[
               {id:"wins",l:"🏆 Wins"},
               {id:"kills",l:"💀 Kills"},
@@ -496,6 +142,41 @@ export default function ArenaView({ ctx }) {
               </button>
             ))}
           </div>
+
+          {/* Search */}
+          <div className="arena-search" style={{position:"relative",marginBottom:16}}>
+            <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
+            <input className="search-inp" placeholder="Search callsign or gamertag..."
+              value={lbSearch} onChange={e=>{
+                const nextValue=e.target.value;
+                const query=nextValue.trim().toLowerCase();
+                setLbSearch(nextValue);
+                if(!query){setSpotlight(null);return;}
+                const m=players.find(p=>p.username.toLowerCase().includes(query));
+                setSpotlight(m?m.id:null);
+              }}/>
+            {lbSearch&&<button onClick={()=>{setLbSearch("");setSpotlight(null);}} style={{
+              position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
+              background:"rgba(255,255,255,.12)",border:"none",borderRadius:50,
+              width:22,height:22,cursor:"pointer",color:"#fff",fontSize:".72rem"}}>✕</button>}
+          </div>
+
+          {archiveBoardMode&&(
+            <div style={{
+              marginBottom:14,
+              padding:"10px 12px",
+              borderRadius:10,
+              border:"1px solid rgba(0,229,255,.18)",
+              borderLeft:"3px solid rgba(0,229,255,.56)",
+              background:"linear-gradient(135deg,rgba(0,229,255,.08),rgba(0,0,0,.24))",
+            }}>
+              <div className="bc7" style={{fontSize:".74rem",lineHeight:1.55,color:"var(--text2)"}}>
+                {seasonBoardClosed
+                  ?`${activeCampaign?.name||"This season"} is locked. This board is final record, not active movement.`
+                  :"No May lobbies have been filed yet. Arena is showing the latest official archive."}
+              </div>
+            </div>
+          )}
 
           {/* Desktop table */}
           <div className="lb-table hud-bg" style={{...card(),overflow:"hidden",border:"1.5px solid rgba(255,255,255,.1)"}}>
@@ -731,6 +412,95 @@ export default function ArenaView({ ctx }) {
               );
             })}
           </div>
+
+          {/* Spotlight card, only after a player search selects a file */}
+          {spotlight&&(()=>{
+            const p=players.find(x=>x.id===spotlight);if(!p)return null;
+            const st=getArenaStats(p.id);
+            const rank=getRank(p.id);
+            const badges=getBadges(p.id);
+            const streak=getArenaStreak(p.id);
+            return(
+              <div style={{...card({border:`2px solid ${p.color}`,background:`linear-gradient(135deg,${p.color}16,var(--card))`}),
+                padding:18,marginTop:16,marginBottom:18,animation:"popIn .18s ease both"}}>
+                <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,flexWrap:"wrap"}}>
+                  <Avatar p={p} size={52} glow/>
+                  <div>
+                    <div style={{fontFamily:"Fredoka One",fontSize:"1.28rem",color:p.color}}>{p.host?"👑 ":""}{dn(p.username)}</div>
+                    <div style={{fontSize:".8rem",color:rank.color,fontWeight:700}}>{rank.title}</div>
+                    {streak>=2&&<div style={{fontSize:".72rem",color:"#FF6B35",fontWeight:800,marginTop:2}} className="fire">🔥 {streak}-game streak</div>}
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(112px,1fr))",gap:8,marginBottom:12}}>
+                  {[
+                    {l:"Wins",     v:st.wins,           c:"#FFD700",i:"🏆"},
+                    {l:"Kills",    v:st.kills,          c:"#FF4D8F",i:"💀"},
+                    {l:"K/G",      v:st.kd,             c:"#00E5FF",i:"⚡"},
+                    {l:"Win Rate", v:st.winRate+"%",    c:"#00FF94",i:"🎯"},
+                    {l:"Lobbies",  v:st.appearances,    c:"#FFAB40",i:"📅"},
+                    {l:"Carry",    v:getArenaCarry(p.id),c:"#FF6B35",i:"🎖️"},
+                    {l:"Consistency",v:getArenaConsistency(p.id)+"%",c:"#00FF94",i:"🧱"},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"rgba(0,0,0,.35)",borderRadius:9,padding:"8px 10px"}}>
+                      <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:700,marginBottom:1}}>{s.i} {s.l}</div>
+                      <div style={{fontFamily:"Fredoka One",color:s.c,fontSize:"1.08rem"}}>{s.v}</div>
+                    </div>
+                  ))}
+                </div>
+                {badges.length>0&&(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                    {badges.map((b,i)=>(
+                      <span key={i} style={{background:"rgba(255,255,255,.09)",borderRadius:50,padding:"3px 9px",fontSize:".68rem",fontWeight:700,color:"#fff",border:"1px solid rgba(255,255,255,.18)"}}>{b.icon} {b.label}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {sortedLB.length>0&&(()=>{
+            const boardLeader=sortedLB[0];
+            const boardChaser=sortedLB[1];
+            const leaderPlayer=players.find((player)=>player.id===boardLeader.id);
+            const chasePlayer=boardChaser?players.find((player)=>player.id===boardChaser.id):null;
+            if(!leaderPlayer)return null;
+            const pressureText=(()=>{
+              if(!boardChaser||!chasePlayer)return `${dn(leaderPlayer.username)} is alone at the top of this official board.`;
+              if(sortBy==="kills"){
+                const gap=boardLeader.kills-boardChaser.kills;
+                return gap===0
+                  ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are level on kills.`
+                  :`${dn(leaderPlayer.username)} is ${gap} kill${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
+              }
+              const gap=boardLeader.wins-boardChaser.wins;
+              return gap===0
+                ?`${dn(leaderPlayer.username)} and ${dn(chasePlayer.username)} are tied on wins. ${dn(leaderPlayer.username)} sits first by the current tiebreak.`
+                :`${dn(leaderPlayer.username)} is ${gap} win${gap===1?"":"s"} clear of ${dn(chasePlayer.username)}.`;
+            })();
+            return(
+              <div className="arena-board-read arena-board-read-compact" style={{
+                marginTop:16,
+                marginBottom:0,
+                background:"rgba(255,255,255,.025)",
+                border:"1px solid rgba(255,255,255,.08)",
+                borderLeft:`3px solid ${leaderPlayer.color}`,
+                borderRadius:"0 10px 10px 0",
+                padding:"10px 12px",
+              }}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <span className="bc7" style={{fontSize:".58rem",letterSpacing:".2em",color:`${leaderPlayer.color}bb`}}>
+                    OFFICIAL NOTE
+                  </span>
+                  <span className="bc7" style={{fontSize:".56rem",letterSpacing:".14em",color:"var(--text3)"}}>
+                    {arenaRangeMeta.scopeLabel.toUpperCase()} · SORTED BY {SORT_LABELS[sortBy].toUpperCase()}
+                  </span>
+                </div>
+                <div className="bc7" style={{fontSize:".72rem",color:"var(--text2)",lineHeight:1.55,marginTop:5}}>
+                  {pressureText}
+                </div>
+              </div>
+            );
+          })()}
 
           {arenaScopeSessions.length===0&&(
             <div style={{textAlign:"center",padding:"48px 0"}}>
