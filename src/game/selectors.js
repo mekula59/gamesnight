@@ -1766,7 +1766,7 @@ export const getCampaignFronts = (seasonId, sessions, players) => {
   const damageChaser = byKills[1] || null;
   const presenceLeader = byPresence[0] || null;
   const presenceChaser = byPresence[1] || null;
-  const breakthrough = noWinFiles[0] || null;
+  const breakthroughFiles = noWinFiles.slice(0, 5);
   const winLine = leader
     ? byWins.filter((player) => player.wins === leader.wins)
     : [];
@@ -1782,10 +1782,10 @@ export const getCampaignFronts = (seasonId, sessions, players) => {
       label: "CROWN FRONT",
       tone: "crown",
       headline: winLine.length > 1
-        ? `${joinNames(winLine.map((player) => displayName(player.id)))} share the win line.`
-        : `${displayName(leader.id)} holds the win line.`,
+        ? `The crown line is tied at ${leader.wins}W.`
+        : `${displayName(leader.id)} holds the crown line at ${leader.wins}W.`,
       detail: winLine.length > 1
-        ? `${displayName(leader.id)} sits first by the current tiebreak, not a clean lead.`
+        ? `${joinNames(winLine.map((player) => displayName(player.id)))} share the lead by wins.`
         : chaser
           ? `${displayName(chaser.id)} is ${crownGap} win${crownGap === 1 ? "" : "s"} back.`
           : "No second file has reached the chase yet.",
@@ -1800,7 +1800,7 @@ export const getCampaignFronts = (seasonId, sessions, players) => {
       id: "damage",
       label: "DAMAGE FRONT",
       tone: "damage",
-      headline: `${displayName(damageLeader.id)} owns the damage lane.`,
+      headline: `${displayName(damageLeader.id)} leads damage at ${damageLeader.kills}K.`,
       detail: damageChaser
         ? `${displayName(damageChaser.id)} is ${killGap} kill${killGap === 1 ? "" : "s"} back.`
         : "No second damage file has separated yet.",
@@ -1815,7 +1815,7 @@ export const getCampaignFronts = (seasonId, sessions, players) => {
       id: "presence",
       label: "PRESENCE FRONT",
       tone: "presence",
-      headline: `${displayName(presenceLeader.id)} has the fullest file.`,
+      headline: `${displayName(presenceLeader.id)} has filed ${presenceLeader.appearances} Season 3 lobbies.`,
       detail: presenceChaser
         ? attendanceGap === 0
           ? `${displayName(presenceChaser.id)} is level on attendance.`
@@ -1827,15 +1827,19 @@ export const getCampaignFronts = (seasonId, sessions, players) => {
     });
   }
 
-  if (breakthrough && breakthrough.appearances >= 2) {
+  if (breakthroughFiles.length) {
+    const breakthroughNames = joinNames(
+      breakthroughFiles.map((player) => displayName(player.id)),
+    );
+    const topBreakthrough = breakthroughFiles[0];
     fronts.push({
       id: "breakthrough",
       label: "BREAKTHROUGH FRONT",
       tone: "breakthrough",
-      headline: `${displayName(breakthrough.id)} is the loudest no-win file.`,
-      detail: `${breakthrough.appearances} lobbies and ${breakthrough.kills} kills without a Season 3 win.`,
-      playerIds: [breakthrough.id],
-      statLine: `${breakthrough.appearances}G · 0W · ${breakthrough.kills}K`,
+      headline: `${breakthroughNames} ${breakthroughFiles.length === 1 ? "is" : "are"} still looking for a first Season 3 close.`,
+      detail: `${displayName(topBreakthrough.id)} has the longest no-win file at ${topBreakthrough.appearances} lobbies.`,
+      playerIds: breakthroughFiles.map((player) => player.id),
+      statLine: `${breakthroughFiles.length} file${breakthroughFiles.length === 1 ? "" : "s"} · 0W`,
       source: "season_no_win_files",
     });
   }
@@ -1844,17 +1848,17 @@ export const getCampaignFronts = (seasonId, sessions, players) => {
     const winnerShare = seasonSessions.length
       ? Math.round((uniqueWinners.size / seasonSessions.length) * 100)
       : 0;
-    const volatilityState = crownGap <= 1 || uniqueWinners.size >= Math.max(4, Math.ceil(seasonSessions.length * 0.25))
-      ? "The board is active, not settled."
-      : crownGap >= 4 && killGap >= 8
-        ? "The main lines are starting to separate."
-        : "The board is open, but the first gaps are showing.";
+    const volatilityDetail = crownGap <= 1
+      ? "The crown line is still tight enough to turn quickly."
+      : crownGap >= 5
+        ? "The crown gap is widening, but the pack is still moving."
+        : "The first gap is visible, but the board is not sealed.";
     fronts.push({
       id: "volatility",
       label: "VOLATILITY FRONT",
       tone: "volatility",
-      headline: volatilityState,
-      detail: `${uniqueWinners.size} winners across ${seasonSessions.length} lobbies keeps the file moving.`,
+      headline: `${uniqueWinners.size} winners across ${seasonSessions.length} lobbies keeps the board open.`,
+      detail: volatilityDetail,
       playerIds: [leader.id, damageLeader.id].filter(Boolean),
       statLine: `${uniqueWinners.size} winners · ${winnerShare}% spread`,
       source: "season_spread",
