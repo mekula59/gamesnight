@@ -1,5 +1,4 @@
 import { STORAGE_VERSION } from "./config";
-import { CEREMONY_START_DATE } from "./seasons";
 import { INITIAL_PLAYERS, INITIAL_SESSIONS } from "./seedData";
 import { todayStr } from "./time";
 
@@ -37,6 +36,30 @@ const getDefaultState = () => ({
   showCeremony: false,
 });
 
+const OFFICIAL_REPLACEMENT_DATES = new Set(["2026-05-01"]);
+
+const getSessionNumber = (session) =>
+  Number(String(session?.id || "").replace(/\D/g, "")) || 0;
+
+const replaceOfficialSessions = (sessions) => {
+  if (!Array.isArray(sessions) || !sessions.length) {
+    return INITIAL_SESSIONS;
+  }
+
+  const officialSessions = INITIAL_SESSIONS.filter((session) =>
+    OFFICIAL_REPLACEMENT_DATES.has(session.date),
+  );
+  const officialDates = new Set(officialSessions.map((session) => session.date));
+  const keptSessions = sessions.filter((session) => !officialDates.has(session.date));
+
+  return [...keptSessions, ...officialSessions].sort((left, right) => {
+    if (left.date !== right.date) {
+      return left.date.localeCompare(right.date);
+    }
+    return getSessionNumber(left) - getSessionNumber(right);
+  });
+};
+
 const getDefaultRivalOpsState = () => ({
   ops: [],
   selectedOpId: null,
@@ -59,20 +82,18 @@ export const loadGameData = async (store) => {
     const sessionsResult = await store.get("gn-sessions");
     const storedPlayers = playersResult ? JSON.parse(playersResult.value) : INITIAL_PLAYERS;
     const storedSessions = sessionsResult ? JSON.parse(sessionsResult.value) : null;
+    const sessions = replaceOfficialSessions(
+      storedSessions && storedSessions.length > 0 ? storedSessions : INITIAL_SESSIONS,
+    );
+    await store.set("gn-sessions", JSON.stringify(sessions));
 
     const pollKey = `gn-poll-${todayStr()}`;
     const pollResult = await store.get(pollKey);
-    let showCeremony = false;
-    if (todayStr() >= CEREMONY_START_DATE) {
-      const ceremonySeen = await store.get("gn-s2-ceremony-seen");
-      showCeremony = !ceremonySeen?.value;
-    }
-
     return {
       players: storedPlayers,
-      sessions: storedSessions && storedSessions.length > 0 ? storedSessions : INITIAL_SESSIONS,
+      sessions,
       pollVote: pollResult?.value ?? null,
-      showCeremony,
+      showCeremony: false,
     };
   } catch {
     return getDefaultState();
@@ -98,7 +119,7 @@ export const readRivalOpsState = async (store) => {
     }
     const parsed = JSON.parse(result.value);
     return {
-      ops: parsed?.ops?.length ? [parsed.ops[0]] : [],
+      ops: Array.isArray(parsed?.ops) ? parsed.ops.filter(Boolean) : [],
       selectedOpId: parsed?.selectedOpId ?? null,
       lastResolvedOpId: parsed?.lastResolvedOpId ?? null,
     };
@@ -109,7 +130,7 @@ export const readRivalOpsState = async (store) => {
 
 export const writeRivalOpsState = async (store, nextState) => {
   const safeState = {
-    ops: nextState?.ops?.length ? [nextState.ops[0]] : [],
+    ops: Array.isArray(nextState?.ops) ? nextState.ops.filter(Boolean) : [],
     selectedOpId: nextState?.selectedOpId ?? null,
     lastResolvedOpId: nextState?.lastResolvedOpId ?? null,
   };
@@ -124,8 +145,12 @@ export const writeRivalOpsState = async (store, nextState) => {
 };
 
 export const upsertRivalOpRecord = async (store, op, currentState) => {
+  const currentOps = Array.isArray(currentState?.ops) ? currentState.ops.filter(Boolean) : [];
+  const nextOps = op
+    ? [...currentOps.filter((entry) => entry.pairId !== op.pairId), op]
+    : currentOps;
   const nextState = {
-    ops: op ? [op] : [],
+    ops: nextOps,
     selectedOpId: op?.id ?? null,
     lastResolvedOpId:
       op?.state === "resolved" ? op.id : currentState?.lastResolvedOpId ?? null,
@@ -143,16 +168,18 @@ export const pruneExpiredResolvedEcho = (persisted, nowUtc) => {
   if (!persisted?.ops?.length) {
     return getDefaultRivalOpsState();
   }
-  const op = persisted.ops[0];
-  if (op.state !== "resolved" || !op.resolvedAtUtc) {
-    return persisted;
-  }
-  if (String(nowUtc).split("T")[0] <= op.resolvedAtUtc) {
-    return persisted;
-  }
+  const nextOps = persisted.ops.map((op) => {
+    if (op.state !== "resolved" || !op.resolvedAtUtc) {
+      return op;
+    }
+    if (String(nowUtc).split("T")[0] <= op.resolvedAtUtc) {
+      return op;
+    }
+    return op;
+  });
   return {
     ...persisted,
-    lastResolvedOpId: op.id,
+    ops: nextOps,
   };
 };
 
@@ -161,14 +188,16 @@ export const pruneInvalidRivalOps = (persisted, state, nowUtc) => {
   if (!safeState.ops.length) {
     return safeState;
   }
-  const op = safeState.ops[0];
   const players = state?.players || [];
   const sessions = state?.sessions || [];
-  const hasPlayers =
-    players.some((player) => player.id === op.playerAId) &&
-    players.some((player) => player.id === op.playerBId);
-  if (!hasPlayers || !sessions.length) {
+  const nextOps = safeState.ops.filter((op) => {
+    const hasPlayers =
+      players.some((player) => player.id === op.playerAId) &&
+      players.some((player) => player.id === op.playerBId);
+    return hasPlayers;
+  });
+  if (!nextOps.length || !sessions.length) {
     return getDefaultRivalOpsState();
   }
-  return pruneExpiredResolvedEcho(safeState, nowUtc);
+  return pruneExpiredResolvedEcho({ ...safeState, ops: nextOps }, nowUtc);
 };
