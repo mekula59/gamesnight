@@ -1218,6 +1218,17 @@ const CSS = `
     .badge-grid{grid-template-columns:repeat(2,1fr)!important;}
     .mission-board{grid-template-columns:1fr!important;}
     .vault-grid{grid-template-columns:1fr!important;}
+    .vault-view-shell{width:calc(100vw - 48px)!important;max-width:calc(100vw - 48px)!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important;}
+    .vault-view-shell>div{max-width:100%!important;}
+    .vault-view-shell .vault-card{width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
+    .vault-header-row{display:block!important;}
+    .vault-header-row{align-items:flex-start!important;}
+    .vault-header-row button{margin-top:8px!important;}
+    .vault-header-row button{max-width:100%!important;}
+    .vault-support-line{max-width:34ch!important;letter-spacing:.07em!important;line-height:1.5!important;white-space:normal!important;overflow-wrap:break-word!important;}
+    .vault-archive-totals{grid-template-columns:1fr!important;}
+    .vault-season-files-grid,.vault-historic-grid{grid-template-columns:1fr!important;}
+    .vault-season-stat-grid{grid-template-columns:1fr!important;}
     .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow-x:hidden!important;}
     .card-h,.lb-card,.rival-card,.comm-card{min-width:0!important;width:100%!important;}
     .card-h.legacy-player-card{width:calc(100vw - 68px)!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;}
@@ -3997,6 +4008,8 @@ export default function GameNight(){
           getStats,
           getLobbyDateMarker,
           activeCampaign,
+          SEASONS,
+          go,
         }}/>
       )}
 
