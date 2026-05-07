@@ -152,7 +152,7 @@ export default function WarRoomView({ ctx }) {
               fontSize:".68rem",
               lineHeight:1.45,
             }}>
-              Latest filed room set: {formatLobbyDate(weeklyLoopState.latestFiledDate,{day:"numeric",month:"short"})}. {weeklyLoopState.label}.
+              Latest filed room set: {formatLobbyDate(weeklyLoopState.latestFiledDate,{day:"numeric",month:"short"})}.
             </div>
           )}
           {openerFallout&&(

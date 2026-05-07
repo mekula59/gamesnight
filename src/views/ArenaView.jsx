@@ -142,6 +142,12 @@ export default function ArenaView({ ctx }) {
             </div>
           </div>
 
+          {arenaRangeKey==="week"&&weeklyLoopState&&(
+            <div className="bc7 arena-week-chip-mobile" style={{display:"none"}}>
+              {weeklyRangeState} · {weeklyLoopState.weekSessions} LOBBIES FILED
+            </div>
+          )}
+
           {/* Sort pills */}
           <div className="arena-sort-pills" style={{display:"flex",gap:7,marginBottom:12,flexWrap:"wrap"}}>
             {[

@@ -657,6 +657,7 @@ const CSS = `
     line-height:1.55;
     color:var(--text2);
   }
+  .arena-week-chip-mobile{display:none!important;}
   @media(max-width:720px){
     .arena-page .arena-hero{
       margin-bottom:14px!important;
@@ -696,6 +697,20 @@ const CSS = `
     }
     .arena-page .arena-range-rail>div{
       display:none!important;
+    }
+    .arena-page .arena-week-chip-mobile{
+      display:inline-flex!important;
+      width:fit-content!important;
+      max-width:100%!important;
+      margin:-2px 0 10px!important;
+      padding:5px 9px!important;
+      border-radius:999px!important;
+      border:1px solid rgba(0,229,255,.2)!important;
+      background:rgba(0,229,255,.07)!important;
+      color:#00E5FF!important;
+      font-size:.56rem!important;
+      letter-spacing:.12em!important;
+      line-height:1.25!important;
     }
     .arena-page .arena-search{
       margin-bottom:10px!important;
@@ -1431,8 +1446,8 @@ const CSS = `
     border:2px solid rgba(255,215,0,.5);border-radius:20px;padding:24px;
     animation:liveGlo 2s ease-in-out infinite;}
   @media(min-width:641px){
-    .lb-cards{display:none!important;} .mob-menu{display:none!important;}
-    .ham-btn{display:none!important;} .show-mob{display:none!important;}
+  .lb-cards{display:none!important;} .mob-menu{display:none!important;}
+  .ham-btn{display:none!important;} .show-mob{display:none!important;}
   }
 
   /* ── Nav & Mobile Menu ── */
