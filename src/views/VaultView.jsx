@@ -175,15 +175,16 @@ export default function VaultView({ ctx }) {
     player: firstWinP,
   });
   seasonFiles.forEach((file) => {
-    addHistoricNight(`${file.season.id}-opener`, {
-      date: file.season.start,
-      label: `${file.season.name} opener`,
-      value: file.sessions.some((session) => session.date === file.season.start)
-        ? `${file.sessions.filter((session) => session.date === file.season.start).length} lobbies`
-        : "No opener file",
-      note: `${file.season.label} campaign origin.`,
-      color: file.season.color,
-    });
+    const openerSessions = file.sessions.filter((session) => session.date === file.season.start);
+    if (openerSessions.length > 0) {
+      addHistoricNight(`${file.season.id}-opener`, {
+        date: file.season.start,
+        label: `${file.season.name} opener`,
+        value: `${openerSessions.length} lobbies`,
+        note: `${file.season.label} campaign origin.`,
+        color: file.season.color,
+      });
+    }
     if (file.sessions.some((session) => session.date === file.season.end)) {
       addHistoricNight(`${file.season.id}-final`, {
         date: file.season.end,
