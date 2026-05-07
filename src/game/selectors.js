@@ -3007,6 +3007,213 @@ export const getBenchmark = (playerId, players, sessions) => {
   };
 };
 
+export const getPlayerSeasonRead = (
+  playerId,
+  seasonId,
+  players,
+  sessions,
+  options = {},
+) => {
+  const playerIndex = buildPlayerIndex(players);
+  const player = getPlayerById(playerIndex, playerId);
+  const season = SEASONS.find((entry) => entry.id === seasonId) || null;
+  const seasonName = season?.name || "this season";
+  const seasonShort = seasonId ? seasonId.toUpperCase() : "SEASON";
+  if (!player) {
+    return null;
+  }
+
+  const plural = (count, singular, pluralWord = `${singular}s`) =>
+    `${count} ${count === 1 ? singular : pluralWord}`;
+  const seasonSessions = seasonId === "all" ? sessions : getSeasonSessions(sessions, seasonId);
+  const seasonRows = allStats(players, seasonSessions)
+    .filter((row) => row.appearances > 0)
+    .sort((left, right) => right.wins - left.wins || right.kills - left.kills || right.appearances - left.appearances);
+  const damageRows = [...seasonRows].sort(
+    (left, right) => right.kills - left.kills || right.wins - left.wins || right.appearances - left.appearances,
+  );
+  const presenceRows = [...seasonRows].sort(
+    (left, right) => right.appearances - left.appearances || right.wins - left.wins || right.kills - left.kills,
+  );
+  const stats = getStats(playerId, seasonSessions);
+  const rankIndex = seasonRows.findIndex((row) => row.id === playerId);
+  const killRankIndex = damageRows.findIndex((row) => row.id === playerId);
+  const presenceRankIndex = presenceRows.findIndex((row) => row.id === playerId);
+  const rank = rankIndex >= 0 ? rankIndex + 1 : null;
+  const killRank = killRankIndex >= 0 ? killRankIndex + 1 : null;
+  const presenceRank = presenceRankIndex >= 0 ? presenceRankIndex + 1 : null;
+  const latestDate = getLatestSessionDate(seasonSessions);
+  const latestSessions = latestDate ? seasonSessions.filter((session) => session.date === latestDate) : [];
+  const latestStats = getStats(playerId, latestSessions);
+  const openerSessions = season?.start
+    ? seasonSessions.filter((session) => session.date === season.start)
+    : [];
+  const openerStats = getStats(playerId, openerSessions);
+  const hasPostOpenerFile = Boolean(
+    season?.start && seasonSessions.some((session) => session.date > season.start && session.attendees?.includes(playerId)),
+  );
+
+  const topWins = seasonRows[0]?.wins || 0;
+  const topKills = damageRows[0]?.kills || 0;
+  const tiedWinLeaders = seasonRows.filter((row) => row.wins === topWins && topWins > 0);
+  const winsLeader = seasonRows[0] || null;
+  const damageLeader = damageRows[0] || null;
+  const nextRankTarget = rankIndex > 0 ? seasonRows[rankIndex - 1] : null;
+  const nextDamageTarget = killRankIndex > 0 ? damageRows[killRankIndex - 1] : null;
+
+  const seasonRivals = getRivals(seasonSessions).filter((rivalry) => rivalry.p1 === playerId || rivalry.p2 === playerId);
+  const allRivals = getRivals(sessions).filter((rivalry) => rivalry.p1 === playerId || rivalry.p2 === playerId);
+  const topRival = seasonRivals[0] || allRivals[0] || null;
+  const rivalId = topRival ? (topRival.p1 === playerId ? topRival.p2 : topRival.p1) : null;
+  const rival = rivalId ? getPlayerById(playerIndex, rivalId) : null;
+  const playerDuelWins = topRival ? (topRival.p1 === playerId ? topRival.p1wins : topRival.p2wins) : 0;
+  const rivalDuelWins = topRival ? (topRival.p1 === playerId ? topRival.p2wins : topRival.p1wins) : 0;
+  const latestTopTwoMeeting = topRival
+    ? [...seasonSessions]
+        .filter((session) => {
+          const placements = session.placements || session.attendees || [];
+          const [first, second] = placements;
+          return first && second && [first, second].sort().join(":") === [topRival.p1, topRival.p2].sort().join(":");
+        })
+        .sort(compareSessionsDesc)[0] || null
+    : null;
+
+  const rankLine = (() => {
+    if (!rank) return `${seasonName} rank is waiting on a filed lobby.`;
+    if (rank === 1 && tiedWinLeaders.length > 1) {
+      return `${seasonName} crown line is tied at ${topWins}W.`;
+    }
+    if (rank === 1) return `${seasonName} rank 1 by wins, then kills.`;
+    return `${seasonName} rank ${rank} by wins, then kills.`;
+  })();
+
+  const nextMark = (() => {
+    if (stats.appearances === 0) return `First ${seasonShort} lobby still open.`;
+    if (stats.wins === 0) return `First ${seasonShort} win still open.`;
+    if (nextRankTarget) {
+      const target = getPlayerById(playerIndex, nextRankTarget.id);
+      if (nextRankTarget.wins > stats.wins) {
+        const gap = nextRankTarget.wins - stats.wins;
+        return `${plural(gap, "win")} to tie ${target?.username || "the next file"}.`;
+      }
+      if (nextRankTarget.kills >= stats.kills) {
+        const gap = nextRankTarget.kills - stats.kills + 1;
+        return `${plural(gap, "kill")} to pass the next damage mark.`;
+      }
+    }
+    if (nextDamageTarget && nextDamageTarget.kills >= stats.kills) {
+      const gap = nextDamageTarget.kills - stats.kills + 1;
+      return `${plural(gap, "kill")} to pass the next damage mark.`;
+    }
+    return "Next filed room protects the lead.";
+  })();
+
+  const rivalryLine = (() => {
+    if (!topRival || !rival) return "No Season 3 top-two duel has enough shape yet.";
+    const latestLine = latestTopTwoMeeting ? ` Last shared top-two was Lobby ${parseSessionIdNumber(latestTopTwoMeeting.id)}.` : "";
+    if (playerDuelWins === rivalDuelWins) {
+      return `${rival.username} is level in the duel at ${playerDuelWins}-${rivalDuelWins}.${latestLine}`;
+    }
+    if (playerDuelWins > rivalDuelWins) {
+      return `${rival.username} is the main duel, with this file ahead ${playerDuelWins}-${rivalDuelWins}.${latestLine}`;
+    }
+    return `${rival.username} leads this duel ${rivalDuelWins}-${playerDuelWins}.${latestLine}`;
+  })();
+
+  const headlineSupport = (() => {
+    if (stats.appearances === 0) {
+      return {
+        stateLabel: "Unfiled this season",
+        headline: `No ${seasonShort} file yet.`,
+        supportLine: "The all-time record stays archived until this name enters the room.",
+      };
+    }
+    if (rank === 1 && tiedWinLeaders.length > 1) {
+      return {
+        stateLabel: "Front line",
+        headline: `The crown line is tied at ${stats.wins}W.`,
+        supportLine: `${stats.kills}K and ${stats.appearances} lobbies keep this file on the first board read.`,
+      };
+    }
+    if (rank === 1) {
+      const second = seasonRows[1] ? getPlayerById(playerIndex, seasonRows[1].id) : null;
+      const gap = seasonRows[1] ? stats.wins - seasonRows[1].wins : 0;
+      return {
+        stateLabel: "Leader",
+        headline: `Holding the ${seasonName} crown line at ${stats.wins}W.`,
+        supportLine: second ? `${second.username} is ${plural(gap, "win")} back.` : `${stats.kills}K backs up the lead.`,
+      };
+    }
+    if (killRank === 1) {
+      return {
+        stateLabel: "Damage pressure",
+        headline: `Damage is carrying the file at ${stats.kills}K.`,
+        supportLine: `${stats.wins} wins keep this file ${rank ? `rank ${rank}` : "visible"} on the crown line.`,
+      };
+    }
+    if (stats.wins === 0) {
+      return {
+        stateLabel: "Awaiting first S3 win",
+        headline: `Still waiting for a ${seasonShort} close.`,
+        supportLine: `${plural(stats.appearances, "lobby", "lobbies")} filed, no crown yet.`,
+      };
+    }
+    if (latestStats.wins >= 2) {
+      return {
+        stateLabel: "Rising",
+        headline: `${latestStats.wins} wins on the latest filed night moved this file.`,
+        supportLine: `${stats.wins} ${seasonShort} wins are now on file.`,
+      };
+    }
+    if (rank && rank <= 5) {
+      return {
+        stateLabel: "Chaser",
+        headline: `In the chase pack at ${stats.wins}W.`,
+        supportLine: `${stats.kills}K keeps this file close enough to move.`,
+      };
+    }
+    if (openerStats.appearances > 0 && !hasPostOpenerFile) {
+      return {
+        stateLabel: "Quiet opener",
+        headline: `Quiet opener, but the file is not blank.`,
+        supportLine: `${openerStats.appearances} opener lobby${openerStats.appearances === 1 ? "" : "ies"} logged the first ${seasonShort} read.`,
+      };
+    }
+    return {
+      stateLabel: "Holding",
+      headline: `${stats.wins} ${seasonShort} win${stats.wins === 1 ? "" : "s"} on file.`,
+      supportLine: `${stats.kills}K across ${plural(stats.appearances, "lobby", "lobbies")} keeps the read current.`,
+    };
+  })();
+
+  return {
+    ...headlineSupport,
+    seasonStats: {
+      seasonId,
+      wins: stats.wins,
+      kills: stats.kills,
+      appearances: stats.appearances,
+      winRate: stats.winRate,
+      kg: stats.kd,
+      rank,
+      killRank,
+      presenceRank,
+      latestDate,
+      latestWins: latestStats.wins,
+      latestKills: latestStats.kills,
+      openerWins: openerStats.wins,
+      openerKills: openerStats.kills,
+      topWins,
+      topKills,
+      winsLeaderId: winsLeader?.id || null,
+      damageLeaderId: damageLeader?.id || null,
+    },
+    rankLine,
+    nextMark,
+    rivalryLine,
+  };
+};
+
 export const getPlayerFileState = (
   playerId,
   players,

@@ -27,6 +27,7 @@ export default function CombatFileView({ ctx }) {
     dn,
     getPlayerLevel,
     getPlayerFileState,
+    getPlayerSeasonRead,
     getSeasonOpenerFallout,
     compareSessionsDesc,
     Avatar,
@@ -58,6 +59,7 @@ export default function CombatFileView({ ctx }) {
   );
   const showOpenerReadHigh = Boolean(openerRead && !playerHasPostOpenerCampaignFile);
   const campaignSt = getStats(p.id, campaignSess);
+  const seasonRead = getPlayerSeasonRead?.(p.id, activeCampaignId);
   const form = getFormGuide(p.id, 5);
   const drought = getDrought(p.id);
   const carry = getCarryScore(p.id);
@@ -165,7 +167,20 @@ export default function CombatFileView({ ctx }) {
     { label: "WIN RATE", value: `${st.winRate}%`, color: "#00FF94" },
     { label: "LOBBIES", value: st.appearances, color: "#00E5FF" },
   ];
-  const showPressureLine = livingPressure.concrete && livingPressure.targetId !== livingConflict.rivalId;
+  const seasonReadColor = (() => {
+    if (seasonRead?.stateLabel === "Leader" || seasonRead?.stateLabel === "Front line") return "#FFD700";
+    if (seasonRead?.stateLabel === "Damage pressure") return "#FF4D8F";
+    if (seasonRead?.stateLabel === "Rising") return "#00FF94";
+    if (seasonRead?.stateLabel === "Awaiting first S3 win" || seasonRead?.stateLabel === "Unfiled this season") return "#7B8CDE";
+    return p.color;
+  })();
+  const seasonStripStats = [
+    { l: `${campaignShort} WINS`, v: seasonRead?.seasonStats?.wins ?? campaignSt.wins, c: "#00E5FF" },
+    { l: `${campaignShort} KILLS`, v: seasonRead?.seasonStats?.kills ?? campaignSt.kills, c: "#FF4D8F" },
+    { l: `${campaignShort} LOBBIES`, v: seasonRead?.seasonStats?.appearances ?? campaignSt.appearances, c: "#C77DFF" },
+    { l: `${campaignShort} WIN RATE`, v: `${seasonRead?.seasonStats?.winRate ?? campaignSt.winRate}%`, c: "#00FF94" },
+  ];
+  const showPressureLine = Boolean(seasonRead?.nextMark) || (livingPressure.concrete && livingPressure.targetId !== livingConflict.rivalId);
   const rivalryStats = [
     { label: "RIVAL", value: livingConflict.rivalName, color: livingConflict.color },
     { label: "DUEL EDGE", value: `${livingConflict.playerWins}-${livingConflict.rivalWins}`, color: livingConflict.color },
@@ -235,7 +250,7 @@ export default function CombatFileView({ ctx }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
                 <div className="bc7" style={{ fontSize: ".58rem", letterSpacing: ".3em", color: `${p.color}66`, whiteSpace: "nowrap" }}>{rank.title}</div>
-                <div className="bc7" style={{ fontSize: ".6rem", background: `${livingState.color}18`, borderRadius: 3, padding: "2px 8px", border: `1px solid ${livingState.color}44`, color: livingState.color, letterSpacing: ".08em", whiteSpace: "nowrap" }}>{livingState.label}</div>
+                <div className="bc7" style={{ fontSize: ".6rem", background: `${seasonReadColor}18`, borderRadius: 3, padding: "2px 8px", border: `1px solid ${seasonReadColor}44`, color: seasonReadColor, letterSpacing: ".08em", whiteSpace: "nowrap" }}>{seasonRead?.stateLabel || livingState.label}</div>
               </div>
               <div className="bc9" style={{ color: p.color, fontSize: "clamp(1.2rem,5vw,1.9rem)", letterSpacing: ".06em", textShadow: `0 0 20px ${p.color}44`, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.host ? "👑 " : ""}{dn(p.username).toUpperCase()}</div>
               <div className="combat-file-summary" style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
@@ -253,10 +268,15 @@ export default function CombatFileView({ ctx }) {
           </div>
 
           <div className="living-dossier-read" style={{ position: "relative", zIndex: 1, marginTop: 14, paddingTop: 12, borderTop: `1px solid ${p.color}18` }}>
-            <div className="bc7" style={{ fontSize: ".55rem", letterSpacing: ".2em", color: `${livingState.color}aa`, marginBottom: 7 }}>LIVE READ</div>
-            <div className="bc9" style={{ fontSize: "clamp(.98rem,3vw,1.16rem)", color: livingState.color, lineHeight: 1.25 }}>
-              {fileState?.liveRead || identityLine}
+            <div className="bc7" style={{ fontSize: ".55rem", letterSpacing: ".2em", color: `${seasonReadColor}aa`, marginBottom: 7 }}>LIVE READ</div>
+            <div className="bc9" style={{ fontSize: "clamp(.98rem,3vw,1.16rem)", color: seasonReadColor, lineHeight: 1.2 }}>
+              {seasonRead?.headline || fileState?.liveRead || identityLine}
             </div>
+            {seasonRead?.supportLine&&(
+              <div className="bc7" style={{ fontSize: ".68rem", color: "var(--text3)", lineHeight: 1.45, marginTop: 6, letterSpacing: ".04em" }}>
+                {seasonRead.supportLine}
+              </div>
+            )}
           </div>
 
           {showOpenerReadHigh&&(
@@ -297,7 +317,7 @@ export default function CombatFileView({ ctx }) {
           {showPressureLine&&(
             <div className="living-dossier-pressure" style={{ position: "relative", zIndex: 1, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${livingPressure.color}20` }}>
               <div className="bc7" style={{ fontSize: ".55rem", letterSpacing: ".2em", color: `${livingPressure.color}bb`, marginBottom: 6 }}>{livingPressure.label}</div>
-              <div className="bc7" style={{ fontSize: ".7rem", color: "var(--text2)", lineHeight: 1.6 }}>{livingPressure.line} {livingPressure.detail}</div>
+              <div className="bc7" style={{ fontSize: ".7rem", color: "var(--text2)", lineHeight: 1.6 }}>{seasonRead?.nextMark || `${livingPressure.line} ${livingPressure.detail}`}</div>
             </div>
           )}
         </div>
@@ -310,12 +330,11 @@ export default function CombatFileView({ ctx }) {
             });
             const maxDay = Object.values(dayMap).length ? Math.max(...Object.values(dayMap)) : 0;
             return [
-              { l: `${campaignShort} WINS`, v: campaignSt.wins, c: "#00E5FF" },
+              ...seasonStripStats,
               { l: "ALL WINS", v: st.wins, c: "#FFD700" },
-              { l: "KILLS", v: st.kills, c: "#FF4D8F" },
+              { l: "ALL KILLS", v: st.kills, c: "#FF4D8F" },
               { l: "BEST GAME", v: `${st.biggestGame}K`, c: "#FF6B35" },
-              { l: "WIN RATE", v: `${st.winRate}%`, c: "#00FF94" },
-              { l: "K/G", v: st.kd, c: "#00E5FF" },
+              { l: "ALL K/G", v: st.kd, c: "#00E5FF" },
               { l: "MAX/DAY", v: `${maxDay}G`, c: "#C77DFF" },
               { l: "CARRY", v: carry, c: "#FF6B35" },
               { l: "CONSISTENCY", v: `${consistency}%`, c: "#00FF94" },

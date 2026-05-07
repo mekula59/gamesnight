@@ -49,6 +49,7 @@ import {
   getPressureQueue as selectGetPressureQueue,
   getPeriodSessions as selectGetPeriodSessions,
   getPlayerFileState as selectGetPlayerFileState,
+  getPlayerSeasonRead as selectGetPlayerSeasonRead,
   getPlayerLevel as selectGetPlayerLevel,
   getRank as selectGetRank,
   getRecords as selectGetRecords,
@@ -2141,6 +2142,8 @@ export default function GameNight(){
   const getPlayerLobbyWipeSummary=pid=>selectGetPlayerLobbyWipeSummary(pid,sessions,players);
   const getPlayerLevel=pid=>selectGetPlayerLevel(pid,sessions);
   const getPlayerFileState=pid=>selectGetPlayerFileState(pid,players,sessions,{seasonId:activeCampaignId});
+  const getPlayerSeasonRead=(pid,seasonId=activeCampaignId,options={})=>
+    selectGetPlayerSeasonRead(pid,seasonId,players,sessions,options);
   const getDailyMVP=()=>selectGetDailyMVP(sessions,players);
   const getRivals=()=>selectGetRivals(sessions);
   const getSeasonSessions=sid=>selectGetSeasonSessions(sessions,sid);
@@ -3885,6 +3888,7 @@ export default function GameNight(){
           dn,
           getPlayerLevel,
           getPlayerFileState,
+          getPlayerSeasonRead,
           getSeasonOpenerFallout,
           compareSessionsDesc,
           Avatar,
