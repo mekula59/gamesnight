@@ -6,7 +6,7 @@ export default function WarRoomView({ ctx }) {
     players,
     compareSessionsDesc,
     getLatestSessionDate,
-    getLatestDayConsequences,
+    getFalloutReport,
     getSeasonOpenerFallout,
     getPlayer,
     getLatestDayHeatRun,
@@ -48,8 +48,7 @@ export default function WarRoomView({ ctx }) {
   const latestArchiveDate = getLatestSessionDate();
   const latestIsCampaignOpener=Boolean(activeCampaign?.start&&latestArchiveDate===activeCampaign.start);
   const openerFallout=latestIsCampaignOpener?getSeasonOpenerFallout?.(activeCampaign.id):null;
-  const latestConsequences = getLatestDayConsequences(latestArchiveDate);
-  const latestConsequenceLines = (openerFallout?.consequenceReads || latestConsequences?.summary || []).slice(0, 2);
+  const falloutReport=getFalloutReport?.(latestArchiveDate)||null;
   const latestWinner = latestLobby ? getPlayer(latestLobby.winner) : null;
   const liveHeat = getLatestDayHeatRun(latestArchiveDate) || null;
   const heatPlayer = liveHeat?.player || null;
@@ -204,27 +203,69 @@ export default function WarRoomView({ ctx }) {
                 {loudestLobby ? `${loudestLobby.id.toUpperCase()} on ${formatLobbyDate(loudestLobby.date)}` : "The first explosion will mark this slot."}
               </div>
             </div>
-            <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)" }}>
-              <div className="bc7" style={{ fontSize: ".58rem", letterSpacing: ".16em", color: "var(--text3)", textTransform: "uppercase", marginBottom: 6 }}>
-                Latest consequences
-              </div>
-              <div style={{ display: "grid", gap: 6 }}>
-                {latestConsequenceLines.length ? (
-                  latestConsequenceLines.map((line) => (
-                    <div key={line} className="bc7" style={{ fontSize: ".72rem", color: "var(--text2)", lineHeight: 1.55 }}>
-                      <span style={{ color: "#00FF94", marginRight: 7 }}>▸</span>
-                      {line}
-                    </div>
-                  ))
-                ) : (
-                  <div className="bc7" style={{ fontSize: ".72rem", color: "var(--text3)", lineHeight: 1.55 }}>
-                    The last session day moved the totals, but no clear consequence line held long enough to pin here.
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </MotionReveal>
+
+        {falloutReport&&(
+          <MotionReveal
+            className="warroom-fallout-report zone-receive-follow"
+            delay={70}
+            style={{
+              "--receive-delay":"125ms",
+              ...card({
+                padding:"16px 16px 17px",
+                marginBottom:2,
+                border:"1.5px solid rgba(255,77,143,.22)",
+                borderLeft:"3px solid rgba(255,77,143,.7)",
+                background:"linear-gradient(135deg,rgba(255,77,143,.1),rgba(0,0,0,.24))",
+              }),
+            }}
+          >
+            <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap",marginBottom:12}}>
+              <div>
+                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:6}}>
+                  FALLOUT REPORT
+                </div>
+                <div className="bc9" style={{fontSize:"clamp(.98rem,3vw,1.16rem)",color:"#FF4D8F",lineHeight:1.25}}>
+                  {falloutReport.headline}
+                </div>
+              </div>
+              <div className="bc7" style={{fontSize:".6rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase"}}>
+                {formatLobbyDate(falloutReport.date,{weekday:"short",day:"numeric",month:"short"})}
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(165px,1fr))",gap:8}}>
+              {falloutReport.cards.map((entry)=>{
+                const toneColor={
+                  filed:"#00E5FF",
+                  crown:"#FFD700",
+                  damage:"#FF4D8F",
+                  marker:"#FFAB40",
+                  memory:"#00FF94",
+                }[entry.tone]||"#C77DFF";
+                return(
+                  <div key={entry.id} style={{
+                    padding:"11px 12px",
+                    borderRadius:"0 8px 8px 0",
+                    border:`1px solid ${toneColor}24`,
+                    borderLeft:`3px solid ${toneColor}`,
+                    background:`linear-gradient(135deg,${toneColor}0f,rgba(0,0,0,.22))`,
+                  }}>
+                    <div className="bc7" style={{fontSize:".5rem",letterSpacing:".16em",color:`${toneColor}cc`,textTransform:"uppercase",marginBottom:6}}>
+                      {entry.label}
+                    </div>
+                    <div className="bc9" style={{fontSize:".84rem",lineHeight:1.25,color:toneColor,marginBottom:5}}>
+                      {entry.headline}
+                    </div>
+                    <div className="bc7" style={{fontSize:".64rem",lineHeight:1.48,color:"var(--text2)"}}>
+                      {entry.detail}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </MotionReveal>
+        )}
 
         <MotionReveal
           className="warroom-filter-card zone-receive-follow"

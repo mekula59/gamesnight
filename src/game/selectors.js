@@ -2321,6 +2321,141 @@ export const getLatestDayConsequences = (
   };
 };
 
+export const getFalloutReport = (
+  date,
+  sessions,
+  players,
+) => {
+  if (!sessions?.length || !players?.length) {
+    return null;
+  }
+  const reportDate = date || getLatestSessionDate(sessions);
+  if (!reportDate) {
+    return null;
+  }
+
+  const daySessions = [...sessions]
+    .filter((session) => session.date === reportDate)
+    .sort(compareSessionsAsc);
+  if (!daySessions.length) {
+    return null;
+  }
+
+  const recap = getDayRecap(reportDate, sessions, players);
+  const fallout = getLatestDayConsequences(sessions, players, reportDate);
+  const playerIndex = buildPlayerIndex(players);
+  const displayName = (playerId) => getPlayerById(playerIndex, playerId)?.username || "Unknown";
+  const dayStats = allStats(players, daySessions).filter((player) => player.appearances > 0);
+  const topWinner = fallout?.topWinners?.[0] || recap?.topWinner || null;
+  const topKiller = fallout?.topKiller || [...dayStats].sort((left, right) => right.kills - left.kills || right.wins - left.wins)[0] || null;
+  const uniquePlayers = recap?.uniquePlayers || new Set(daySessions.flatMap((session) => session.attendees || [])).size;
+  const totalKills = recap?.totalKills || daySessions.reduce((sum, session) => sum + getLobbyTotalKills(session), 0);
+
+  let bestSingleGame = null;
+  daySessions.forEach((session) => {
+    Object.entries(session.kills || {}).forEach(([playerId, kills]) => {
+      const candidate = {
+        playerId,
+        player: getPlayerById(playerIndex, playerId),
+        kills,
+        session,
+      };
+      if (
+        !bestSingleGame ||
+        candidate.kills > bestSingleGame.kills ||
+        (
+          candidate.kills === bestSingleGame.kills &&
+          parseSessionIdNumber(candidate.session.id) > parseSessionIdNumber(bestSingleGame.session.id)
+        )
+      ) {
+        bestSingleGame = candidate;
+      }
+    });
+  });
+
+  const cards = [];
+  const pushCard = (entry) => {
+    if (entry?.headline && !cards.some((card) => card.id === entry.id)) {
+      cards.push(entry);
+    }
+  };
+
+  pushCard({
+    id: "night-filed",
+    label: "NIGHT FILED",
+    tone: "filed",
+    headline: `${daySessions.length} lobbies, ${uniquePlayers} players, and ${totalKills} kills are now on file.`,
+    detail: "Latest filed night is locked from official room data.",
+    playerIds: [],
+    source: "day_recap",
+  });
+
+  if (topWinner?.player || topWinner?.pid) {
+    const player = topWinner.player || getPlayerById(playerIndex, topWinner.pid);
+    const wins = topWinner.wins || fallout?.topWinCount || 0;
+    pushCard({
+      id: "ground-gained",
+      label: "GROUND GAINED",
+      tone: "crown",
+      headline: `${displayName(player?.id)} closed ${wins} room${wins === 1 ? "" : "s"} on the night.`,
+      detail: "Top win line from the latest filed night.",
+      playerIds: [player?.id].filter(Boolean),
+      source: "latest_day_wins",
+    });
+  }
+
+  if (topKiller?.player || topKiller?.id) {
+    const player = topKiller.player || getPlayerById(playerIndex, topKiller.id);
+    const kills = topKiller.kills || 0;
+    pushCard({
+      id: "damage-line",
+      label: "DAMAGE LINE",
+      tone: "damage",
+      headline: `${displayName(player?.id)} led the night at ${kills}K.`,
+      detail: "Top damage line from the latest filed night.",
+      playerIds: [player?.id].filter(Boolean),
+      source: "latest_day_kills",
+    });
+  }
+
+  if (bestSingleGame?.player && bestSingleGame.kills > 0) {
+    pushCard({
+      id: "file-marker",
+      label: "FILE MARKER",
+      tone: "marker",
+      headline: `${bestSingleGame.player.username} set the night ceiling with ${bestSingleGame.kills}K in ${getLobbyLabel(bestSingleGame.session.id)}.`,
+      detail: "Best single-lobby kill line from the latest filed night.",
+      playerIds: [bestSingleGame.player.id],
+      source: "best_single_lobby_kills",
+    });
+  }
+
+  const memorySource = fallout?.consequences?.find((entry) =>
+    ["lobby-wipe", "zero-kill-win", "benchmark", "climbed", "extended-streak"].includes(entry.type),
+  );
+  pushCard({
+    id: "room-memory",
+    label: "ROOM MEMORY",
+    tone: "memory",
+    headline: memorySource?.shortText || "No single file marker outranked the board movement.",
+    detail: memorySource?.text && memorySource.text !== memorySource.shortText
+      ? memorySource.text
+      : "The night still moved the official file.",
+    playerIds: [],
+    source: memorySource?.type || "fallback",
+  });
+
+  return {
+    date: reportDate,
+    label: "FALLOUT REPORT",
+    lobbies: daySessions.length,
+    players: uniquePlayers,
+    kills: totalKills,
+    headline: `${daySessions.length} lobbies, ${uniquePlayers} players, and ${totalKills} kills are now on file.`,
+    cards: cards.slice(0, 5),
+  };
+};
+
 const joinHumanNames = (names) => {
   const cleaned = names.filter(Boolean);
   if (!cleaned.length) {

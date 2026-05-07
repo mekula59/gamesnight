@@ -39,6 +39,7 @@ import {
   getLastSeen as selectGetLastSeen,
   getLatestDayConsequences as selectGetLatestDayConsequences,
   getLatestSessionDate as selectGetLatestSessionDate,
+  getFalloutReport as selectGetFalloutReport,
   getLeaderboardShiftData as selectGetLeaderboardShiftData,
   getPlayerLobbyWipeSummary as selectGetPlayerLobbyWipeSummary,
   getLiveStreaks as selectGetLiveStreaks,
@@ -2157,6 +2158,7 @@ export default function GameNight(){
       orderWindow: live || getNextSession().toISOString().slice(0,10)===todayStr() ? "today" : "next-room",
     });
   const getLatestDayConsequences=date=>selectGetLatestDayConsequences(sessions,players,date);
+  const getFalloutReport=date=>selectGetFalloutReport(date,sessions,players);
   const getSeasonOpenerFallout=seasonId=>selectGetSeasonOpenerFallout(seasonId, sessions, players);
   const getCampaignFronts=seasonId=>selectGetCampaignFronts(seasonId, sessions, players);
   const getLeaderboardShiftData=(seasonId="all",period=lbPeriod,sortKey=sortBy)=>
@@ -3648,7 +3650,7 @@ export default function GameNight(){
           players,
           compareSessionsDesc,
           getLatestSessionDate,
-          getLatestDayConsequences,
+          getFalloutReport,
           getSeasonOpenerFallout,
           getPlayer,
           getLatestDayHeatRun,
