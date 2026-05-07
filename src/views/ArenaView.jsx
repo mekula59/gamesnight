@@ -36,9 +36,17 @@ export default function ArenaView({ ctx }) {
     activeCampaign,
     activeCampaignClosed,
     seasonThreeWaiting,
+    weeklyLoopState,
   } = ctx;
   const seasonBoardClosed=activeCampaignClosed&&arenaRangeKey==="season";
   const archiveBoardMode=seasonBoardClosed||seasonThreeWaiting;
+  const weeklyRangeState=weeklyLoopState
+    ? weeklyLoopState.state==="ROOM LIVE TODAY"
+      ?"LIVE WINDOW"
+      : weeklyLoopState.state==="RESULTS FILED"||weeklyLoopState.state==="BOARD LOCKED"
+        ?"BOARD LOCKED"
+        : weeklyLoopState.state
+    : "";
 
   return (
 <div className="fade-up arena-page" style={{minHeight:"calc(100vh - 120px)"}}>
@@ -118,6 +126,19 @@ export default function ArenaView({ ctx }) {
               }}>
                 {arenaRangeMeta.scopeLabel.toUpperCase()} · {SORT_LABELS[sortBy].toUpperCase()} · {filteredLB.length} IN VIEW{lbSearch.trim()?` · FILTER ${lbSearch.trim().toUpperCase()}`:""}
               </span>
+              {arenaRangeKey==="week"&&weeklyLoopState&&(
+                <span className="bc7" style={{
+                  fontSize:".58rem",
+                  letterSpacing:".13em",
+                  color:"#00E5FF",
+                  background:"rgba(0,229,255,.07)",
+                  border:"1px solid rgba(0,229,255,.18)",
+                  borderRadius:999,
+                  padding:"5px 10px",
+                }}>
+                  {weeklyRangeState} · THIS WEEK · {weeklyLoopState.weekSessions} LOBBIES FILED
+                </span>
+              )}
             </div>
           </div>
 

@@ -25,6 +25,7 @@ export default function Season2View({ ctx }) {
     Avatar,
     s2CdClock,
     SEASON_TWO_LAUNCH_DATE,
+    weeklyLoopState,
   } = ctx;
   const currentDate=todayStr();
   const selectedSeasonId=campaignSeasonId||selectedCampaignSeasonId||activeCampaignId||SEASON_TWO_ID;
@@ -463,6 +464,12 @@ export default function Season2View({ ctx }) {
                         ? `${campaignName} has ${s2Sessions.length} lobbies filed, ${uniqueWins} winners, and ${totalKills} kills on record.`
                         : seasonPulse}
                     </div>
+                    {showCampaignFronts&&weeklyLoopState&&(
+                      <div style={{fontSize:".7rem",color:"var(--text3)",fontWeight:700,lineHeight:1.55}}>
+                        Current week: {weeklyLoopState.weekSessions} lobbies, {weeklyLoopState.weekKills} kills, and {weeklyLoopState.weekWinners} winners filed.
+                        {weeklyLoopState.latestFiledDate?` Latest file: ${formatLobbyDate(weeklyLoopState.latestFiledDate,{day:"numeric",month:"short"})}.`:""}
+                      </div>
+                    )}
                   </div>
                 </div>
 

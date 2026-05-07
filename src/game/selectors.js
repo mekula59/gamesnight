@@ -1,4 +1,4 @@
-import { SEASONS } from "./config";
+import { SEASONS, SESSION_DAYS, SESSION_END_HOUR, SESSION_START_HOUR } from "./config";
 import {
   APRIL_FOOLS_DATE,
   EASTER_SATURDAY_DATE,
@@ -1412,6 +1412,219 @@ export const getChartData = (playerId, sessions) => {
   return Object.values(byDate).sort((left, right) =>
     left.date.localeCompare(right.date),
   );
+};
+
+export const getSeasonScoutBoard = (
+  seasonId,
+  players,
+  sessions,
+  options = {},
+) => {
+  const seasonSessions = getSeasonSessions(sessions, seasonId);
+  const latestDate = getLatestSessionDate(seasonSessions);
+  const latestSessions = latestDate
+    ? seasonSessions.filter((session) => session.date === latestDate)
+    : [];
+  const priorSessions = latestDate
+    ? seasonSessions.filter((session) => session.date < latestDate)
+    : [];
+  const playerIndex = buildPlayerIndex(players);
+  const displayName = (playerId) => getPlayerById(playerIndex, playerId)?.username || "Unknown";
+  const byWins = (left, right) => right.wins - left.wins || right.kills - left.kills || right.appearances - left.appearances;
+  const byKills = (left, right) => right.kills - left.kills || right.wins - left.wins || right.appearances - left.appearances;
+  const seasonRows = allStats(players, seasonSessions)
+    .filter((row) => row.appearances > 0)
+    .sort(byWins);
+  const priorRows = allStats(players, priorSessions)
+    .filter((row) => row.appearances > 0)
+    .sort(byWins);
+  const latestRows = allStats(players, latestSessions)
+    .filter((row) => row.appearances > 0);
+  const latestByWins = [...latestRows].sort(byWins);
+  const damageRows = [...seasonRows].sort(byKills);
+  const rankOf = (rows, playerId) => {
+    const index = rows.findIndex((row) => row.id === playerId);
+    return index >= 0 ? index + 1 : null;
+  };
+  const rowFor = (rows, playerId) =>
+    rows.find((row) => row.id === playerId) || {
+      id: playerId,
+      wins: 0,
+      kills: 0,
+      appearances: 0,
+      winRate: 0,
+      kd: 0,
+      biggestGame: 0,
+    };
+  const selectedPlayerId = options.playerId || seasonRows[0]?.id || players[0]?.id || "";
+  const selectedSeasonRow = rowFor(seasonRows, selectedPlayerId);
+  const selectedLatestRow = rowFor(latestRows, selectedPlayerId);
+  const selectedChart = getChartData(selectedPlayerId, seasonSessions);
+  const bestDay = selectedChart.reduce((best, day) => {
+    if (!best) return day;
+    if (day.wins > best.wins) return day;
+    if (day.wins === best.wins && day.kills > best.kills) return day;
+    return best;
+  }, null);
+  const currentFormSessions = [...seasonSessions]
+    .filter((session) => session.attendees?.includes(selectedPlayerId))
+    .sort(compareSessionsDesc)
+    .slice(0, 5);
+  const currentFormWins = currentFormSessions.filter((session) => session.winner === selectedPlayerId).length;
+  const selectedRank = rankOf(seasonRows, selectedPlayerId);
+  const selectedKillRank = rankOf(damageRows, selectedPlayerId);
+  const selectedPriorRank = rankOf(priorRows, selectedPlayerId);
+  const selectedRankChange = selectedPriorRank && selectedRank ? selectedPriorRank - selectedRank : 0;
+  const nextTarget = selectedRank && selectedRank > 1 ? seasonRows[selectedRank - 2] : null;
+  const latestDateLabel = latestDate
+    ? new Date(`${latestDate}T12:00:00Z`).toLocaleDateString("en", { month: "short", day: "numeric" })
+    : "No latest file";
+  const bestDateLabel = bestDay
+    ? new Date(`${bestDay.date}T12:00:00Z`).toLocaleDateString("en", { month: "short", day: "numeric" })
+    : "No day filed";
+
+  const risingPlayers = latestRows
+    .map((row) => {
+      const beforeRank = rankOf(priorRows, row.id);
+      const afterRank = rankOf(seasonRows, row.id);
+      const rankChange = beforeRank && afterRank ? beforeRank - afterRank : 0;
+      return {
+        playerId: row.id,
+        name: displayName(row.id),
+        latestWins: row.wins,
+        latestKills: row.kills,
+        rankChange,
+        headline: row.wins > 0
+          ? `${displayName(row.id)} added ${row.wins}W on the latest filed night.`
+          : `${displayName(row.id)} added ${row.kills}K on the latest filed night.`,
+        detail: rankChange > 0
+          ? `Moved ${rankChange} place${rankChange === 1 ? "" : "s"} on the Season 3 board.`
+          : `${row.kills}K kept the file active on ${latestDateLabel}.`,
+        statLine: `${row.wins}W · ${row.kills}K`,
+      };
+    })
+    .filter((entry) => entry.latestWins > 0 || entry.rankChange > 0 || entry.latestKills >= 5)
+    .sort((left, right) => right.rankChange - left.rankChange || right.latestWins - left.latestWins || right.latestKills - left.latestKills)
+    .slice(0, 4);
+
+  const damageWatchPlayers = damageRows
+    .filter((row) => row.kills > 0)
+    .map((row) => {
+      const winsRank = rankOf(seasonRows, row.id);
+      const killRank = rankOf(damageRows, row.id);
+      return {
+        playerId: row.id,
+        name: displayName(row.id),
+        kills: row.kills,
+        wins: row.wins,
+        killRank,
+        winsRank,
+        headline: `${displayName(row.id)} is carrying ${row.kills}K in Season 3.`,
+        detail: winsRank && killRank && winsRank > killRank
+          ? `Damage rank ${killRank}, wins rank ${winsRank}.`
+          : `${row.wins}W keeps the damage tied to board movement.`,
+        statLine: `${row.kills}K · ${row.kd} K/G`,
+      };
+    })
+    .filter((entry) => entry.killRank <= 6 && (entry.winsRank > entry.killRank || entry.kills >= (damageRows[0]?.kills || 0) - 15))
+    .slice(0, 4);
+
+  const quietFiles = seasonRows
+    .filter((row) => row.appearances >= 5 && row.wins === 0)
+    .sort((left, right) => right.appearances - left.appearances || right.kills - left.kills)
+    .slice(0, 4)
+    .map((row) => ({
+      playerId: row.id,
+      name: displayName(row.id),
+      appearances: row.appearances,
+      kills: row.kills,
+      headline: `${displayName(row.id)} is still waiting for a Season 3 close.`,
+      detail: `${row.appearances} lobbies and ${row.kills}K are already on file.`,
+      statLine: `${row.appearances}G · 0W`,
+    }));
+
+  const latestMovement = latestByWins.slice(0, 4).map((row) => {
+    const beforeRank = rankOf(priorRows, row.id);
+    const afterRank = rankOf(seasonRows, row.id);
+    const rankChange = beforeRank && afterRank ? beforeRank - afterRank : 0;
+    return {
+      playerId: row.id,
+      name: displayName(row.id),
+      wins: row.wins,
+      kills: row.kills,
+      rankChange,
+      headline: `${displayName(row.id)} closed ${row.wins} room${row.wins === 1 ? "" : "s"} on ${latestDateLabel}.`,
+      detail: rankChange > 0
+        ? `That moved the file ${rankChange} place${rankChange === 1 ? "" : "s"}.`
+        : `${row.kills}K backed the latest filed night.`,
+      statLine: `${row.wins}W · ${row.kills}K`,
+    };
+  });
+
+  const selectedPlayerBrief = (() => {
+    if (!selectedPlayerId || !selectedSeasonRow.appearances) {
+      return {
+        headline: "No Season 3 file yet.",
+        supportLine: "Intel starts once the player has official Season 3 rooms on file.",
+        markers: [
+          { label: "Season 3 rank", value: "Waiting", color: "#00E5FF" },
+          { label: "Latest filed night", value: "No file", color: "#00FF94" },
+          { label: "Best day", value: "No day filed", color: "#FFD700" },
+        ],
+        seasonRank: null,
+        latestNight: null,
+        bestDay: null,
+        currentForm: "No Season 3 form yet",
+      };
+    }
+    const rankText = selectedRank ? `#${selectedRank} by wins` : "Off board";
+    const latestText = selectedLatestRow.appearances
+      ? `${selectedLatestRow.appearances}G · ${selectedLatestRow.wins}W · ${selectedLatestRow.kills}K on ${latestDateLabel}`
+      : `No file on ${latestDateLabel}`;
+    const bestText = bestDay
+      ? `${bestDay.wins}W · ${bestDay.kills}K on ${bestDateLabel}`
+      : "No best day";
+    const headline = (() => {
+      if (selectedRank === 1) return `${displayName(selectedPlayerId)} is the Season 3 crown file.`;
+      if (selectedKillRank === 1) return `${displayName(selectedPlayerId)} is the Season 3 damage read.`;
+      if (selectedLatestRow.wins >= 2) return `${displayName(selectedPlayerId)} moved on the latest filed night.`;
+      if (selectedSeasonRow.wins === 0) return `${displayName(selectedPlayerId)} is still waiting for a Season 3 close.`;
+      return `${displayName(selectedPlayerId)} is a Season 3 scouting file worth watching.`;
+    })();
+    const supportLine = (() => {
+      if (selectedRank === 1) return `${selectedSeasonRow.wins}W, ${selectedSeasonRow.kills}K, and ${selectedSeasonRow.appearances} lobbies lead the board read.`;
+      if (nextTarget) {
+        const gap = nextTarget.wins - selectedSeasonRow.wins;
+        return `${gap} win${gap === 1 ? "" : "s"} to tie ${displayName(nextTarget.id)}.`;
+      }
+      if (selectedSeasonRow.wins === 0) return `${selectedSeasonRow.appearances} lobbies are filed, but the first crown is still open.`;
+      if (selectedRankChange > 0) return `Latest filed movement improved the file by ${selectedRankChange} place${selectedRankChange === 1 ? "" : "s"}.`;
+      return `${currentFormWins}/${currentFormSessions.length || 0} wins in the last five filed lobbies.`;
+    })();
+    return {
+      headline,
+      supportLine,
+      markers: [
+        { label: "Season 3 rank", value: rankText, color: "#00E5FF" },
+        { label: "Latest filed night", value: latestText, color: "#00FF94" },
+        { label: "Best day", value: bestText, color: "#FFD700" },
+      ],
+      seasonRank: selectedRank,
+      latestNight: selectedLatestRow,
+      bestDay,
+      currentForm: `${currentFormWins}/${currentFormSessions.length || 0} last-five wins`,
+    };
+  })();
+
+  return {
+    risingPlayers,
+    damageWatchPlayers,
+    quietFiles,
+    latestMovement,
+    selectedPlayerBrief,
+    defaultPlayerId: seasonRows[0]?.id || "",
+    latestDate,
+  };
 };
 
 export const getPOTW = (sessions, players) => {
@@ -4626,6 +4839,117 @@ const getRankTier = (rank, seasonRank) => {
 const getRowRank = (rows, playerId) => rows.findIndex((row) => row.id === playerId) + 1;
 
 const formatUtcDateKey = (date) => date.toISOString().slice(0, 10);
+
+const formatWeeklyLoopDate = (dateKey) => {
+  if (!dateKey) {
+    return "";
+  }
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return dateKey;
+  }
+  return date.toLocaleDateString("en", { month: "short", day: "numeric", timeZone: "UTC" });
+};
+
+const getNextScheduledSessionDate = (now, sessionDays, sessionStartHour) => {
+  const current = now instanceof Date ? new Date(now) : new Date(now || Date.now());
+  if (Number.isNaN(current.getTime())) {
+    return null;
+  }
+
+  for (let offset = 0; offset <= 14; offset += 1) {
+    const candidate = new Date(current);
+    candidate.setUTCDate(current.getUTCDate() + offset);
+    candidate.setUTCHours(sessionStartHour, 0, 0, 0);
+    if (sessionDays.includes(candidate.getUTCDay()) && candidate > current) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+export const getWeeklyLoopState = ({
+  officialSessionDays = SESSION_DAYS,
+  sessionDays = officialSessionDays,
+  sessionStartHour = SESSION_START_HOUR,
+  sessionEndHour = SESSION_END_HOUR,
+  now = new Date(),
+  filedSessions = [],
+  sessions = filedSessions,
+  activeCampaignSessions = [],
+} = {}) => {
+  const current = now instanceof Date ? new Date(now) : new Date(now || Date.now());
+  const safeNow = Number.isNaN(current.getTime()) ? new Date() : current;
+  const scopedSessions = activeCampaignSessions.length ? activeCampaignSessions : sessions;
+  const todayKey = formatUtcDateKey(safeNow);
+  const day = safeNow.getUTCDay();
+  const hour = safeNow.getUTCHours();
+  const filedThroughToday = scopedSessions.filter((session) => session.date <= todayKey);
+  const latestFiledDate = filedThroughToday.length ? getLatestSessionDate(filedThroughToday) : null;
+  const nextSession = getNextScheduledSessionDate(safeNow, sessionDays, sessionStartHour);
+  const weekStart = new Date(safeNow);
+  weekStart.setUTCHours(0, 0, 0, 0);
+  weekStart.setUTCDate(safeNow.getUTCDate() - ((safeNow.getUTCDay() + 6) % 7));
+  const weekStartKey = formatUtcDateKey(weekStart);
+  const weekSessions = scopedSessions.filter(
+    (session) => session.date >= weekStartKey && session.date <= todayKey,
+  );
+  const weekKills = weekSessions.reduce(
+    (total, session) =>
+      total +
+      Object.values(session.kills || {}).reduce((sum, kills) => sum + (Number(kills) || 0), 0) +
+      (Number(session.unassignedKills) || 0),
+    0,
+  );
+  const weekWinners = new Set(weekSessions.map((session) => session.winner).filter(Boolean)).size;
+  const todaySessions = scopedSessions.filter((session) => session.date === todayKey);
+  const isSessionDay = sessionDays.includes(day);
+  const latestLabel = formatWeeklyLoopDate(latestFiledDate);
+  const todayLabel = formatWeeklyLoopDate(todayKey);
+  const nextLabel = nextSession ? formatShellUtcTime(nextSession) : "the next room";
+  let state = "WAITING FOR NEXT ROOM";
+  let line = latestFiledDate
+    ? `No new report filed since ${latestLabel}.`
+    : `No filed rooms in this campaign yet.`;
+
+  if ((day === 0 || (day === 1 && hour < 8)) && !todaySessions.length) {
+    state = "WEEKLY RESET PENDING";
+    line = `Weekly board is between cycles. Next room opens ${nextLabel}.`;
+  } else if (isSessionDay && hour >= sessionStartHour && hour < sessionEndHour) {
+    state = "ROOM LIVE TODAY";
+    line = `Room window is open. Results lock when the night is filed.`;
+  } else if (isSessionDay && hour < sessionStartHour) {
+    state = "ROOM OPENS SOON";
+    line = latestFiledDate
+      ? `Room opens ${nextLabel}. Latest filed night is ${latestLabel}.`
+      : `Room opens ${nextLabel}. The campaign file is waiting on its first result.`;
+  } else if (todaySessions.length) {
+    state = "RESULTS FILED";
+    line = `${todayLabel} results are filed. The board is locked until the next room.`;
+  } else if (isSessionDay && hour >= sessionEndHour) {
+    state = "BOARD LOCKED";
+    line = latestFiledDate
+      ? `No ${todayLabel} report is filed yet. The board still reads from ${latestLabel}.`
+      : `The room window has closed. No result is filed yet.`;
+  } else {
+    state = "WAITING FOR NEXT ROOM";
+    line = latestFiledDate
+      ? `No new report filed since ${latestLabel}. Next room opens ${nextLabel}.`
+      : `The campaign file is waiting on its first result.`;
+  }
+
+  return {
+    state,
+    label: state,
+    line,
+    latestFiledDate,
+    nextSessionDate: nextSession ? nextSession.toISOString() : null,
+    weekSessions: weekSessions.length,
+    weekKills,
+    weekWinners,
+  };
+};
 
 export const getDailyOrdersScheduleState = (now = new Date()) => {
   const current = now instanceof Date ? now : new Date(now);

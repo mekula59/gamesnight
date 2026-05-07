@@ -60,8 +60,10 @@ import {
   getSeasonCampaignFile as selectGetSeasonCampaignFile,
   getSeasonOneWrap as selectGetSeasonOneWrap,
   getSeasonOpenerFallout as selectGetSeasonOpenerFallout,
+  getSeasonScoutBoard as selectGetSeasonScoutBoard,
   getSeasonSessions as selectGetSeasonSessions,
   getSortedLeaderboard as selectGetSortedLeaderboard,
+  getWeeklyLoopState as selectGetWeeklyLoopState,
   sameRivalOpsState as selectSameRivalOpsState,
   getStats as selectGetStats,
   getStreak as selectGetStreak,
@@ -1171,6 +1173,18 @@ const CSS = `
     }
     .hide-mob{display:none!important;} .show-mob{display:flex!important;}
     .hof-grid{grid-template-columns:1fr!important;}
+    .hof-grid{min-width:0!important;width:100%!important;max-width:100%!important;}
+    .hof-honors-grid{grid-template-columns:1fr!important;}
+    .legacy-player-card{width:auto!important;max-width:100%!important;box-sizing:border-box!important;margin-left:0!important;margin-right:0!important;}
+    .legacy-player-card{padding:22px 16px 18px!important;border-radius:24px!important;}
+    .legacy-card-head{gap:12px!important;margin-bottom:18px!important;}
+    .legacy-card-avatar{width:66px!important;height:66px!important;transform:scale(.78)!important;transform-origin:left center!important;margin-right:-14px!important;}
+    .legacy-card-name{font-size:1.45rem!important;white-space:normal!important;}
+    .legacy-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+    .legacy-stat-grid{width:calc(100vw - 124px)!important;max-width:100%!important;overflow:hidden!important;}
+    .legacy-stat-tile{padding:12px 11px!important;text-align:left!important;}
+    .legacy-stat-value{font-size:1.45rem!important;}
+    .legacy-badge-strip{gap:7px!important;}
     .stats-4{grid-template-columns:repeat(2,1fr)!important;}
     .lb-table{display:none!important;} .lb-cards{display:flex!important;}
     .hero-h1{font-size:clamp(2.4rem,14vw,4.5rem)!important;}
@@ -1191,6 +1205,9 @@ const CSS = `
     .vault-grid{grid-template-columns:1fr!important;}
     .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow-x:hidden!important;}
     .card-h,.lb-card,.rival-card,.comm-card{min-width:0!important;width:100%!important;}
+    .card-h.legacy-player-card{width:calc(100vw - 68px)!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;}
+    .legacy-badge-strip{width:calc(100vw - 124px)!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;}
+    .legacy-badge-strip span{max-width:100%!important;white-space:normal!important;line-height:1.15!important;font-size:.62rem!important;padding:3px 7px!important;}
     main{padding-left:12px!important;padding-right:12px!important;overflow-x:hidden!important;}
     .combat-picker-shell{
       padding:9px!important;
@@ -1383,6 +1400,11 @@ const CSS = `
     .warroom-beat-tags>div:nth-child(n+4){display:none!important;}
     .warroom-placements{padding-left:0!important;gap:6px!important;}
     .warroom-endchips{padding-left:0!important;gap:6px!important;}
+    .intel-v2-page .intel-scout-board{display:flex!important;overflow-x:auto!important;scroll-snap-type:x mandatory!important;gap:10px!important;padding-bottom:4px!important;margin-left:-4px!important;margin-right:-4px!important;}
+    .intel-v2-page .intel-scout-board>div{min-width:78%!important;scroll-snap-align:start!important;}
+    .intel-v2-page .intel-player-selector{flex-wrap:nowrap!important;overflow-x:auto!important;padding-bottom:4px!important;margin-left:-4px!important;margin-right:-4px!important;}
+    .intel-v2-page .intel-player-selector button{flex:0 0 auto!important;}
+    .intel-v2-page table{font-size:.82rem!important;}
     .season2-top-shell .season2-banner{padding:20px 15px!important;margin-bottom:24px!important;}
     .season2-top-shell .season2-banner-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
     .season2-top-shell .season2-banner-copy{margin-top:16px!important;padding-top:16px!important;gap:9px!important;}
@@ -1572,6 +1594,63 @@ const CSS = `
   .spin-a{animation:spinA 1.1s linear infinite;display:inline-block;}
   .pulse-a{animation:pulseA 1.4s ease-in-out infinite;display:inline-block;}
   .fire{display:inline-block;}
+  .legacy-player-card{
+    isolation:isolate;
+    transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,filter .16s ease;
+  }
+  .legacy-player-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 18% 12%,var(--legacy-glow,rgba(255,255,255,.08)),transparent 32%),
+      linear-gradient(120deg,transparent 0%,rgba(255,255,255,.055) 42%,transparent 58%);
+    opacity:.38;
+    transform:translateX(-18%);
+    transition:opacity .16s ease,transform .22s ease;
+  }
+  .legacy-player-card::after{
+    content:"";
+    position:absolute;
+    inset:9px;
+    z-index:0;
+    pointer-events:none;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.045);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .legacy-player-card:hover{
+    transform:translateY(-4px);
+    filter:saturate(1.08);
+  }
+  .legacy-player-card:hover::before{
+    opacity:.62;
+    transform:translateX(10%);
+  }
+  .legacy-player-card.has-streak-glow{
+    animation:legacyHeatBreath 3.8s ease-in-out infinite;
+  }
+  .legacy-stat-tile{
+    transition:transform .14s ease,background .14s ease,border-color .14s ease;
+  }
+  .legacy-player-card:hover .legacy-stat-tile{
+    background:rgba(0,0,0,.46)!important;
+  }
+  .legacy-player-card:hover .legacy-stat-tile:nth-child(odd){
+    transform:translateY(-1px);
+  }
+  .legacy-badge-strip span{
+    transition:background .14s ease,border-color .14s ease,transform .14s ease;
+  }
+  .legacy-player-card:hover .legacy-badge-strip span{
+    border-color:rgba(255,255,255,.28)!important;
+  }
+  @keyframes legacyHeatBreath{
+    0%,100%{box-shadow:0 0 30px rgba(255,107,53,.16),0 0 24px var(--legacy-glow,rgba(255,255,255,.12));}
+    50%{box-shadow:0 0 42px rgba(255,107,53,.28),0 0 38px var(--legacy-glow,rgba(255,255,255,.18));}
+  }
   .live-glo{animation:popIn .4s ease both;}
   .nav-btn{
     background:none;border:none;cursor:pointer;font-family:inherit;transition:color .16s,background .16s,transform .16s,box-shadow .16s;
@@ -2144,12 +2223,14 @@ export default function GameNight(){
   const getPlayerFileState=pid=>selectGetPlayerFileState(pid,players,sessions,{seasonId:activeCampaignId});
   const getPlayerSeasonRead=(pid,seasonId=activeCampaignId,options={})=>
     selectGetPlayerSeasonRead(pid,seasonId,players,sessions,options);
+  const getSeasonScoutBoard=(seasonId=activeCampaignId,options={})=>
+    selectGetSeasonScoutBoard(seasonId,players,sessions,options);
   const getDailyMVP=()=>selectGetDailyMVP(sessions,players);
   const getRivals=()=>selectGetRivals(sessions);
   const getSeasonSessions=sid=>selectGetSeasonSessions(sessions,sid);
   const getMissionBoardState=()=>selectGetMissionBoardState(sessions,players);
   const getRecords=()=>selectGetRecords(sessions,players);
-  const getChartData=pid=>selectGetChartData(pid,sessions);
+  const getChartData=(pid,src=sessions)=>selectGetChartData(pid,src);
   const getLiveStreaks=()=>selectGetLiveStreaks(sessions,players);
   const getLatestDayHeatRun=(date=getLatestSessionDate())=>selectGetLatestDayHeatRun(sessions,players,date);
   const getDayRecap=date=>selectGetDayRecap(date,sessions,players);
@@ -2773,6 +2854,12 @@ export default function GameNight(){
   })();
   const activeCampaignId=activeCampaign?.id||SEASON_TWO_ID;
   const activeCampaignSessions=filterSessionsBySeason(sessions,activeCampaignId);
+  const weeklyLoopState=selectGetWeeklyLoopState({
+    sessions,
+    filedSessions:sessions,
+    activeCampaignSessions,
+    now:new Date(),
+  });
   const activeCampaignClosed=Boolean(activeCampaign?.end&&todayStr()>activeCampaign.end);
   const activeCampaignOpened=Boolean(activeCampaignSessions.length);
   const navItems=[
@@ -3268,7 +3355,7 @@ export default function GameNight(){
     )}
 
     {/* ════ MAIN ════ */}
-    <main style={{maxWidth:1100,margin:"0 auto",padding:"clamp(12px,4vw,28px) clamp(8px,3vw,14px)",position:"relative",zIndex:2}}>
+    <main style={{maxWidth:view==="hof"?1320:1100,margin:"0 auto",padding:"clamp(12px,4vw,28px) clamp(8px,3vw,14px)",position:"relative",zIndex:2}}>
       {showSeasonTwoClosedState&&(
         <section className="season-closed-state" style={{
           ...card({
@@ -3339,6 +3426,7 @@ export default function GameNight(){
             SEASONS,
             activeCampaign,
             activeCampaignSessions,
+            weeklyLoopState,
           sessions,
           allStats,
           players,
@@ -3416,7 +3504,7 @@ export default function GameNight(){
                     <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4}}>All-time marks only. No live campaign movement.</div>
                   </div>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+                <div className="hof-honors-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
                   {honors.map((honor)=>(
                     <div key={honor.label} onClick={()=>honor.player&&goProfile(honor.player.id)} style={{
                       background:"rgba(0,0,0,.34)",
@@ -3441,139 +3529,118 @@ export default function GameNight(){
             );
           })()}
 
-          {/* Season Recaps */}
-          {SEASONS.filter((season)=>{
-            const now=new Date().toISOString().split("T")[0];
-            const seasonSessions=sessions.filter(s=>s.date>=season.start&&s.date<=season.end);
-            const finalDayFiled=seasonSessions.some((session)=>session.date===season.end);
-            return season.end<=now||finalDayFiled;
-          }).map(season=>{
-            const sSess=sessions.filter(s=>s.date>=season.start&&s.date<=season.end);
-            if(!sSess.length)return null;
-            const sStats=allStats(sSess).filter(p=>p.appearances>0);
-            const champ=sStats.sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
-            const topK=[...sStats].sort((a,b)=>b.kills-a.kills)[0];
-            const mostActive=[...sStats].sort((a,b)=>b.appearances-a.appearances)[0];
-            const now=new Date().toISOString().split("T")[0];
-            const finalDayFiled=sSess.some((session)=>session.date===season.end);
-            const ended=season.end<=now||finalDayFiled;
-            return(
-              <div key={season.id} style={{...card({border:`2px solid ${season.color}44`,
-                background:`linear-gradient(135deg,${season.color}0c,var(--card))`}),
-                padding:20,marginBottom:14,animation:"fadeUp .4s ease both"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-                  <div>
-                    <span style={{fontSize:".68rem",color:season.color,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase"}}>{ended?"🏁 Campaign Closed":"📅 Campaign Filed"}</span>
-                    <h3 style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.2rem",marginTop:2}}>{season.name}: {season.label}</h3>
-                    <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>{sSess.length} lobbies logged · {sStats.length} names on file</p>
-                  </div>
-                  {ended&&champ&&<div style={{textAlign:"center"}}>
-                    <div style={{fontSize:".66rem",color:"#FFD700",fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>👑 Crown Holder</div>
-                    <div style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.1rem"}}>{champ.username}</div>
-                    <div style={{fontSize:".72rem",color:"var(--text3)"}}>{champ.wins}W · {champ.winRate}%WR</div>
-                  </div>}
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:8}}>
-                  {[
-                    {icon:"🏆",label:"Wins Leader",    p:champ,    val:champ?.wins+"W"},
-                    {icon:"💀",label:"Lead Fragger",   p:topK,     val:topK?.kills+"K"},
-                    {icon:"📅",label:"Iron Presence", p:mostActive,val:mostActive?.appearances+"G"},
-                  ].filter(a=>a.p).map((a,i)=>(
-                    <div key={i} onClick={()=>a.p&&goProfile(a.p.id)} style={{
-                      background:"rgba(0,0,0,.35)",borderRadius:10,padding:"10px 12px",cursor:"pointer"}}>
-                      <div style={{fontSize:".62rem",color:"var(--text3)",fontWeight:700,marginBottom:5}}>{a.icon} {a.label}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <Avatar p={a.p} size={26}/>
-                        <div>
-                          <div style={{fontFamily:"Fredoka One",color:season.color,fontSize:".84rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:90}}>{a.p.username}</div>
-                          <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".9rem"}}>{a.val}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Rare Commendations */}
+          {/* Legacy Files */}
           {(()=>{
-            const rareNames=new Set(["Invincible","S1 Champion","S2 Champion","First Blood S2","S1 Record Breaker","1K Kills","500 Kills","Rampage","LOBBY WIPE"]);
-            const rareBadges=BADGE_CATALOGUE.filter((badge)=>rareNames.has(badge.name));
+            const allTimeRows=allStats()
+              .filter((player)=>player.appearances>0)
+              .sort((a,b)=>b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances);
             return(
-              <div style={{...card({border:"2px solid rgba(199,125,255,.2)"}),padding:18,marginBottom:16}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                  <span style={{fontSize:"1.35rem"}}>🎖️</span>
+              <div style={{...card({border:"2px solid rgba(0,229,255,.18)",background:"linear-gradient(135deg,rgba(0,229,255,.05),rgba(0,0,0,.22),var(--card))"}),padding:20,marginBottom:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
                   <div>
-                    <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.1rem"}}>Rare Commendations</h3>
-                    <p style={{color:"var(--text3)",fontSize:".76rem",marginTop:2}}>Permanent honors and record badges. The full reference sits below.</p>
+                    <div className="bc7" style={{fontSize:".62rem",letterSpacing:".28em",color:"#00E5FF"}}>LEGACY FILES</div>
+                    <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4}}>All-time player cards from official room history.</div>
                   </div>
+                  <div className="bc7" style={{fontSize:".62rem",letterSpacing:".16em",color:"var(--text3)"}}>{allTimeRows.length} FILES</div>
                 </div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {rareBadges.map((badge)=>(
-                    <span key={badge.name} style={{
-                      background:"rgba(255,255,255,.06)",
-                      border:"1px solid rgba(255,255,255,.12)",
-                      borderRadius:999,
-                      padding:"7px 10px",
-                      color:"var(--text2)",
-                      fontSize:".74rem",
-                      fontWeight:800,
-                    }}>{badge.icon} {badge.name}</span>
-                  ))}
+                <div className="hof-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:18}}>
+                  {allTimeRows.map((row,index)=>{
+                    const player=players.find((entry)=>entry.id===row.id);
+                    if(!player)return null;
+                    const rank=getRank(player.id);
+                    const badges=getBadges(player.id);
+                    const streak=getStreak(player.id);
+                    const hasStreakGlow=streak>=3;
+                    return(
+                      <div key={player.id} className={`card-h legacy-player-card${hasStreakGlow?" has-streak-glow":""}`} onClick={()=>goProfile(player.id)} style={{
+                        "--legacy-glow":`${player.color}33`,
+                        ...card({
+                          borderTop:`4px solid ${player.color}`,
+                          boxShadow:hasStreakGlow
+                            ?`0 0 34px rgba(255,107,53,.2), 0 0 28px ${player.color}18`
+                            :`0 0 28px ${player.color}14`,
+                        }),
+                        padding:20,
+                        position:"relative",
+                        overflow:"hidden",
+                        cursor:"pointer",
+                      }}>
+                        {hasStreakGlow&&(
+                          <div className="fire" style={{
+                            position:"absolute",
+                            top:8,
+                            left:10,
+                            zIndex:2,
+                            fontSize:".8rem",
+                            background:"rgba(255,107,53,.2)",
+                            borderRadius:50,
+                            padding:"2px 7px",
+                            border:"1px solid rgba(255,107,53,.4)",
+                            color:"#FF6B35",
+                            fontWeight:800,
+                            boxShadow:"0 0 16px rgba(255,107,53,.25)",
+                          }}>
+                            🔥 {streak} streak
+                          </div>
+                        )}
+                        {index<3&&(
+                          <div style={{position:"absolute",top:8,right:10,fontSize:"1.5rem",zIndex:2,
+                            animation:index===0?"floatY 3s ease-in-out infinite":"none"}}>
+                            {["👑","🥈","🥉"][index]}
+                          </div>
+                        )}
+                        <div className="legacy-card-head" style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,marginTop:hasStreakGlow?20:0,position:"relative",zIndex:1}}>
+                          <Avatar p={player} size={52} glow/>
+                          <div style={{minWidth:0,flex:1,position:"relative",zIndex:1}}>
+                            <div className="legacy-card-name" style={{fontFamily:"Fredoka One",color:"#fff",fontSize:"1.15rem",overflow:"visible",textOverflow:"clip",whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.08}}>
+                              {player.host?"👑 ":""}{dn(player.username)}
+                            </div>
+                            <div style={{fontSize:".72rem",color:rank.color,fontWeight:700,marginTop:2}}>
+                              {rank.title}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="legacy-stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6,position:"relative",zIndex:1,marginBottom:12}}>
+                          {[
+                            {icon:"🏆",label:"Wins",value:row.wins,color:"#FFD700"},
+                            {icon:"💀",label:"Kills",value:row.kills,color:"#FF4D8F"},
+                            {icon:"⚡",label:"K/G",value:row.kd,color:"#00E5FF"},
+                            {icon:"🎯",label:"Win Rate",value:`${row.winRate}%`,color:"#00FF94"},
+                            {icon:"📅",label:"Lobbies",value:row.appearances,color:"#FFAB40"},
+                            {icon:"🌟",label:"Best Game",value:`${row.biggestGame}K`,color:"#C77DFF"},
+                          ].map((stat)=>(
+                            <div key={stat.label} className="legacy-stat-tile" style={{background:"rgba(0,0,0,.38)",border:`1px solid ${stat.color}18`,borderRadius:8,padding:"7px 10px",textAlign:"left"}}>
+                              <div style={{fontSize:".6rem",color:"var(--text3)",fontWeight:700,marginBottom:1}}>{stat.icon} {stat.label}</div>
+                              <div className="legacy-stat-value" style={{fontFamily:"Fredoka One",color:stat.color,fontSize:"1.08rem"}}>{stat.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {badges.length>0&&(
+                          <div className="legacy-badge-strip" style={{display:"flex",flexWrap:"wrap",gap:5,position:"relative",zIndex:1}}>
+                            {badges.map((badge,index)=>(
+                              <span key={`${badge.label}-${index}`} style={{
+                              background:badge.hot?"rgba(255,107,53,.15)":"rgba(255,255,255,.09)",
+                              borderRadius:999,
+                              padding:"3px 9px",
+                              fontSize:".68rem",
+                              fontWeight:700,
+                              color:"#fff",
+                              border:badge.hot?"1px solid rgba(255,107,53,.36)":"1px solid rgba(255,255,255,.18)",
+                              boxShadow:badge.hot?"0 0 14px rgba(255,107,53,.12)":"none",
+                            }}>
+                                {badge.hot?<span className="fire" style={{display:"inline-block"}}>{badge.icon}</span>:badge.icon} {badge.label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })()}
 
-          {/* Rank Titles FAQ */}
-          <div style={{...card({border:"2px solid rgba(199,125,255,.25)"}),padding:24,marginBottom:16}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-              <span style={{fontSize:"1.4rem"}}>🏅</span>
-              <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.2rem"}}>Callsigns Explained</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Every title means something. This is what the room is saying.</p>
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
-              {RANK_FAQ.map((r,i)=>(
-                <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"13px 16px",
-                  border:`1px solid ${r.color}33`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <span style={{fontSize:"1.2rem"}}>{r.icon}</span>
-                    <span style={{fontFamily:"Fredoka One",color:r.color,fontSize:"1rem"}}>{r.name}</span>
-                  </div>
-                  <p style={{color:"var(--text2)",fontSize:".78rem",lineHeight:1.55}}>{r.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Badges FAQ */}
-          <div style={{...card({border:"2px solid rgba(255,215,0,.25)"}),padding:24}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-              <span style={{fontSize:"1.4rem"}}>🎖️</span>
-              <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.2rem"}}>Commendations</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Tap any badge to see what kind of night earns it.</p>
-              </div>
-            </div>
-            <div>
-              {BADGE_CATALOGUE.map((b,i)=>(
-                <div key={i} className="faq-item">
-                  <div className="faq-q" onClick={()=>setFaqOpen(faqOpen===i?null:i)}>
-                    <span>{b.icon} <strong>{b.name}</strong>: <span style={{color:"var(--text3)",fontWeight:600}}>{b.desc}</span></span>
-                    <span style={{color:"var(--text3)",marginLeft:8,flexShrink:0}}>{faqOpen===i?"▲":"▼"}</span>
-                  </div>
-                  {faqOpen===i&&(
-                    <div className="faq-a">
-                      <span style={{color:"#00FF94",fontWeight:800}}>How to earn:</span> {b.how}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
@@ -3616,6 +3683,7 @@ export default function GameNight(){
           activeCampaign,
           activeCampaignClosed,
           seasonThreeWaiting,
+          weeklyLoopState,
         }}/>
       )}
 
@@ -3688,6 +3756,7 @@ export default function GameNight(){
           Avatar,
           dn,
           activeCampaign,
+          weeklyLoopState,
         }}/>
       )}
 
@@ -3917,47 +3986,69 @@ export default function GameNight(){
       )}
 
       {view==="charts"&&(
-        <div className="fade-up" style={{minHeight:"calc(100vh - 120px)"}}>
-          <div style={{textAlign:"center",marginBottom:32}}>
-            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Player read</p>
+        <div className="fade-up intel-v2-page" style={{minHeight:"calc(100vh - 120px)"}}>
+          <div style={{textAlign:"center",marginBottom:22}}>
+            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Season 3 scouting</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
               background:"linear-gradient(135deg,#00E5FF,#C77DFF)",
               WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
-              📈 Intel
+              Intel
             </h2>
           </div>
           {(()=>{
-            const activePlayers=players.filter(p=>getStats(p.id).appearances>=3)
-              .map(p=>({...p,...getStats(p.id)}))
-              .sort((a,b)=>b.wins-a.wins);
-            const effectivePid=chartPid||activePlayers[0]?.id||"";
+            const seasonSess=filterSessionsBySeason(sessions,activeCampaignId);
+            const baseScout=getSeasonScoutBoard(activeCampaignId);
+            const activePlayers=players
+              .map(p=>({...p,...getStats(p.id,seasonSess)}))
+              .filter(p=>p.appearances>0)
+              .sort((a,b)=>b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances);
+            const effectivePid=chartPid||baseScout.defaultPlayerId||activePlayers[0]?.id||"";
+            const scout=getSeasonScoutBoard(activeCampaignId,{playerId:effectivePid});
             const chartPlayer=players.find(p=>p.id===effectivePid);
-            const chartData=getChartData(effectivePid);
+            const chartData=getChartData(effectivePid,seasonSess);
             const maxW=Math.max(1,...chartData.map(d=>d.wins));
             const maxK=Math.max(1,...chartData.map(d=>d.kills));
-            const selectedStats=effectivePid?getStats(effectivePid):null;
-            const bestDamageDay=chartData.reduce((best,day)=>day.kills>(best?.kills||0)?day:best,null);
-            const bestWinDay=chartData.reduce((best,day)=>day.wins>(best?.wins||0)?day:best,null);
-            const latestDay=[...chartData].reverse().find((day)=>day.games>0)||null;
-            const latestLabel=latestDay
-              ?new Date(latestDay.date+"T12:00:00Z").toLocaleDateString("en",{month:"short",day:"numeric"})
-              :"No recent file";
-            const bestDamageLabel=bestDamageDay&&bestDamageDay.kills>0
-              ?`${bestDamageDay.kills}K on ${new Date(bestDamageDay.date+"T12:00:00Z").toLocaleDateString("en",{month:"short",day:"numeric"})}`
-              :"No damage spike";
-            const bestWinLabel=bestWinDay&&bestWinDay.wins>0
-              ?`${bestWinDay.wins}W on ${new Date(bestWinDay.date+"T12:00:00Z").toLocaleDateString("en",{month:"short",day:"numeric"})}`
-              :"No win spike";
-            const leaderIndex=activePlayers.findIndex((player)=>player.id===effectivePid);
-            const rankLabel=leaderIndex>=0?`#${leaderIndex+1} by wins`:"Off board";
-            const intelRead=chartPlayer&&selectedStats
-              ?selectedStats.wins>0
-                ?`${dn(chartPlayer.username)} is carrying ${selectedStats.wins} wins and ${selectedStats.kills} kills across ${selectedStats.appearances} lobbies. The file is not just volume. It has closing pressure.`
-                :`${dn(chartPlayer.username)} is still hunting the first close. ${selectedStats.kills} kills across ${selectedStats.appearances} lobbies keeps the file visible, but the board is waiting for payoff.`
-              :"Pick a file to read the pressure line.";
+            const selectedBrief=scout.selectedPlayerBrief;
+            const scoutLanes=[
+              {label:"Rising files",color:"#00FF94",items:scout.risingPlayers},
+              {label:"Damage watch",color:"#FF4D8F",items:scout.damageWatchPlayers},
+              {label:"Quiet files",color:"#7B8CDE",items:scout.quietFiles},
+              {label:"Latest movement",color:"#FFD700",items:scout.latestMovement},
+            ];
             return(
               <div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+                <div className="intel-scout-board" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:18}}>
+                  {scoutLanes.map((lane)=>{
+                    const item=lane.items?.[0];
+                    return(
+                      <div key={lane.label} style={{
+                        background:`linear-gradient(135deg,${lane.color}12,rgba(0,0,0,.3))`,
+                        border:`1px solid ${lane.color}2c`,
+                        borderLeft:`3px solid ${lane.color}`,
+                        borderRadius:"0 8px 8px 0",
+                        padding:"12px 13px",
+                        minHeight:118,
+                      }}>
+                        <div className="bc7" style={{fontSize:".54rem",letterSpacing:".2em",color:`${lane.color}cc`,textTransform:"uppercase",marginBottom:8}}>
+                          {lane.label}
+                        </div>
+                        <div className="bc9" style={{fontSize:".92rem",lineHeight:1.2,color:lane.color,marginBottom:6}}>
+                          {item?.headline || "No clean read yet."}
+                        </div>
+                        <div className="bc7" style={{fontSize:".64rem",lineHeight:1.5,color:"var(--text3)",marginBottom:8}}>
+                          {item?.detail || "Official Season 3 data has not made this lane useful yet."}
+                        </div>
+                        {item?.statLine&&(
+                          <div className="bc7" style={{fontSize:".58rem",letterSpacing:".14em",color:"var(--text2)"}}>
+                            {item.statLine}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="intel-player-selector" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
                   {activePlayers.map(p=>(
                     <button key={p.id} onClick={()=>setChartPid(p.id)}
                       className="pill" style={{
@@ -3989,25 +4080,23 @@ export default function GameNight(){
                         </div>
                         <div style={{minWidth:0}}>
                           <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:`${chartPlayer.color}bb`,textTransform:"uppercase",marginBottom:5}}>
-                            Intel brief
+                            Selected scout file
                           </div>
                           <div style={{fontFamily:"Fredoka One",fontSize:"1.2rem",color:chartPlayer.color,lineHeight:1.1}}>
                             {chartPlayer.host?"👑 ":""}{dn(chartPlayer.username)}
                           </div>
                         </div>
                       </div>
-                      <div className="bc7" style={{fontSize:".8rem",lineHeight:1.72,color:"var(--text2)",marginBottom:13}}>
-                        {intelRead}
+                      <div className="bc9" style={{fontSize:"1rem",lineHeight:1.28,color:chartPlayer.color,marginBottom:6}}>
+                        {selectedBrief.headline}
                       </div>
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8}}>
-                        {[
-                          {label:"Board position",value:rankLabel,color:"#00E5FF"},
-                          {label:"Best close",value:bestWinLabel,color:"#FFD700"},
-                          {label:"Damage spike",value:bestDamageLabel,color:"#FF4D8F"},
-                          {label:"Latest file",value:latestDay?`${latestDay.games}G · ${latestDay.wins}W · ${latestDay.kills}K on ${latestLabel}`:"No latest file",color:"#00FF94"},
-                        ].map((marker)=>(
+                      <div className="bc7" style={{fontSize:".76rem",lineHeight:1.55,color:"var(--text2)",marginBottom:13}}>
+                        {selectedBrief.supportLine}
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+                        {selectedBrief.markers.map((marker,index)=>(
                           <div key={marker.label} style={{background:"rgba(0,0,0,.24)",border:`1px solid ${marker.color}24`,borderRadius:8,padding:"10px 11px"}}>
-                            <div className="bc7" style={{fontSize:".54rem",letterSpacing:".16em",color:`${marker.color}cc`,textTransform:"uppercase",marginBottom:5}}>
+                            <div className="bc7" style={{fontSize:".54rem",letterSpacing:".16em",color:index===0?"#00E5FF":index===1?"#00FF94":"#FFD700",textTransform:"uppercase",marginBottom:5}}>
                               {marker.label}
                             </div>
                             <div className="bc7" style={{fontSize:".72rem",lineHeight:1.45,color:"var(--text)"}}>
@@ -4021,9 +4110,12 @@ export default function GameNight(){
                       <div style={{fontSize:".75rem",color:"var(--text3)",fontWeight:800,letterSpacing:2,textTransform:"uppercase",marginBottom:12}}>
                         🏆 Win line
                       </div>
+                      <div className="bc7" style={{fontSize:".68rem",color:"var(--text3)",lineHeight:1.5,margin:"-4px 0 12px"}}>
+                        The chart shows where the file moved, not just what it totaled.
+                      </div>
                       <div style={{display:"flex",alignItems:"flex-end",gap:6,height:120,overflowX:"auto",paddingBottom:4}}>
                         {chartData.map((d,i)=>{
-                          const h=maxW>0?(d.wins/maxW)*100:0;
+                          const h=maxW>0?Math.round((d.wins/maxW)*96):0;
                           const dd=new Date(d.date+"T12:00:00Z");
                           const label=`${dd.toLocaleDateString("en",{month:"short",day:"numeric"})}: ${d.wins}W`;
                           return(
@@ -4032,7 +4124,7 @@ export default function GameNight(){
                                 {d.wins>0?d.wins:""}
                               </div>
                               <div className="chart-bar" title={label} style={{
-                                width:28,height:`${Math.max(4,h)}%`,minHeight:4,
+                                width:28,height:`${Math.max(6,h)}px`,minHeight:6,
                                 background:d.wins>0?`linear-gradient(to top,${chartPlayer.color},${chartPlayer.color}88)`:"rgba(255,255,255,.08)",
                                 borderRadius:"4px 4px 0 0",cursor:"default"}}>
                               </div>
@@ -4050,9 +4142,12 @@ export default function GameNight(){
                       <div style={{fontSize:".75rem",color:"var(--text3)",fontWeight:800,letterSpacing:2,textTransform:"uppercase",marginBottom:12}}>
                         💀 Damage line
                       </div>
+                      <div className="bc7" style={{fontSize:".68rem",color:"var(--text3)",lineHeight:1.5,margin:"-4px 0 12px"}}>
+                        Damage spikes show pressure even when the crown does not move.
+                      </div>
                       <div style={{display:"flex",alignItems:"flex-end",gap:6,height:120,overflowX:"auto",paddingBottom:4}}>
                         {chartData.map((d,i)=>{
-                          const h=maxK>0?(d.kills/maxK)*100:0;
+                          const h=maxK>0?Math.round((d.kills/maxK)*96):0;
                           const dd=new Date(d.date+"T12:00:00Z");
                           const label=`${dd.toLocaleDateString("en",{month:"short",day:"numeric"})}: ${d.kills}K`;
                           return(
@@ -4061,7 +4156,7 @@ export default function GameNight(){
                                 {d.kills>0?d.kills:""}
                               </div>
                               <div className="chart-bar" title={label} style={{
-                                width:28,height:`${Math.max(4,h)}%`,minHeight:4,
+                                width:28,height:`${Math.max(6,h)}px`,minHeight:6,
                                 background:d.kills>0?"linear-gradient(to top,#FF4D8F,#FF4D8F88)":"rgba(255,255,255,.08)",
                                 borderRadius:"4px 4px 0 0",cursor:"default"}}>
                               </div>
@@ -4567,6 +4662,7 @@ export default function GameNight(){
           Avatar,
           s2CdClock,
           SEASON_TWO_LAUNCH_DATE,
+          weeklyLoopState,
         }}/>
       )}
 

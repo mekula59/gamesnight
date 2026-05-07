@@ -41,6 +41,7 @@ export default function WarRoomView({ ctx }) {
     Avatar,
     dn,
     activeCampaign,
+    weeklyLoopState,
   } = ctx;
 
   const archiveSessions = [...sessions].sort(compareSessionsDesc);
@@ -137,6 +138,23 @@ export default function WarRoomView({ ctx }) {
               ? `${activeCampaign.name} opened on ${formatLobbyDate(latestArchiveDate,{weekday:"short",day:"numeric",month:"short"})}. Read the newest campaign file first, then pull any older report.`
               : "The full session archive. Read the freshest rooms first, filter one operative or one day, and open any report to see how the room actually broke."}
           </p>
+          {weeklyLoopState?.latestFiledDate&&(
+            <div className="bc7" style={{
+              marginTop:10,
+              padding:"7px 10px",
+              width:"fit-content",
+              maxWidth:"100%",
+              border:"1px solid rgba(0,229,255,.14)",
+              borderLeft:"3px solid rgba(0,229,255,.5)",
+              borderRadius:"0 7px 7px 0",
+              background:"rgba(0,229,255,.045)",
+              color:"var(--text2)",
+              fontSize:".68rem",
+              lineHeight:1.45,
+            }}>
+              Latest filed room set: {formatLobbyDate(weeklyLoopState.latestFiledDate,{day:"numeric",month:"short"})}. {weeklyLoopState.label}.
+            </div>
+          )}
           {openerFallout&&(
             <div style={{
               display:"grid",

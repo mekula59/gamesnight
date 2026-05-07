@@ -8,6 +8,7 @@ export default function HomeView({ ctx }) {
     todayStr,
     SEASONS,
     activeCampaign,
+    weeklyLoopState,
     sessions,
     allStats,
     players,
@@ -462,6 +463,29 @@ export default function HomeView({ ctx }) {
                       {dn(leaderP.username).toUpperCase()} · {leaderStats.wins}W
                     </div>
                   )}
+                </div>
+              )}
+
+              {currentSeason.id==="s3"&&seasonSess.length>0&&weeklyLoopState&&(
+                <div className="zone-receive-follow" style={{
+                  "--receive-delay":"205ms",
+                  margin:"-16px 0 26px",
+                  padding:"9px 12px",
+                  border:"1px solid rgba(0,229,255,.16)",
+                  borderLeft:"3px solid rgba(0,229,255,.58)",
+                  borderRadius:"0 7px 7px 0",
+                  background:"rgba(0,229,255,.045)",
+                }}>
+                  <div className="bc7" style={{fontSize:".5rem",letterSpacing:".2em",color:"rgba(0,229,255,.72)",marginBottom:4}}>
+                    WEEKLY LOOP
+                  </div>
+                  <div className="bc7" style={{fontSize:".7rem",lineHeight:1.5,color:"var(--text2)"}}>
+                    <span style={{color:"#00E5FF",fontWeight:900,letterSpacing:".08em"}}>
+                      {weeklyLoopState.state}
+                    </span>
+                    {" · "}
+                    {weeklyLoopState.line}
+                  </div>
                 </div>
               )}
 
