@@ -110,7 +110,7 @@ export default function VaultView({ ctx }) {
                     <div className="bc9" style={{ fontSize: ".84rem", lineHeight: 1.2, color: kkP?.color || "var(--text3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: kkP ? "pointer" : "default" }} onClick={() => kkP && goProfile(kkP.id)}>
                       {kkP ? kkNames : "Night stayed quiet"}
                     </div>
-                    {kkMax > 0 && <div className="bc7" style={{ fontSize: ".62rem", color: "#FF4D8F", lineHeight: 1, marginTop: 2 }}>{kkMax}K{kkPlayers.length > 1 ? " shared" : ""} · {kkLobbyLine}</div>}
+                    {kkMax > 0 && <div className="bc7" style={{ fontSize: ".62rem", color: "#FF4D8F", lineHeight: 1, marginTop: 2 }}>{dayLabel} ceiling · {kkMax}K{kkPlayers.length > 1 ? " shared" : ""} · {kkLobbyLine}</div>}
                   </div>
                 </div>
               );
