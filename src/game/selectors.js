@@ -715,9 +715,9 @@ export const getBadges = (playerId, sessions) => {
         seasonTwoSessions.some(
           (session) => session.date === date && session.winner === playerId,
         ),
-      );
+    );
     if (seasonTwoResolved && wonEveryFiledDay) {
-      badges.push({ icon: "🛡️", label: "Invincible", hot: true });
+      badges.push({ icon: "🛡️", label: "S2 Invincible", hot: true });
     }
   }
 
