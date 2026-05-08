@@ -660,6 +660,7 @@ const CSS = `
     color:var(--text2);
   }
   .arena-week-chip-mobile{display:none!important;}
+  .warroom-weekly-mobile-row{display:none;}
   @media(max-width:720px){
     .arena-page .arena-hero{
       margin-bottom:14px!important;
@@ -1412,6 +1413,20 @@ const CSS = `
     .combat-file-page .combat-file-duo{grid-template-columns:1fr!important;gap:10px!important;}
     .warroom-hero{padding:18px 16px!important;}
     .warroom-summary-grid{grid-template-columns:1fr!important;gap:8px!important;margin-top:16px!important;}
+    .warroom-fallout-report{padding:12px!important;margin-bottom:0!important;}
+    .warroom-fallout-head{gap:8px!important;margin-bottom:9px!important;}
+    .warroom-fallout-headline{font-size:.9rem!important;line-height:1.22!important;}
+    .warroom-fallout-grid{grid-template-columns:1fr!important;gap:7px!important;}
+    .warroom-fallout-card{padding:8px 9px!important;}
+    .warroom-fallout-card:nth-child(n+4){display:none!important;}
+    .warroom-weekly-recap{padding:10px 11px!important;margin-bottom:0!important;}
+    .warroom-weekly-head{margin-bottom:8px!important;gap:8px!important;}
+    .warroom-weekly-headline{display:none!important;}
+    .warroom-weekly-cards{display:none!important;}
+    .warroom-weekly-mobile-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;}
+    .warroom-weekly-mobile-stat{padding:8px 8px 7px!important;border:1px solid color-mix(in srgb,var(--weekly-stat-color) 28%,transparent)!important;border-left:3px solid var(--weekly-stat-color)!important;border-radius:0 7px 7px 0!important;background:rgba(0,0,0,.2)!important;min-width:0!important;}
+    .warroom-weekly-mobile-label{font-size:.48rem!important;letter-spacing:.14em!important;color:var(--text3)!important;text-transform:uppercase!important;margin-bottom:4px!important;}
+    .warroom-weekly-mobile-value{font-size:.68rem!important;line-height:1.18!important;color:var(--weekly-stat-color)!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
     .warroom-filter-card{padding:16px!important;}
     .warroom-filter-head{margin-bottom:14px!important;gap:10px!important;}
     .warroom-filter-grid{grid-template-columns:1fr!important;gap:10px!important;}

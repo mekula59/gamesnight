@@ -51,6 +51,12 @@ export default function WarRoomView({ ctx }) {
   const latestIsCampaignOpener=Boolean(activeCampaign?.start&&latestArchiveDate===activeCampaign.start);
   const openerFallout=latestIsCampaignOpener?getSeasonOpenerFallout?.(activeCampaign.id):null;
   const falloutReport=getFalloutReport?.(latestArchiveDate)||null;
+  const formatWeeklyCompactLeader=(leader, valueKey, suffix)=>{
+    const names=leader?.players?.map((player)=>dn(player.username)).filter(Boolean)||[];
+    const compactNames=names.length>2?`${names.slice(0,2).join(" + ")} +${names.length-2}`:names.join(" + ");
+    const value=leader?.[valueKey]||0;
+    return compactNames?`${compactNames} · ${value}${suffix}`:`0${suffix}`;
+  };
   const latestWinner = latestLobby ? getPlayer(latestLobby.winner) : null;
   const liveHeat = getLatestDayHeatRun(latestArchiveDate) || null;
   const heatPlayer = liveHeat?.player || null;
@@ -240,12 +246,12 @@ export default function WarRoomView({ ctx }) {
               }),
             }}
           >
-            <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap",marginBottom:12}}>
+            <div className="warroom-fallout-head" style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap",marginBottom:12}}>
               <div>
                 <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:"#FF9BC2",textTransform:"uppercase",marginBottom:6}}>
                   FALLOUT REPORT
                 </div>
-                <div className="bc9" style={{fontSize:"clamp(.98rem,3vw,1.16rem)",color:"#FF4D8F",lineHeight:1.25}}>
+                <div className="bc9 warroom-fallout-headline" style={{fontSize:"clamp(.98rem,3vw,1.16rem)",color:"#FF4D8F",lineHeight:1.25}}>
                   {falloutReport.headline}
                 </div>
               </div>
@@ -253,7 +259,7 @@ export default function WarRoomView({ ctx }) {
                 {formatLobbyDate(falloutReport.date,{weekday:"short",day:"numeric",month:"short"})}
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(165px,1fr))",gap:8}}>
+            <div className="warroom-fallout-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(165px,1fr))",gap:8}}>
               {falloutReport.cards.map((entry)=>{
                 const toneColor={
                   filed:"#00E5FF",
@@ -263,7 +269,7 @@ export default function WarRoomView({ ctx }) {
                   memory:"#00FF94",
                 }[entry.tone]||"#C77DFF";
                 return(
-                  <div key={entry.id} style={{
+                  <div key={entry.id} className="warroom-fallout-card" style={{
                     padding:"11px 12px",
                     borderRadius:"0 8px 8px 0",
                     border:`1px solid ${toneColor}24`,
@@ -301,12 +307,12 @@ export default function WarRoomView({ ctx }) {
               }),
             }}
           >
-            <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap",marginBottom:11}}>
+            <div className="warroom-weekly-head" style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap",marginBottom:11}}>
               <div>
                 <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:"#00E5FF",textTransform:"uppercase",marginBottom:6}}>
                   WEEKLY RECAP
                 </div>
-                <div className="bc9" style={{fontSize:"clamp(.96rem,3vw,1.12rem)",color:"#00E5FF",lineHeight:1.25}}>
+                <div className="bc9 warroom-weekly-headline" style={{fontSize:"clamp(.96rem,3vw,1.12rem)",color:"#00E5FF",lineHeight:1.25}}>
                   {weeklyRecap.lobbies} lobbies, {weeklyRecap.kills} kills, and {weeklyRecap.uniqueWinners} winners filed this week.
                 </div>
               </div>
@@ -314,7 +320,20 @@ export default function WarRoomView({ ctx }) {
                 {weeklyRecap.weekLabel}
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:8}}>
+            <div className="warroom-weekly-mobile-row">
+              {[
+                {label:"Lobbies",value:weeklyRecap.lobbies,color:"#00E5FF"},
+                {label:"Kills",value:weeklyRecap.kills,color:"#FF4D8F"},
+                {label:"Win line",value:formatWeeklyCompactLeader(weeklyRecap.winsLeader,"wins","W"),color:"#FFD700"},
+                {label:"Damage",value:formatWeeklyCompactLeader(weeklyRecap.killLeader,"kills","K"),color:"#FF4D8F"},
+              ].map((item)=>(
+                <div key={item.label} className="warroom-weekly-mobile-stat" style={{"--weekly-stat-color":item.color}}>
+                  <div className="bc7 warroom-weekly-mobile-label">{item.label}</div>
+                  <div className="bc9 warroom-weekly-mobile-value">{item.value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="warroom-weekly-cards" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:8}}>
               {weeklyRecap.cards.slice(1,7).map((entry)=>{
                 const toneColor={
                   crown:"#FFD700",
