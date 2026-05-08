@@ -40,6 +40,7 @@ import {
   getLatestDayConsequences as selectGetLatestDayConsequences,
   getLatestSessionDate as selectGetLatestSessionDate,
   getFalloutReport as selectGetFalloutReport,
+  getLatestWeeklyRecap as selectGetLatestWeeklyRecap,
   getLeaderboardShiftData as selectGetLeaderboardShiftData,
   getLobbyWipeEvents as selectGetLobbyWipeEvents,
   getPlayerLobbyWipeSummary as selectGetPlayerLobbyWipeSummary,
@@ -2277,6 +2278,15 @@ export default function GameNight(){
     });
   const getLatestDayConsequences=date=>selectGetLatestDayConsequences(sessions,players,date);
   const getFalloutReport=date=>selectGetFalloutReport(date,sessions,players);
+  const getWeeklyRecap=(seasonId=activeCampaignId)=>{
+    const scopedSessions=seasonId==="all"?sessions:filterSessionsBySeason(sessions,seasonId);
+    return selectGetLatestWeeklyRecap({
+      sessions:scopedSessions,
+      players,
+      weeklyLoopState:seasonId===activeCampaignId?weeklyLoopState:null,
+      now:new Date(),
+    });
+  };
   const getSeasonOpenerFallout=seasonId=>selectGetSeasonOpenerFallout(seasonId, sessions, players);
   const getCampaignFronts=seasonId=>selectGetCampaignFronts(seasonId, sessions, players);
   const getLeaderboardShiftData=(seasonId="all",period=lbPeriod,sortKey=sortBy)=>
@@ -3791,6 +3801,7 @@ export default function GameNight(){
           dn,
           activeCampaign,
           weeklyLoopState,
+          weeklyRecap:getWeeklyRecap(activeCampaignId),
         }}/>
       )}
 
@@ -4723,6 +4734,7 @@ export default function GameNight(){
           getLatestSessionDate,
           getLatestDayConsequences,
           getCampaignFronts,
+          getWeeklyRecap,
           getSeasonOpenerFallout,
           buildSeasonCampaignFile,
           joinHumanList,

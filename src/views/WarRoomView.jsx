@@ -42,6 +42,7 @@ export default function WarRoomView({ ctx }) {
     dn,
     activeCampaign,
     weeklyLoopState,
+    weeklyRecap,
   } = ctx;
 
   const archiveSessions = [...sessions].sort(compareSessionsDesc);
@@ -276,6 +277,68 @@ export default function WarRoomView({ ctx }) {
                       {entry.headline}
                     </div>
                     <div className="bc7" style={{fontSize:".64rem",lineHeight:1.48,color:"var(--text2)"}}>
+                      {entry.detail}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </MotionReveal>
+        )}
+
+        {weeklyRecap&&(
+          <MotionReveal
+            className="warroom-weekly-recap zone-receive-follow"
+            delay={75}
+            style={{
+              "--receive-delay":"140ms",
+              ...card({
+                padding:"15px 16px 16px",
+                marginBottom:2,
+                border:"1.5px solid rgba(0,229,255,.18)",
+                borderLeft:"3px solid rgba(0,229,255,.62)",
+                background:"linear-gradient(135deg,rgba(0,229,255,.075),rgba(0,0,0,.24))",
+              }),
+            }}
+          >
+            <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap",marginBottom:11}}>
+              <div>
+                <div className="bc7" style={{fontSize:".58rem",letterSpacing:".22em",color:"#00E5FF",textTransform:"uppercase",marginBottom:6}}>
+                  WEEKLY RECAP
+                </div>
+                <div className="bc9" style={{fontSize:"clamp(.96rem,3vw,1.12rem)",color:"#00E5FF",lineHeight:1.25}}>
+                  {weeklyRecap.lobbies} lobbies, {weeklyRecap.kills} kills, and {weeklyRecap.uniqueWinners} winners filed this week.
+                </div>
+              </div>
+              <div className="bc7" style={{fontSize:".6rem",letterSpacing:".16em",color:"var(--text3)",textTransform:"uppercase"}}>
+                {weeklyRecap.weekLabel}
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:8}}>
+              {weeklyRecap.cards.slice(1,7).map((entry)=>{
+                const toneColor={
+                  crown:"#FFD700",
+                  damage:"#FF4D8F",
+                  marker:"#FFAB40",
+                  presence:"#00FF94",
+                  climb:"#C77DFF",
+                  rivalry:"#FF6B35",
+                }[entry.tone]||"#00E5FF";
+                return(
+                  <div key={entry.id} style={{
+                    padding:"10px 11px",
+                    borderRadius:"0 8px 8px 0",
+                    border:`1px solid ${toneColor}22`,
+                    borderLeft:`3px solid ${toneColor}`,
+                    background:`linear-gradient(135deg,${toneColor}0d,rgba(0,0,0,.2))`,
+                  }}>
+                    <div className="bc7" style={{fontSize:".5rem",letterSpacing:".16em",color:`${toneColor}cc`,textTransform:"uppercase",marginBottom:6}}>
+                      {entry.label}
+                    </div>
+                    <div className="bc9" style={{fontSize:".8rem",lineHeight:1.28,color:toneColor,marginBottom:5}}>
+                      {entry.headline}
+                    </div>
+                    <div className="bc7" style={{fontSize:".62rem",lineHeight:1.45,color:"var(--text2)"}}>
                       {entry.detail}
                     </div>
                   </div>

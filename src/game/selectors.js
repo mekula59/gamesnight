@@ -2754,6 +2754,306 @@ export const getFalloutReport = (
   };
 };
 
+const getUtcWeekBoundsForDate = (dateKey) => {
+  const anchor = new Date(`${dateKey}T12:00:00Z`);
+  if (Number.isNaN(anchor.getTime())) {
+    return { startDate: "", endDate: "" };
+  }
+  const start = new Date(anchor);
+  start.setUTCDate(anchor.getUTCDate() - ((anchor.getUTCDay() + 6) % 7));
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+  return {
+    startDate: formatUtcDateKey(start),
+    endDate: formatUtcDateKey(end),
+  };
+};
+
+const getWeeklyRecapRankRows = (players, sessions) =>
+  allStats(players, sessions)
+    .filter((player) => player.appearances > 0 || player.wins > 0 || player.kills > 0)
+    .sort(
+      (left, right) =>
+        right.wins - left.wins ||
+        right.kills - left.kills ||
+        right.appearances - left.appearances ||
+        left.username.localeCompare(right.username),
+    );
+
+export const getWeeklyRecap = (
+  weekId,
+  sessions,
+  players,
+  {
+    state = "RESULTS FILED",
+    latestFiledDate = "",
+    now = new Date(),
+  } = {},
+) => {
+  if (!sessions?.length || !players?.length) {
+    return null;
+  }
+
+  const sortedSessions = [...sessions].sort(compareSessionsAsc);
+  const fallbackDate = latestFiledDate || getLatestSessionDate(sortedSessions);
+  const dateForWeek = weekId || fallbackDate || formatUtcDateKey(now instanceof Date ? now : new Date(now));
+  const { startDate, endDate } = getUtcWeekBoundsForDate(dateForWeek);
+  if (!startDate || !endDate) {
+    return null;
+  }
+
+  const weekSessions = sortedSessions.filter(
+    (session) => session.date >= startDate && session.date <= endDate,
+  );
+  if (!weekSessions.length) {
+    return null;
+  }
+
+  const playerIndex = buildPlayerIndex(players);
+  const stats = allStats(players, weekSessions).filter((player) => player.appearances > 0);
+  const lobbies = weekSessions.length;
+  const kills = weekSessions.reduce((sum, session) => sum + getLobbyTotalKills(session), 0);
+  const uniqueWinners = new Set(weekSessions.map((session) => session.winner).filter(Boolean)).size;
+  const weekLabel = `${formatWeeklyLoopDate(startDate)} to ${formatWeeklyLoopDate(endDate)}`;
+  const displayName = (playerId) => getPlayerById(playerIndex, playerId)?.username || "Unknown";
+
+  const winsSorted = [...stats].sort(
+    (left, right) =>
+      right.wins - left.wins ||
+      right.kills - left.kills ||
+      right.appearances - left.appearances ||
+      left.username.localeCompare(right.username),
+  );
+  const topWins = winsSorted[0]?.wins || 0;
+  const winsLeaders = topWins > 0 ? winsSorted.filter((player) => player.wins === topWins) : [];
+
+  const killsSorted = [...stats].sort(
+    (left, right) =>
+      right.kills - left.kills ||
+      right.wins - left.wins ||
+      right.appearances - left.appearances ||
+      left.username.localeCompare(right.username),
+  );
+  const topKills = killsSorted[0]?.kills || 0;
+  const killLeaders = topKills > 0 ? killsSorted.filter((player) => player.kills === topKills) : [];
+
+  const activeSorted = [...stats].sort(
+    (left, right) =>
+      right.appearances - left.appearances ||
+      right.wins - left.wins ||
+      right.kills - left.kills ||
+      left.username.localeCompare(right.username),
+  );
+  const topAppearances = activeSorted[0]?.appearances || 0;
+  const mostActive = topAppearances > 0
+    ? activeSorted.filter((player) => player.appearances === topAppearances)
+    : [];
+
+  const singleGames = [];
+  weekSessions.forEach((session) => {
+    Object.entries(session.kills || {}).forEach(([playerId, value]) => {
+      const killCount = Number(value) || 0;
+      if (killCount > 0) {
+        singleGames.push({
+          playerId,
+          player: getPlayerById(playerIndex, playerId),
+          kills: killCount,
+          session,
+        });
+      }
+    });
+  });
+  const bestSingleGame = singleGames
+    .sort(
+      (left, right) =>
+        right.kills - left.kills ||
+        parseSessionIdNumber(right.session.id) - parseSessionIdNumber(left.session.id) ||
+        (left.player?.username || "").localeCompare(right.player?.username || ""),
+    )[0] || null;
+  const bestSingleGames = bestSingleGame
+    ? singleGames
+      .filter((entry) => entry.kills === bestSingleGame.kills)
+      .sort(
+        (left, right) =>
+          parseSessionIdNumber(right.session.id) - parseSessionIdNumber(left.session.id) ||
+          (left.player?.username || "").localeCompare(right.player?.username || ""),
+      )
+    : [];
+
+  const beforeSessions = sortedSessions.filter((session) => session.date < startDate);
+  const throughWeekSessions = sortedSessions.filter((session) => session.date <= endDate);
+  const beforeRows = getWeeklyRecapRankRows(players, beforeSessions);
+  const afterRows = getWeeklyRecapRankRows(players, throughWeekSessions);
+  const beforeRank = new Map(beforeRows.map((player, index) => [player.id, index + 1]));
+  const afterRank = new Map(afterRows.map((player, index) => [player.id, index + 1]));
+  const weekPlayerIds = new Set(stats.map((player) => player.id));
+  const biggestClimb = afterRows
+    .filter((player) => weekPlayerIds.has(player.id) && beforeRank.has(player.id) && afterRank.has(player.id))
+    .map((player) => ({
+      player,
+      from: beforeRank.get(player.id),
+      to: afterRank.get(player.id),
+      delta: beforeRank.get(player.id) - afterRank.get(player.id),
+    }))
+    .filter((entry) => entry.delta >= 2)
+    .sort((left, right) => right.delta - left.delta || left.to - right.to)[0] || null;
+
+  const rivalryCounts = new Map();
+  weekSessions.forEach((session) => {
+    const [first, second] = session.placements || [];
+    if (!first || !second) {
+      return;
+    }
+    const key = [first, second].sort().join("__");
+    const current = rivalryCounts.get(key) || { playerIds: [first, second], meetings: 0, latest: session };
+    current.meetings += 1;
+    if (compareSessionsAsc(current.latest, session) < 0) {
+      current.latest = session;
+    }
+    rivalryCounts.set(key, current);
+  });
+  const rivalryMoment = [...rivalryCounts.values()]
+    .filter((entry) => entry.meetings >= 2)
+    .sort(
+      (left, right) =>
+        right.meetings - left.meetings ||
+        parseSessionIdNumber(right.latest.id) - parseSessionIdNumber(left.latest.id),
+    )[0] || null;
+
+  const cards = [];
+  const pushCard = (entry) => {
+    if (entry?.headline && !cards.some((card) => card.id === entry.id)) {
+      cards.push(entry);
+    }
+  };
+
+  pushCard({
+    id: "week-file",
+    label: "WEEK FILE",
+    tone: "filed",
+    headline: `${lobbies} lobbies, ${kills} kills, and ${uniqueWinners} winners are on the week file.`,
+    detail: `${weekLabel} from official sessions.`,
+    playerIds: [],
+    source: "week_sessions",
+  });
+
+  if (winsLeaders.length) {
+    pushCard({
+      id: "week-leader",
+      label: "WEEK LEADER",
+      tone: "crown",
+      headline: `${joinHumanNames(winsLeaders.map((player) => player.username))} ${winsLeaders.length > 1 ? "share" : "holds"} the week win line at ${topWins}W.`,
+      detail: "Most wins filed inside this week.",
+      playerIds: winsLeaders.map((player) => player.id),
+      source: "week_wins",
+    });
+  }
+
+  if (killLeaders.length) {
+    pushCard({
+      id: "damage-line",
+      label: "DAMAGE LINE",
+      tone: "damage",
+      headline: `${joinHumanNames(killLeaders.map((player) => player.username))} ${killLeaders.length > 1 ? "share" : "leads"} week damage at ${topKills}K.`,
+      detail: "Highest kill total filed inside this week.",
+      playerIds: killLeaders.map((player) => player.id),
+      source: "week_kills",
+    });
+  }
+
+  if (bestSingleGames.length) {
+    pushCard({
+      id: "best-lobby",
+      label: "BEST LOBBY",
+      tone: "marker",
+      headline: bestSingleGames.length > 1
+        ? `${joinHumanNames(bestSingleGames.map((entry) => entry.player?.username || displayName(entry.playerId)))} shared the week ceiling at ${bestSingleGame.kills}K.`
+        : `${bestSingleGames[0].player?.username || displayName(bestSingleGames[0].playerId)} set the week ceiling at ${bestSingleGame.kills}K in ${bestSingleGames[0].session.id}.`,
+      detail: bestSingleGames.length > 1
+        ? bestSingleGames.map((entry) => entry.session.id).join(" and ")
+        : `${formatWeeklyLoopDate(bestSingleGames[0].session.date)} official room file.`,
+      playerIds: bestSingleGames.map((entry) => entry.playerId),
+      source: "week_best_single_game",
+    });
+  }
+
+  if (mostActive.length) {
+    pushCard({
+      id: "most-active-file",
+      label: "MOST ACTIVE FILE",
+      tone: "presence",
+      headline: `${joinHumanNames(mostActive.map((player) => player.username))} filed ${topAppearances} week lobbies.`,
+      detail: "Highest attendance count inside this week.",
+      playerIds: mostActive.map((player) => player.id),
+      source: "week_appearances",
+    });
+  }
+
+  if (biggestClimb) {
+    pushCard({
+      id: "board-climb",
+      label: "BOARD CLIMB",
+      tone: "climb",
+      headline: `${biggestClimb.player.username} climbed ${biggestClimb.delta} places on the official board.`,
+      detail: `Moved from #${biggestClimb.from} to #${biggestClimb.to} by wins, then kills.`,
+      playerIds: [biggestClimb.player.id],
+      source: "week_rank_shift",
+    });
+  }
+
+  if (rivalryMoment) {
+    pushCard({
+      id: "rivalry-file",
+      label: "RIVALRY FILE",
+      tone: "rivalry",
+      headline: `${rivalryMoment.playerIds.map(displayName).join(" vs ")} met top-two ${rivalryMoment.meetings} times this week.`,
+      detail: `Latest clash was ${rivalryMoment.latest.id}.`,
+      playerIds: rivalryMoment.playerIds,
+      source: "week_top_two_meetings",
+    });
+  }
+
+  return {
+    weekLabel,
+    startDate,
+    endDate,
+    state,
+    lobbies,
+    kills,
+    uniqueWinners,
+    winsLeader: { players: winsLeaders, wins: topWins },
+    killLeader: { players: killLeaders, kills: topKills },
+    bestSingleGame: bestSingleGame
+      ? {
+          players: bestSingleGames.map((entry) => entry.player).filter(Boolean),
+          kills: bestSingleGame.kills,
+          sessions: bestSingleGames.map((entry) => entry.session),
+        }
+      : null,
+    mostActive: { players: mostActive, appearances: topAppearances },
+    biggestClimb,
+    rivalryMoment,
+    cards: cards.slice(0, 7),
+  };
+};
+
+export const getLatestWeeklyRecap = ({
+  sessions = [],
+  players = [],
+  weeklyLoopState = null,
+  now = new Date(),
+} = {}) => {
+  const latestFiledDate = weeklyLoopState?.latestFiledDate || getLatestSessionDate(sessions);
+  if (!latestFiledDate || weeklyLoopState?.state === "ROOM LIVE TODAY") {
+    return null;
+  }
+  return getWeeklyRecap(latestFiledDate, sessions, players, {
+    state: weeklyLoopState?.state || "RESULTS FILED",
+    latestFiledDate,
+    now,
+  });
+};
+
 const joinHumanNames = (names) => {
   const cleaned = names.filter(Boolean);
   if (!cleaned.length) {

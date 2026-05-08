@@ -14,6 +14,7 @@ export default function Season2View({ ctx }) {
     getLatestSessionDate,
     getLatestDayConsequences,
     getCampaignFronts,
+    getWeeklyRecap,
     getSeasonOpenerFallout,
     buildSeasonCampaignFile,
     joinHumanList,
@@ -194,6 +195,7 @@ export default function Season2View({ ctx }) {
             const showCampaignFronts=Boolean(
               campaignFronts?.mode==="live"&&campaignFronts.fronts?.length&&s2Sessions.length,
             );
+            const weeklyRecap=showCampaignFronts?getWeeklyRecap?.(selectedSeasonId):null;
             const s2LatestSplitLeaders=s2LatestFallout?.topWinners.length
               ?joinHumanList(s2LatestFallout.topWinners.map((entry)=>dn(entry.player?.username||"")))
               :"";
@@ -520,6 +522,64 @@ export default function Season2View({ ctx }) {
                             </div>
                             <div className="bc7" style={{fontSize:".56rem",letterSpacing:".14em",color:"var(--text3)"}}>
                               {front.statLine}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {showCampaignFronts&&weeklyRecap&&(
+                  <div style={{
+                    display:"grid",
+                    gap:10,
+                    marginBottom:28,
+                    padding:"14px 16px",
+                    border:"1px solid rgba(0,229,255,.16)",
+                    borderLeft:`3px solid ${campaignColor}`,
+                    borderRadius:"0 12px 12px 0",
+                    background:`linear-gradient(135deg,${campaignColor}0d,rgba(0,0,0,.24))`,
+                  }}>
+                    <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
+                      <div>
+                        <div className="bc7" style={{fontSize:".56rem",letterSpacing:".22em",color:`${campaignColor}cc`,marginBottom:6}}>
+                          WEEKLY RECAP
+                        </div>
+                        <div className="bc9" style={{fontSize:"clamp(.92rem,3vw,1.08rem)",color:campaignColor,lineHeight:1.25}}>
+                          {weeklyRecap.lobbies} lobbies, {weeklyRecap.kills} kills, {weeklyRecap.uniqueWinners} winners.
+                        </div>
+                      </div>
+                      <div className="bc7" style={{fontSize:".58rem",letterSpacing:".14em",color:"var(--text3)"}}>
+                        {weeklyRecap.weekLabel}
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:8}}>
+                      {weeklyRecap.cards.slice(1,4).map((entry)=>{
+                        const color={
+                          crown:"#FFD700",
+                          damage:"#FF4D8F",
+                          marker:"#FFAB40",
+                          presence:"#00FF94",
+                          climb:"#C77DFF",
+                          rivalry:"#FF6B35",
+                        }[entry.tone]||campaignColor;
+                        return(
+                          <div key={entry.id} style={{
+                            padding:"10px 11px",
+                            background:`linear-gradient(135deg,${color}0d,rgba(0,0,0,.22))`,
+                            border:`1px solid ${color}22`,
+                            borderLeft:`3px solid ${color}`,
+                            borderRadius:"0 8px 8px 0",
+                          }}>
+                            <div className="bc7" style={{fontSize:".5rem",letterSpacing:".16em",color:`${color}bb`,marginBottom:6}}>
+                              {entry.label}
+                            </div>
+                            <div className="bc9" style={{fontSize:".82rem",lineHeight:1.24,color,marginBottom:5}}>
+                              {entry.headline}
+                            </div>
+                            <div className="bc7" style={{fontSize:".62rem",lineHeight:1.45,color:"var(--text2)"}}>
+                              {entry.detail}
                             </div>
                           </div>
                         );
