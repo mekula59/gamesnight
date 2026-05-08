@@ -82,10 +82,15 @@ export default function VaultView({ ctx }) {
       winnersByPlayer[session.winner] = winnersByPlayer[session.winner] || new Set();
       winnersByPlayer[session.winner].add(session.date);
     });
-    const invincible = Object.entries(winnersByPlayer)
+    const invincibleHolders = Object.entries(winnersByPlayer)
       .filter(([, dates]) => filedDays.length > 0 && filedDays.every((date) => dates.has(date)))
       .map(([playerId]) => players.find((player) => player.id === playerId))
-      .filter(Boolean)[0] || null;
+      .filter(Boolean)
+      .sort((left, right) => {
+        const leftStats = getStats(left.id, seasonSessions);
+        const rightStats = getStats(right.id, seasonSessions);
+        return rightStats.wins - leftStats.wins || rightStats.kills - leftStats.kills || left.username.localeCompare(right.username);
+      });
     const latestDate = seasonSessions.length
       ? [...seasonSessions].sort((left, right) => right.date.localeCompare(left.date))[0].date
       : "";
@@ -101,7 +106,7 @@ export default function VaultView({ ctx }) {
       killLeader: byKills[0] || null,
       mostActive: byAppearances[0] || null,
       loudestDay,
-      invincible,
+      invincibleHolders,
       latestDate,
     };
   };
@@ -309,7 +314,7 @@ export default function VaultView({ ctx }) {
                 ? [
                     leader ? `Champion: ${dn(leader.username)} · ${file.champion.stats.wins}W` : "Champion: Waiting",
                     killLeader ? `Reaper: ${dn(killLeader.username)} · ${file.killLeader.stats.kills}K` : "Reaper: Waiting",
-                    file.invincible ? `Invincible: ${dn(file.invincible.username)}` : "Invincible: Not earned",
+                    file.invincibleHolders?.length ? `S2 Invincible: ${file.invincibleHolders.map((player) => dn(player.username)).join(", ")}` : "S2 Invincible: Not earned",
                     file.loudestDay ? `Loudest night: ${file.loudestDay.kills}K on ${formatArchiveDate(file.loudestDay.date)}` : "Loudest night: Waiting",
                   ]
                 : [
