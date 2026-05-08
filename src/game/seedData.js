@@ -4117,6 +4117,87 @@ export const INITIAL_SESSIONS = [
     placements:["p02","p21","p01","p18"],
     kills:{"p02":1,"p21":1}},
 
+  // Thu 07 May 2026 - 16 lobbies
+  {id:"s828",date:"2026-05-07",notes:"Lobby 828",
+    winner:"p02",attendees:["p02","p42","p01","p08","p18"],
+    placements:["p02","p42","p01","p08","p18"],
+    kills:{"p02":1,"p42":1,"p01":2}},
+
+  {id:"s829",date:"2026-05-07",notes:"Lobby 829",
+    winner:"p42",attendees:["p42","p01","p02","p18","p12","p21"],
+    placements:["p42","p01","p02","p18","p12","p21"],
+    kills:{"p42":1,"p01":2,"p02":1,"p12":1}},
+
+  {id:"s830",date:"2026-05-07",notes:"Lobby 830",
+    winner:"p02",attendees:["p02","p21","p01","p18","p30","p42","p12","p08"],
+    placements:["p02","p21","p01","p18","p30","p42","p12","p08"],
+    kills:{"p02":3,"p21":1,"p01":1,"p18":1}},
+
+  {id:"s831",date:"2026-05-07",notes:"Lobby 831",
+    winner:"p01",attendees:["p01","p08","p25","p12","p21","p18","p02","p22","p42"],
+    placements:["p01","p08","p25","p12","p21","p18","p02","p22","p42"],
+    kills:{"p08":2,"p25":2,"p21":2}},
+
+  {id:"s832",date:"2026-05-07",notes:"Lobby 832",
+    winner:"p25",attendees:["p25","p01","p42","p08","p12","p02","p21","p18","p22"],
+    placements:["p25","p01","p42","p08","p12","p02","p21","p18","p22"],
+    kills:{"p25":2,"p01":1,"p42":1,"p08":2,"p12":1}},
+
+  {id:"s833",date:"2026-05-07",notes:"Lobby 833",
+    winner:"p12",attendees:["p12","p02","p42","p01","p25","p21","p22","p18"],
+    placements:["p12","p02","p42","p01","p25","p21","p22","p18"],
+    kills:{"p12":4,"p02":1,"p01":1}},
+
+  {id:"s834",date:"2026-05-07",notes:"Lobby 834",
+    winner:"p42",attendees:["p42","p25","p02","p30","p12","p01","p21","p08","p18","p22"],
+    placements:["p42","p25","p02","p30","p12","p01","p21","p08","p18","p22"],
+    kills:{"p42":1,"p25":1,"p02":1,"p30":1,"p12":2,"p01":1}},
+
+  {id:"s835",date:"2026-05-07",notes:"Lobby 835",
+    winner:"p42",attendees:["p42","p30","p25","p02","p21","p01","p08","p11","p18"],
+    placements:["p42","p30","p25","p02","p21","p01","p08","p11","p18"],
+    kills:{"p42":2,"p30":1,"p02":1,"p21":1,"p01":2}},
+
+  {id:"s836",date:"2026-05-07",notes:"Lobby 836",
+    winner:"p02",attendees:["p02","p42","p25","p01","p11","p21","p30","p18"],
+    placements:["p02","p42","p25","p01","p11","p21","p30","p18"],
+    kills:{"p42":3,"p25":1}},
+
+  {id:"s837",date:"2026-05-07",notes:"Lobby 837",
+    winner:"p02",attendees:["p02","p25","p30","p11","p21","p42","p18","p01","p04"],
+    placements:["p02","p25","p30","p11","p21","p42","p18","p01","p04"],
+    kills:{"p02":1,"p25":3,"p30":2,"p18":1}},
+
+  {id:"s838",date:"2026-05-07",notes:"Lobby 838",
+    winner:"p01",attendees:["p01","p30","p25","p04","p21","p02","p18","p11","p42"],
+    placements:["p01","p30","p25","p04","p21","p02","p18","p11","p42"],
+    kills:{"p01":2,"p30":3,"p04":1,"p21":1}},
+
+  {id:"s839",date:"2026-05-07",notes:"Lobby 839",
+    winner:"p21",attendees:["p21","p02","p30","p01","p42","p18"],
+    placements:["p21","p02","p30","p01","p42","p18"],
+    kills:{"p21":1,"p30":1,"p01":2,"p42":1}},
+
+  {id:"s840",date:"2026-05-07",notes:"Lobby 840",
+    winner:"p30",attendees:["p30","p18","p01","p02","p04","p21","p42"],
+    placements:["p30","p18","p01","p02","p04","p21","p42"],
+    kills:{"p30":4,"p21":1}},
+
+  {id:"s841",date:"2026-05-07",notes:"Lobby 841",
+    winner:"p42",attendees:["p42","p02","p01","p21"],
+    placements:["p42","p02","p01","p21"],
+    kills:{"p42":1,"p02":1}},
+
+  {id:"s842",date:"2026-05-07",notes:"Lobby 842",
+    winner:"p02",attendees:["p02","p30","p21","p01","p42"],
+    placements:["p02","p30","p21","p01","p42"],
+    kills:{"p02":1,"p30":1,"p21":1}},
+
+  {id:"s843",date:"2026-05-07",notes:"Lobby 843",
+    winner:"p21",attendees:["p21","p02","p01"],
+    placements:["p21","p02","p01"],
+    kills:{"p21":1,"p02":1}},
+
 ];
 // ═══════════════════════════════════════════════════
 //  RANK TITLES FAQ

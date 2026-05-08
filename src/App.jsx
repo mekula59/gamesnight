@@ -41,6 +41,7 @@ import {
   getLatestSessionDate as selectGetLatestSessionDate,
   getFalloutReport as selectGetFalloutReport,
   getLeaderboardShiftData as selectGetLeaderboardShiftData,
+  getLobbyWipeEvents as selectGetLobbyWipeEvents,
   getPlayerLobbyWipeSummary as selectGetPlayerLobbyWipeSummary,
   getLiveStreaks as selectGetLiveStreaks,
   getMilestones as selectGetMilestones,
@@ -1227,7 +1228,7 @@ const CSS = `
     .vault-header-row button{max-width:100%!important;}
     .vault-support-line{max-width:34ch!important;letter-spacing:.07em!important;line-height:1.5!important;white-space:normal!important;overflow-wrap:break-word!important;}
     .vault-archive-totals{grid-template-columns:1fr!important;}
-    .vault-season-files-grid,.vault-historic-grid{grid-template-columns:1fr!important;}
+    .vault-season-files-grid,.vault-historic-grid,.vault-lobby-wipe-grid{grid-template-columns:1fr!important;}
     .vault-season-stat-grid{grid-template-columns:1fr!important;}
     .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow-x:hidden!important;}
     .card-h,.lb-card,.rival-card,.comm-card{min-width:0!important;width:100%!important;}
@@ -1427,9 +1428,14 @@ const CSS = `
     .warroom-placements{padding-left:0!important;gap:6px!important;}
     .warroom-endchips{padding-left:0!important;gap:6px!important;}
     .intel-v2-page .intel-scout-board{display:flex!important;overflow-x:auto!important;scroll-snap-type:x mandatory!important;gap:10px!important;padding-bottom:4px!important;margin-left:-4px!important;margin-right:-4px!important;}
+    .intel-v2-page{width:calc(100vw - 48px)!important;max-width:calc(100vw - 48px)!important;overflow-x:hidden!important;}
     .intel-v2-page .intel-scout-board>div{min-width:78%!important;scroll-snap-align:start!important;}
+    .intel-v2-page .intel-scope-switcher{justify-content:flex-start!important;flex-wrap:nowrap!important;overflow-x:auto!important;padding-bottom:4px!important;margin-left:-4px!important;margin-right:-4px!important;}
+    .intel-v2-page .intel-scope-switcher button{flex:0 0 auto!important;}
     .intel-v2-page .intel-player-selector{flex-wrap:nowrap!important;overflow-x:auto!important;padding-bottom:4px!important;margin-left:-4px!important;margin-right:-4px!important;}
     .intel-v2-page .intel-player-selector button{flex:0 0 auto!important;}
+    .intel-v2-page .intel-marker-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+    .intel-v2-page .intel-marker-grid>div{min-width:0!important;}
     .intel-v2-page table{font-size:.82rem!important;}
     .season2-top-shell .season2-banner{padding:20px 15px!important;margin-bottom:24px!important;}
     .season2-top-shell .season2-banner-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
@@ -2018,6 +2024,7 @@ export default function GameNight(){
   const [sf,setSf]=useState(emptyForm());
   const [np,setNp]=useState({username:"",color:"#FFD700"});
   const [chartPid,setChartPid]=useState("");
+  const [intelScope,setIntelScope]=useState("s3");
   const [shareCard,setShareCard]=useState(null); // {sid, visible}
   const [confetti,setConfetti]=useState(()=>foolsDay?createFoolsConfetti():[]);
   const [foolsToast,setFoolsToast]=useState(0); // 0=hidden 1=warning 2=reveal
@@ -2244,6 +2251,7 @@ export default function GameNight(){
   const getRank=pid=>selectGetRank(pid,players,sessions);
   const getStreak=(pid,src=sessions)=>selectGetStreak(pid,src);
   const getBadges=pid=>selectGetBadges(pid,sessions);
+  const getLobbyWipeEvents=(src=sessions)=>selectGetLobbyWipeEvents(src,players);
   const getPlayerLobbyWipeSummary=pid=>selectGetPlayerLobbyWipeSummary(pid,sessions,players);
   const getPlayerLevel=pid=>selectGetPlayerLevel(pid,sessions);
   const getPlayerFileState=pid=>selectGetPlayerFileState(pid,players,sessions,{seasonId:activeCampaignId});
@@ -4006,6 +4014,7 @@ export default function GameNight(){
           renderPlayerIntel,
           goProfile,
           getStats,
+          getLobbyWipeEvents,
           getLobbyDateMarker,
           activeCampaign,
           SEASONS,
@@ -4016,24 +4025,59 @@ export default function GameNight(){
       {view==="charts"&&(
         <div className="fade-up intel-v2-page" style={{minHeight:"calc(100vh - 120px)"}}>
           <div style={{textAlign:"center",marginBottom:22}}>
-            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Season 3 scouting</p>
+            <p style={{color:"var(--text3)",fontWeight:800,fontSize:".7rem",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>{intelScope==="all"?"Comparative scouting":`${SEASONS.find((season)=>season.id===intelScope)?.name || "Season"} scouting`}</p>
             <h2 style={{fontFamily:"Fredoka One",fontSize:"clamp(2rem,8vw,3.2rem)",
               background:"linear-gradient(135deg,#00E5FF,#C77DFF)",
               WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
               Intel
             </h2>
+            <div className="intel-scope-switcher" style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap",marginTop:14}}>
+              {[
+                {id:"s3",label:"Season 3"},
+                {id:"s2",label:"Season 2"},
+                {id:"s1",label:"Season 1"},
+                {id:"all",label:"All Time"},
+              ].map((scope)=>(
+                <button key={scope.id} type="button" onClick={()=>{
+                  setIntelScope(scope.id);
+                  setChartPid("");
+                }} className="pill" style={{
+                  padding:"7px 13px",
+                  borderRadius:999,
+                  fontSize:".68rem",
+                  fontWeight:900,
+                  letterSpacing:".08em",
+                  textTransform:"uppercase",
+                  background:intelScope===scope.id?"#00E5FF":"rgba(255,255,255,.05)",
+                  color:intelScope===scope.id?"#030014":"var(--text2)",
+                  border:intelScope===scope.id?"1px solid #00E5FF":"1px solid rgba(255,255,255,.1)",
+                  boxShadow:intelScope===scope.id?"0 0 16px rgba(0,229,255,.32)":"none",
+                }}>
+                  {scope.label}
+                </button>
+              ))}
+            </div>
           </div>
           {(()=>{
-            const seasonSess=filterSessionsBySeason(sessions,activeCampaignId);
-            const baseScout=getSeasonScoutBoard(activeCampaignId);
+            const scopeMeta=intelScope==="all"
+              ?{id:"all",name:"All Time",mode:"all-time",sessions}
+              :{
+                id:intelScope,
+                name:SEASONS.find((season)=>season.id===intelScope)?.name || "Season",
+                mode:intelScope==="s3"?"live":"archive",
+                sessions:filterSessionsBySeason(sessions,intelScope),
+              };
+            const scopeSess=scopeMeta.sessions;
+            const baseScout=getSeasonScoutBoard(scopeMeta.id);
             const activePlayers=players
-              .map(p=>({...p,...getStats(p.id,seasonSess)}))
+              .map(p=>({...p,...getStats(p.id,scopeSess)}))
               .filter(p=>p.appearances>0)
               .sort((a,b)=>b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances);
-            const effectivePid=chartPid||baseScout.defaultPlayerId||activePlayers[0]?.id||"";
-            const scout=getSeasonScoutBoard(activeCampaignId,{playerId:effectivePid});
+            const chartPidInScope=activePlayers.some((player)=>player.id===chartPid);
+            const effectivePid=(chartPidInScope&&chartPid)||baseScout.defaultPlayerId||activePlayers[0]?.id||"";
+            const scout=getSeasonScoutBoard(scopeMeta.id,{playerId:effectivePid});
             const chartPlayer=players.find(p=>p.id===effectivePid);
-            const chartData=getChartData(effectivePid,seasonSess);
+            const chartData=getChartData(effectivePid,scopeSess);
             const maxW=Math.max(1,...chartData.map(d=>d.wins));
             const maxK=Math.max(1,...chartData.map(d=>d.kills));
             const selectedBrief=scout.selectedPlayerBrief;
@@ -4041,7 +4085,7 @@ export default function GameNight(){
               {label:"Rising files",color:"#00FF94",items:scout.risingPlayers},
               {label:"Damage watch",color:"#FF4D8F",items:scout.damageWatchPlayers},
               {label:"Quiet files",color:"#7B8CDE",items:scout.quietFiles},
-              {label:"Latest movement",color:"#FFD700",items:scout.latestMovement},
+              {label:scopeMeta.mode==="archive"?"Final movement":scopeMeta.mode==="all-time"?"Recent marker":"Latest movement",color:"#FFD700",items:scout.latestMovement},
             ];
             return(
               <div>
@@ -4064,7 +4108,7 @@ export default function GameNight(){
                           {item?.headline || "No clean read yet."}
                         </div>
                         <div className="bc7" style={{fontSize:".64rem",lineHeight:1.5,color:"var(--text3)",marginBottom:8}}>
-                          {item?.detail || "Official Season 3 data has not made this lane useful yet."}
+                          {item?.detail || `Official ${scopeMeta.name} data has not made this lane useful yet.`}
                         </div>
                         {item?.statLine&&(
                           <div className="bc7" style={{fontSize:".58rem",letterSpacing:".14em",color:"var(--text2)"}}>
@@ -4121,7 +4165,7 @@ export default function GameNight(){
                       <div className="bc7" style={{fontSize:".76rem",lineHeight:1.55,color:"var(--text2)",marginBottom:13}}>
                         {selectedBrief.supportLine}
                       </div>
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+                      <div className="intel-marker-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
                         {selectedBrief.markers.map((marker,index)=>(
                           <div key={marker.label} style={{background:"rgba(0,0,0,.24)",border:`1px solid ${marker.color}24`,borderRadius:8,padding:"10px 11px"}}>
                             <div className="bc7" style={{fontSize:".54rem",letterSpacing:".16em",color:index===0?"#00E5FF":index===1?"#00FF94":"#FFD700",textTransform:"uppercase",marginBottom:5}}>

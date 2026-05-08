@@ -31,10 +31,13 @@ export default function HomeView({ ctx }) {
     getLiveStreaks,
     getLatestDayHeatRun,
     getOnDeckPressure,
+    getDailyMVP,
     isEventActive,
     card,
     primaryBtn,
     go,
+    goProfile,
+    Avatar,
   } = ctx;
 
   const joinHumanList = (items) => {
@@ -308,6 +311,40 @@ export default function HomeView({ ctx }) {
             const latestNightLabel=latestDate
               ?new Date(`${latestDate}T12:00:00Z`).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})
               :"Waiting";
+            const dailyMVP=getDailyMVP?.();
+            const getMvpPlayer=(entry)=>entry?.id?players.find((player)=>player.id===entry.id)||entry:null;
+            const dailyMvpCards=dailyMVP?[
+              {
+                label:"MOST WINS",
+                value:dailyMVP.topWinner?`${dailyMVP.topWinner.wins}W`:"0W",
+                note:"latest filed day",
+                color:"#FFD700",
+                player:getMvpPlayer(dailyMVP.topWinner),
+              },
+              {
+                label:"MOST KILLS",
+                value:dailyMVP.topKiller?`${dailyMVP.topKiller.kills}K`:"0K",
+                note:"total damage",
+                color:"#FF4D8F",
+                player:getMvpPlayer(dailyMVP.topKiller),
+              },
+              {
+                label:"BEST KILL LOBBY",
+                value:dailyMVP.killKing?`${dailyMVP.killKing.killKingK}K`:"0K",
+                note:dailyMVP.killKing?.killKingSid
+                  ?`Lobby ${parseSessionIdNumber(dailyMVP.killKing.killKingSid)||dailyMVP.killKing.killKingSid}`
+                  :"single lobby",
+                color:"#C77DFF",
+                player:getMvpPlayer(dailyMVP.killKing),
+              },
+              {
+                label:"MOST APPEARANCES",
+                value:dailyMVP.topAppear?`${dailyMVP.topAppear.appearances}G`:"0G",
+                note:"lobbies played",
+                color:"#00E5FF",
+                player:getMvpPlayer(dailyMVP.topAppear),
+              },
+            ].filter((item)=>item.player):[];
             const allTimePulseCards=[
               {label:"TOTAL LOBBIES",value:sessions.length,note:"filed sessions",color:"#00E5FF"},
               {label:"TOTAL KILLS",value:allTimeKills,note:"recorded kills",color:"#FF4D8F"},
@@ -614,6 +651,93 @@ export default function HomeView({ ctx }) {
                         ))}
                       </div>
                     )}
+                  </div>
+                </HomeStage>
+              )}
+
+              {dailyMvpCards.length>0&&(
+                <HomeStage
+                  tag="LATEST NIGHT MVP"
+                  title="Latest filed day leaders."
+                  sub={latestNightLabel.toUpperCase()}
+                  accent="#FF6B35"
+                  marginBottom={18}>
+                  <div style={{
+                    display:"grid",
+                    gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",
+                    gap:10,
+                  }}>
+                    {dailyMvpCards.map((item)=>(
+                      <div
+                        key={item.label}
+                        onClick={()=>item.player?.id&&goProfile?.(item.player.id)}
+                        role={item.player?.id?"button":undefined}
+                        tabIndex={item.player?.id?0:undefined}
+                        onKeyDown={(event)=>{
+                          if(!item.player?.id)return;
+                          if(event.key==="Enter"||event.key===" "){
+                            event.preventDefault();
+                            goProfile?.(item.player.id);
+                          }
+                        }}
+                        style={{
+                          display:"grid",
+                          gridTemplateColumns:"auto 1fr auto",
+                          alignItems:"center",
+                          gap:10,
+                          minHeight:78,
+                          padding:"12px 13px",
+                          border:`1px solid ${item.color}24`,
+                          borderLeft:`3px solid ${item.color}8a`,
+                          borderRadius:"0 8px 8px 0",
+                          background:`linear-gradient(135deg,${item.color}0f,rgba(255,255,255,.018))`,
+                          cursor:item.player?.id?"pointer":"default",
+                        }}
+                      >
+                        <div>
+                          {Avatar&&item.player&&(
+                            <Avatar p={item.player} size={34} glow />
+                          )}
+                        </div>
+                        <div style={{minWidth:0}}>
+                          <div className="bc7" style={{
+                            fontSize:".55rem",
+                            letterSpacing:".18em",
+                            color:item.color,
+                            marginBottom:5,
+                          }}>
+                            {item.label}
+                          </div>
+                          <div className="bc9" style={{
+                            fontSize:".82rem",
+                            color:"var(--text1)",
+                            letterSpacing:".05em",
+                            whiteSpace:"nowrap",
+                            overflow:"hidden",
+                            textOverflow:"ellipsis",
+                          }}>
+                            {item.player?dn(item.player.username):"Waiting"}
+                          </div>
+                          <div className="bc7" style={{
+                            fontSize:".6rem",
+                            color:"var(--text3)",
+                            letterSpacing:".08em",
+                            marginTop:4,
+                            textTransform:"uppercase",
+                          }}>
+                            {item.note}
+                          </div>
+                        </div>
+                        <div className="bc9" style={{
+                          color:item.color,
+                          fontSize:"1.15rem",
+                          letterSpacing:".04em",
+                          textShadow:`0 0 14px ${item.color}33`,
+                        }}>
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </HomeStage>
               )}

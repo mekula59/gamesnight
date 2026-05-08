@@ -51,6 +51,19 @@ export default function CombatFileView({ ctx }) {
   const liveDayStreak = getLiveDayStreak(p.id);
   const campaignName = activeCampaign?.name || "current campaign";
   const campaignShort = activeCampaign?.id ? activeCampaign.id.toUpperCase() : "SEASON";
+  const formatFileDate = (date) =>
+    date
+      ? new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+      : "No date";
+  const getSessionNumber = (sessionId = "") => {
+    const match = String(sessionId).match(/(\d+)$/);
+    return match ? Number(match[1]) : 0;
+  };
+  const lobbyWipeEvents = [...(lobbyWipeSummary?.events || [])].sort(
+    (left, right) =>
+      right.date.localeCompare(left.date) ||
+      getSessionNumber(right.sessionId) - getSessionNumber(left.sessionId),
+  );
   const campaignSess = filterSessionsBySeason(sessions, activeCampaignId);
   const playerCampaignSessions = campaignSess.filter((session) => session.attendees?.includes(p.id));
   const playerHasPostOpenerCampaignFile = Boolean(
@@ -451,6 +464,22 @@ export default function CombatFileView({ ctx }) {
               {badges.map((b, bi) => <BadgeFlip key={bi} b={b} playerColor={p.color} />)}
             </div>
           </div>
+        )}
+
+        {lobbyWipeEvents.length > 0 && (
+          <details style={{ marginBottom: 16, padding: "12px 14px", background: "rgba(0,255,148,.06)", border: "1px solid rgba(0,255,148,.18)", borderLeft: "3px solid rgba(0,255,148,.5)", borderRadius: "0 8px 8px 0" }}>
+            <summary className="bc7" style={{ cursor: "pointer", fontSize: ".64rem", letterSpacing: ".18em", color: "#00FF94" }}>
+              LOBBY WIPE TRAIL · {lobbyWipeEvents.length} ON FILE
+            </summary>
+            <div style={{ display: "grid", gap: 7, marginTop: 10 }}>
+              {lobbyWipeEvents.map((event) => (
+                <div key={event.id} className="bc7" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", padding: "8px 10px", borderRadius: 8, background: "rgba(0,0,0,.26)", border: "1px solid rgba(255,255,255,.06)", color: "var(--text2)", fontSize: ".68rem", lineHeight: 1.35 }}>
+                  <span>{event.sessionId} · {event.kills}K · {event.lobbySize}-player room</span>
+                  <span style={{ color: "var(--text3)", whiteSpace: "nowrap" }}>{formatFileDate(event.date)}</span>
+                </div>
+              ))}
+            </div>
+          </details>
         )}
 
         {spark.length > 1 && (

@@ -446,6 +446,7 @@ export default function ArenaView({ ctx }) {
             const st=getArenaStats(p.id);
             const rank=getRank(p.id);
             const badges=getBadges(p.id);
+            const displayBadges=badges.slice(0,6);
             const streak=getArenaStreak(p.id);
             return(
               <div style={{...card({border:`2px solid ${p.color}`,background:`linear-gradient(135deg,${p.color}16,var(--card))`}),
@@ -474,9 +475,9 @@ export default function ArenaView({ ctx }) {
                     </div>
                   ))}
                 </div>
-                {badges.length>0&&(
+                {displayBadges.length>0&&(
                   <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                    {badges.map((b,i)=>(
+                    {displayBadges.map((b,i)=>(
                       <span key={i} style={{background:"rgba(255,255,255,.09)",borderRadius:50,padding:"3px 9px",fontSize:".68rem",fontWeight:700,color:"#fff",border:"1px solid rgba(255,255,255,.18)"}}>{b.icon} {b.label}</span>
                     ))}
                   </div>

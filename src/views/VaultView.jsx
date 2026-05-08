@@ -8,6 +8,7 @@ export default function VaultView({ ctx }) {
     renderPlayerIntel,
     goProfile,
     getStats,
+    getLobbyWipeEvents,
     getLobbyDateMarker,
     activeCampaign,
     SEASONS,
@@ -34,6 +35,10 @@ export default function VaultView({ ctx }) {
   const getLobbyTotalKills = (session) =>
     Object.values(session?.kills || {}).reduce((sum, kills) => sum + (Number(kills) || 0), 0) +
     (Number(session?.unassignedKills) || 0);
+  const getSessionNumber = (sessionId = "") => {
+    const match = String(sessionId).match(/(\d+)$/);
+    return match ? Number(match[1]) : 0;
+  };
   const getDayRows = (sourceSessions) => {
     const dayMap = {};
     sourceSessions.forEach((session) => {
@@ -127,6 +132,14 @@ export default function VaultView({ ctx }) {
     .filter((season) => ["s1", "s2", "s3"].includes(season.id))
     .map(getSeasonFile)
     .filter((file) => file.sessions.length > 0);
+  const lobbyWipeEvents = (getLobbyWipeEvents?.() || [])
+    .sort(
+      (left, right) =>
+        right.kills - left.kills ||
+        right.lobbySize - left.lobbySize ||
+        right.date.localeCompare(left.date) ||
+        getSessionNumber(right.sessionId) - getSessionNumber(left.sessionId),
+    );
 
   const records = [
     { icon: "🏆", color: "#FFD700", title: "All-time crown line", player: topWinP, stat: `${rec.topWinner[1]} wins`, sub: "Permanent wins record across every filed lobby." },
@@ -249,6 +262,33 @@ export default function VaultView({ ctx }) {
           </div>
         ))}
       </div>
+
+      {lobbyWipeEvents.length > 0 && (
+        <div style={{ padding: "16px 18px", marginBottom: 22, background: "linear-gradient(135deg,rgba(0,255,148,.07),rgba(0,0,0,.28))", border: "1px solid rgba(0,255,148,.2)", borderLeft: "3px solid rgba(0,255,148,.55)", borderRadius: "0 10px 10px 0" }}>
+          <div className="bc7" style={{ fontSize: ".6rem", letterSpacing: ".24em", color: "rgba(0,255,148,.78)", marginBottom: 4 }}>LOBBY WIPE ARCHIVE</div>
+          <div className="bc7" style={{ fontSize: ".68rem", color: "var(--text3)", lineHeight: 1.45, marginBottom: 12 }}>Every filed room where the winner took every possible kill in a 5+ player lobby.</div>
+          <div className="vault-lobby-wipe-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8 }}>
+            {lobbyWipeEvents.map((event) => {
+              const player = event.player || players.find((entry) => entry.id === event.playerId);
+              return (
+                <button key={event.id} type="button" onClick={() => player && goProfile(player.id)} style={{
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,255,148,.18)",
+                  background: "rgba(0,0,0,.28)",
+                  color: "var(--text)",
+                  cursor: player ? "pointer" : "default",
+                }}>
+                  <div className="bc7" style={{ fontSize: ".52rem", letterSpacing: ".18em", color: "rgba(0,255,148,.78)", marginBottom: 6 }}>{event.sessionId} · {formatArchiveDate(event.date)}</div>
+                  <div className="bc9" style={{ fontSize: ".9rem", color: player?.color || "#00FF94", marginBottom: 4 }}>{player ? dn(player.username) : "Unfiled player"}</div>
+                  <div className="bc7" style={{ fontSize: ".68rem", color: "var(--text2)", lineHeight: 1.45 }}>{event.kills}K in a {event.lobbySize}-player room</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: "18px", marginBottom: 22, background: "linear-gradient(135deg,rgba(199,125,255,.08),rgba(0,0,0,.28))", border: "1px solid rgba(199,125,255,.22)", borderLeft: "3px solid rgba(199,125,255,.58)", borderRadius: "0 10px 10px 0" }}>
         <div className="bc7" style={{ fontSize: ".6rem", letterSpacing: ".24em", color: "rgba(199,125,255,.78)", marginBottom: 12 }}>SEASON RECORD FILES</div>
