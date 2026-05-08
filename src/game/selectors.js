@@ -374,6 +374,27 @@ export const getRank = (playerId, players, sessions) => {
   if (rideOrDie?.id === playerId) {
     return { title: "🎮 Ride or Die", color: "#FFAB40" };
   }
+  if (stats.wins >= 500) {
+    return { title: "🌌 Eternal", color: "#F48FB1" };
+  }
+  if (stats.wins >= 300) {
+    return { title: "🔺 Ascendant", color: "#B388FF" };
+  }
+  if (stats.wins >= 200) {
+    return { title: "🗻 Apex", color: "#00E5FF" };
+  }
+  if (stats.wins >= 150) {
+    return { title: "⚔️ Warlord", color: "#FF6B35" };
+  }
+  if (stats.wins >= 100) {
+    return { title: "🛡️ Immortal", color: "#FFD700" };
+  }
+  if (stats.wins >= 50) {
+    return { title: "🔮 Mythic", color: "#C77DFF" };
+  }
+  if (stats.wins >= 25) {
+    return { title: "💎 Elite", color: "#00FF94" };
+  }
   if (stats.wins >= 10) {
     return { title: "⚡ Legend", color: "#C77DFF" };
   }
@@ -532,17 +553,29 @@ export const getBadges = (playerId, sessions) => {
   if (stats.appearances >= sessions.length && sessions.length >= 4) {
     badges.push({ icon: "📅", label: "Full House" });
   }
-  if (stats.kills >= 1000) {
-    badges.push({ icon: "👹", label: "1K Kills", hot: true });
-  }
-  if (stats.kills >= 500) {
-    badges.push({ icon: "💀", label: "500 Kills" });
-  }
-  if (stats.kills >= 100) {
-    badges.push({ icon: "🎖️", label: "100 Kills" });
-  } else if (stats.kills >= 50) {
-    badges.push({ icon: "💥", label: "50 Kills" });
-  }
+  [
+    { value: 25, icon: "🎯", label: "25 Kills" },
+    { value: 50, icon: "💥", label: "50 Kills" },
+    { value: 100, icon: "🎖️", label: "100 Kills" },
+    { value: 150, icon: "🎖️", label: "150 Kills" },
+    { value: 200, icon: "☠️", label: "200 Kills" },
+    { value: 300, icon: "☠️", label: "300 Kills" },
+    { value: 500, icon: "💀", label: "500 Kills" },
+    { value: 750, icon: "💀", label: "750 Kills" },
+    { value: 1000, icon: "👹", label: "1K Kills", hot: true },
+    { value: 1500, icon: "👹", label: "1.5K Kills", hot: true },
+    { value: 2000, icon: "👹", label: "2K Kills", hot: true },
+    { value: 3000, icon: "👹", label: "3K Kills", hot: true },
+    { value: 5000, icon: "👹", label: "5K Kills", hot: true },
+  ].forEach((milestone) => {
+    if (stats.kills >= milestone.value) {
+      badges.push({
+        icon: milestone.icon,
+        label: milestone.label,
+        ...(milestone.hot ? { hot: true } : {}),
+      });
+    }
+  });
   if (stats.kd >= 2 && stats.appearances >= 2) {
     badges.push({ icon: "⚡", label: "2.0+ K/G" });
   }
@@ -1420,19 +1453,25 @@ export const getSeasonScoutBoard = (
   sessions,
   options = {},
 ) => {
-  const seasonSessions = getSeasonSessions(sessions, seasonId);
-  const latestDate = getLatestSessionDate(seasonSessions);
+  const isAllTime = seasonId === "all";
+  const season = SEASONS.find((entry) => entry.id === seasonId) || null;
+  const scopeName = isAllTime ? "All Time" : season?.name || "Selected scope";
+  const scopeMode = isAllTime ? "all-time" : seasonId === "s3" ? "live" : "archive";
+  const isLiveScope = scopeMode === "live";
+  const isArchiveScope = scopeMode === "archive";
+  const scopeSessions = isAllTime ? sessions : getSeasonSessions(sessions, seasonId);
+  const latestDate = scopeSessions.length ? getLatestSessionDate(scopeSessions) : "";
   const latestSessions = latestDate
-    ? seasonSessions.filter((session) => session.date === latestDate)
+    ? scopeSessions.filter((session) => session.date === latestDate)
     : [];
   const priorSessions = latestDate
-    ? seasonSessions.filter((session) => session.date < latestDate)
+    ? scopeSessions.filter((session) => session.date < latestDate)
     : [];
   const playerIndex = buildPlayerIndex(players);
   const displayName = (playerId) => getPlayerById(playerIndex, playerId)?.username || "Unknown";
   const byWins = (left, right) => right.wins - left.wins || right.kills - left.kills || right.appearances - left.appearances;
   const byKills = (left, right) => right.kills - left.kills || right.wins - left.wins || right.appearances - left.appearances;
-  const seasonRows = allStats(players, seasonSessions)
+  const seasonRows = allStats(players, scopeSessions)
     .filter((row) => row.appearances > 0)
     .sort(byWins);
   const priorRows = allStats(players, priorSessions)
@@ -1459,14 +1498,20 @@ export const getSeasonScoutBoard = (
   const selectedPlayerId = options.playerId || seasonRows[0]?.id || players[0]?.id || "";
   const selectedSeasonRow = rowFor(seasonRows, selectedPlayerId);
   const selectedLatestRow = rowFor(latestRows, selectedPlayerId);
-  const selectedChart = getChartData(selectedPlayerId, seasonSessions);
-  const bestDay = selectedChart.reduce((best, day) => {
+  const selectedChart = getChartData(selectedPlayerId, scopeSessions);
+  const bestWinsDay = selectedChart.filter((day) => day.wins > 0).reduce((best, day) => {
     if (!best) return day;
     if (day.wins > best.wins) return day;
     if (day.wins === best.wins && day.kills > best.kills) return day;
     return best;
   }, null);
-  const currentFormSessions = [...seasonSessions]
+  const bestKillsDay = selectedChart.filter((day) => day.kills > 0).reduce((best, day) => {
+    if (!best) return day;
+    if (day.kills > best.kills) return day;
+    if (day.kills === best.kills && day.wins > best.wins) return day;
+    return best;
+  }, null);
+  const currentFormSessions = [...scopeSessions]
     .filter((session) => session.attendees?.includes(selectedPlayerId))
     .sort(compareSessionsDesc)
     .slice(0, 5);
@@ -1479,9 +1524,16 @@ export const getSeasonScoutBoard = (
   const latestDateLabel = latestDate
     ? new Date(`${latestDate}T12:00:00Z`).toLocaleDateString("en", { month: "short", day: "numeric" })
     : "No latest file";
-  const bestDateLabel = bestDay
-    ? new Date(`${bestDay.date}T12:00:00Z`).toLocaleDateString("en", { month: "short", day: "numeric" })
+  const bestWinsDateLabel = bestWinsDay
+    ? new Date(`${bestWinsDay.date}T12:00:00Z`).toLocaleDateString("en", { month: "short", day: "numeric" })
     : "No day filed";
+  const bestKillsDateLabel = bestKillsDay
+    ? new Date(`${bestKillsDay.date}T12:00:00Z`).toLocaleDateString("en", { month: "short", day: "numeric" })
+    : "No day filed";
+  const filedNightLabel = isArchiveScope ? "final filed night" : "latest filed night";
+  const boardLabel = isAllTime ? "all-time board" : `${scopeName} board`;
+  const closeLabel = isAllTime ? "official close" : `${scopeName} close`;
+  const closeArticle = closeLabel.match(/^[aeiou]/i) ? "an" : "a";
 
   const risingPlayers = latestRows
     .map((row) => {
@@ -1495,10 +1547,10 @@ export const getSeasonScoutBoard = (
         latestKills: row.kills,
         rankChange,
         headline: row.wins > 0
-          ? `${displayName(row.id)} added ${row.wins}W on the latest filed night.`
-          : `${displayName(row.id)} added ${row.kills}K on the latest filed night.`,
+          ? `${displayName(row.id)} filed ${row.wins}W on the ${filedNightLabel}.`
+          : `${displayName(row.id)} filed ${row.kills}K on the ${filedNightLabel}.`,
         detail: rankChange > 0
-          ? `Moved ${rankChange} place${rankChange === 1 ? "" : "s"} on the Season 3 board.`
+          ? `Moved ${rankChange} place${rankChange === 1 ? "" : "s"} on the ${boardLabel}.`
           : `${row.kills}K kept the file active on ${latestDateLabel}.`,
         statLine: `${row.wins}W · ${row.kills}K`,
       };
@@ -1519,7 +1571,7 @@ export const getSeasonScoutBoard = (
         wins: row.wins,
         killRank,
         winsRank,
-        headline: `${displayName(row.id)} is carrying ${row.kills}K in Season 3.`,
+        headline: `${displayName(row.id)} is carrying ${row.kills}K in ${scopeName}.`,
         detail: winsRank && killRank && winsRank > killRank
           ? `Damage rank ${killRank}, wins rank ${winsRank}.`
           : `${row.wins}W keeps the damage tied to board movement.`,
@@ -1538,7 +1590,7 @@ export const getSeasonScoutBoard = (
       name: displayName(row.id),
       appearances: row.appearances,
       kills: row.kills,
-      headline: `${displayName(row.id)} is still waiting for a Season 3 close.`,
+      headline: `${displayName(row.id)} is still waiting for ${closeArticle} ${closeLabel}.`,
       detail: `${row.appearances} lobbies and ${row.kills}K are already on file.`,
       statLine: `${row.appearances}G · 0W`,
     }));
@@ -1554,9 +1606,9 @@ export const getSeasonScoutBoard = (
       kills: row.kills,
       rankChange,
       headline: `${displayName(row.id)} closed ${row.wins} room${row.wins === 1 ? "" : "s"} on ${latestDateLabel}.`,
-      detail: rankChange > 0
-        ? `That moved the file ${rankChange} place${rankChange === 1 ? "" : "s"}.`
-        : `${row.kills}K backed the latest filed night.`,
+        detail: rankChange > 0
+          ? `That moved the file ${rankChange} place${rankChange === 1 ? "" : "s"}.`
+        : `${row.kills}K backed the ${filedNightLabel}.`,
       statLine: `${row.wins}W · ${row.kills}K`,
     };
   });
@@ -1564,54 +1616,63 @@ export const getSeasonScoutBoard = (
   const selectedPlayerBrief = (() => {
     if (!selectedPlayerId || !selectedSeasonRow.appearances) {
       return {
-        headline: "No Season 3 file yet.",
-        supportLine: "Intel starts once the player has official Season 3 rooms on file.",
+        headline: `No ${scopeName} file yet.`,
+        supportLine: `Intel starts once the player has official ${scopeName} rooms on file.`,
         markers: [
-          { label: "Season 3 rank", value: "Waiting", color: "#00E5FF" },
-          { label: "Latest filed night", value: "No file", color: "#00FF94" },
-          { label: "Best day", value: "No day filed", color: "#FFD700" },
+          { label: "Scope rank", value: "Off board", color: "#00E5FF" },
+          { label: isArchiveScope ? "Final filed night" : "Latest filed night", value: "No file", color: "#00FF94" },
+          { label: "Best wins day", value: "No day filed", color: "#FFD700" },
+          { label: "Best kills day", value: "No day filed", color: "#FF4D8F" },
         ],
         seasonRank: null,
         latestNight: null,
-        bestDay: null,
-        currentForm: "No Season 3 form yet",
+        bestWinsDay: null,
+        bestKillsDay: null,
+        currentForm: `No ${scopeName} form yet`,
       };
     }
     const rankText = selectedRank ? `#${selectedRank} by wins` : "Off board";
     const latestText = selectedLatestRow.appearances
       ? `${selectedLatestRow.appearances}G · ${selectedLatestRow.wins}W · ${selectedLatestRow.kills}K on ${latestDateLabel}`
       : `No file on ${latestDateLabel}`;
-    const bestText = bestDay
-      ? `${bestDay.wins}W · ${bestDay.kills}K on ${bestDateLabel}`
-      : "No best day";
+    const bestWinsText = bestWinsDay
+      ? `${bestWinsDay.wins}W · ${bestWinsDay.kills}K on ${bestWinsDateLabel}`
+      : "No win day filed";
+    const bestKillsText = bestKillsDay
+      ? `${bestKillsDay.kills}K · ${bestKillsDay.wins}W on ${bestKillsDateLabel}`
+      : "No kill day filed";
     const headline = (() => {
-      if (selectedRank === 1) return `${displayName(selectedPlayerId)} is the Season 3 crown file.`;
-      if (selectedKillRank === 1) return `${displayName(selectedPlayerId)} is the Season 3 damage read.`;
-      if (selectedLatestRow.wins >= 2) return `${displayName(selectedPlayerId)} moved on the latest filed night.`;
-      if (selectedSeasonRow.wins === 0) return `${displayName(selectedPlayerId)} is still waiting for a Season 3 close.`;
-      return `${displayName(selectedPlayerId)} is a Season 3 scouting file worth watching.`;
+      if (selectedRank === 1) return `${displayName(selectedPlayerId)} is the ${scopeName} wins read.`;
+      if (selectedKillRank === 1) return `${displayName(selectedPlayerId)} is the ${scopeName} damage read.`;
+      if (selectedLatestRow.wins >= 2) return `${displayName(selectedPlayerId)} moved on the ${filedNightLabel}.`;
+      if (selectedSeasonRow.wins === 0) return `${displayName(selectedPlayerId)} is still waiting for ${closeArticle} ${closeLabel}.`;
+      return `${displayName(selectedPlayerId)} is a ${scopeName} scouting file worth checking.`;
     })();
     const supportLine = (() => {
-      if (selectedRank === 1) return `${selectedSeasonRow.wins}W, ${selectedSeasonRow.kills}K, and ${selectedSeasonRow.appearances} lobbies lead the board read.`;
+      if (selectedRank === 1) return `${selectedSeasonRow.wins}W, ${selectedSeasonRow.kills}K, and ${selectedSeasonRow.appearances} lobbies lead this scope.`;
       if (nextTarget) {
         const gap = nextTarget.wins - selectedSeasonRow.wins;
-        return `${gap} win${gap === 1 ? "" : "s"} to tie ${displayName(nextTarget.id)}.`;
+        if (gap > 0) {
+          return `${gap} win${gap === 1 ? "" : "s"} to tie ${displayName(nextTarget.id)}.`;
+        }
       }
       if (selectedSeasonRow.wins === 0) return `${selectedSeasonRow.appearances} lobbies are filed, but the first crown is still open.`;
-      if (selectedRankChange > 0) return `Latest filed movement improved the file by ${selectedRankChange} place${selectedRankChange === 1 ? "" : "s"}.`;
+      if (selectedRankChange > 0) return `${isArchiveScope ? "Final" : "Latest"} filed movement improved the file by ${selectedRankChange} place${selectedRankChange === 1 ? "" : "s"}.`;
       return `${currentFormWins}/${currentFormSessions.length || 0} wins in the last five filed lobbies.`;
     })();
     return {
       headline,
       supportLine,
       markers: [
-        { label: "Season 3 rank", value: rankText, color: "#00E5FF" },
-        { label: "Latest filed night", value: latestText, color: "#00FF94" },
-        { label: "Best day", value: bestText, color: "#FFD700" },
+        { label: "Scope rank", value: rankText, color: "#00E5FF" },
+        { label: isArchiveScope ? "Final filed night" : "Latest filed night", value: latestText, color: "#00FF94" },
+        { label: "Best wins day", value: bestWinsText, color: "#FFD700" },
+        { label: "Best kills day", value: bestKillsText, color: "#FF4D8F" },
       ],
       seasonRank: selectedRank,
       latestNight: selectedLatestRow,
-      bestDay,
+      bestWinsDay,
+      bestKillsDay,
       currentForm: `${currentFormWins}/${currentFormSessions.length || 0} last-five wins`,
     };
   })();
@@ -1624,6 +1685,8 @@ export const getSeasonScoutBoard = (
     selectedPlayerBrief,
     defaultPlayerId: seasonRows[0]?.id || "",
     latestDate,
+    scopeName,
+    mode: scopeMode,
   };
 };
 
@@ -2558,6 +2621,10 @@ export const getFalloutReport = (
   const fallout = getLatestDayConsequences(sessions, players, reportDate);
   const playerIndex = buildPlayerIndex(players);
   const displayName = (playerId) => getPlayerById(playerIndex, playerId)?.username || "Unknown";
+  const reportDateLabel = new Date(`${reportDate}T12:00:00Z`).toLocaleDateString("en", {
+    month: "short",
+    day: "numeric",
+  });
   const dayStats = allStats(players, daySessions).filter((player) => player.appearances > 0);
   const topWinner = fallout?.topWinners?.[0] || recap?.topWinner || null;
   const topKiller = fallout?.topKiller || [...dayStats].sort((left, right) => right.kills - left.kills || right.wins - left.wins)[0] || null;
@@ -2565,6 +2632,7 @@ export const getFalloutReport = (
   const totalKills = recap?.totalKills || daySessions.reduce((sum, session) => sum + getLobbyTotalKills(session), 0);
 
   let bestSingleGame = null;
+  const bestSingleGames = [];
   daySessions.forEach((session) => {
     Object.entries(session.kills || {}).forEach(([playerId, kills]) => {
       const candidate = {
@@ -2583,8 +2651,21 @@ export const getFalloutReport = (
       ) {
         bestSingleGame = candidate;
       }
+      if (kills > 0) {
+        bestSingleGames.push(candidate);
+      }
     });
   });
+  const bestSingleCeiling = bestSingleGame?.kills || 0;
+  const bestSingleTies = bestSingleCeiling > 0
+    ? bestSingleGames
+      .filter((entry) => entry.kills === bestSingleCeiling && entry.player)
+      .sort(
+        (left, right) =>
+          parseSessionIdNumber(right.session.id) - parseSessionIdNumber(left.session.id) ||
+          (left.player?.username || "").localeCompare(right.player?.username || ""),
+      )
+    : [];
 
   const cards = [];
   const pushCard = (entry) => {
@@ -2631,14 +2712,18 @@ export const getFalloutReport = (
     });
   }
 
-  if (bestSingleGame?.player && bestSingleGame.kills > 0) {
+  if (bestSingleTies.length > 0) {
+    const playerNames = joinHumanNames(bestSingleTies.map((entry) => entry.player.username));
+    const lobbyLabels = bestSingleTies.map((entry) => entry.session.id).join(" and ");
     pushCard({
       id: "file-marker",
       label: "FILE MARKER",
       tone: "marker",
-      headline: `${bestSingleGame.player.username} set the night ceiling with ${bestSingleGame.kills}K in ${getLobbyLabel(bestSingleGame.session.id)}.`,
+      headline: bestSingleTies.length > 1
+        ? `${playerNames} shared the ${reportDateLabel} ceiling at ${bestSingleCeiling}K in ${lobbyLabels}.`
+        : `${bestSingleTies[0].player.username} set the night ceiling with ${bestSingleCeiling}K in ${getLobbyLabel(bestSingleTies[0].session.id)}.`,
       detail: "Best single-lobby kill line from the latest filed night.",
-      playerIds: [bestSingleGame.player.id],
+      playerIds: bestSingleTies.map((entry) => entry.player.id),
       source: "best_single_lobby_kills",
     });
   }
