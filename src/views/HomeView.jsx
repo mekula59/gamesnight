@@ -796,13 +796,15 @@ export default function HomeView({ ctx }) {
                             : building
                               ? "PRESSURE BUILDING"
                               : "WEEKLY OBJECTIVE");
-                      const missionReadout=done
-                        ? "LOCKED"
-                        : remaining===1
-                          ? "1 LEFT"
-                          : remaining>1
-                            ? `${remaining} LEFT`
-                            : `${pct}%`;
+                      const missionReadout=m.readout
+                        ? m.readout
+                        : done
+                          ? "LOCKED"
+                          : remaining===1
+                            ? "1 LEFT"
+                            : remaining>1
+                              ? `${remaining} LEFT`
+                              : `${pct}%`;
                       return(
                         <div key={i} className="mission-item" style={{
                           "--m-color":m.color,

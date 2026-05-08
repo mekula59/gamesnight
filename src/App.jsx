@@ -2280,7 +2280,7 @@ export default function GameNight(){
   const getDailyMVP=()=>selectGetDailyMVP(sessions,players);
   const getRivals=()=>selectGetRivals(sessions);
   const getSeasonSessions=sid=>selectGetSeasonSessions(sessions,sid);
-  const getMissionBoardState=()=>selectGetMissionBoardState(sessions,players);
+  const getMissionBoardState=()=>selectGetMissionBoardState(sessions,players,{weeklyLoopState});
   const getRecords=()=>selectGetRecords(sessions,players);
   const getChartData=(pid,src=sessions)=>selectGetChartData(pid,src);
   const getLiveStreaks=()=>selectGetLiveStreaks(sessions,players);

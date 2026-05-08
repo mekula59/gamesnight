@@ -1326,6 +1326,153 @@ const createAdaptiveMissionState = (progress, target, color) => {
   return { stateLabel: "LIVE WATCH", stateColor: "rgba(255,255,255,.56)" };
 };
 
+const getMissionPhaseCopy = (phase, mission) => {
+  const done = (mission.progress || 0) >= (mission.target || 0);
+  const color = mission.color || "#C77DFF";
+
+  if (phase === "ROOM LIVE TODAY") {
+    return {
+      state: "watch-only",
+      stateLabel: "ON WATCH",
+      stateColor: "#FFD700",
+      mood: "Waiting on official file. Result must be filed before this moves.",
+      footer: "WAITING ON OFFICIAL FILE",
+      readout: "ON WATCH",
+      sortBucket: 30,
+    };
+  }
+
+  if (phase === "ROOM OPENS SOON") {
+    return {
+      state: "pending",
+      stateLabel: "PENDING",
+      stateColor: color,
+      mood: "Next file can move this.",
+      footer: "NEXT FILE CAN MOVE THIS",
+      readout: "PENDING",
+      sortBucket: done ? 50 : 10,
+    };
+  }
+
+  if (phase === "BOARD LOCKED") {
+    return {
+      state: "closed",
+      stateLabel: done ? "CLEARED" : "LOCKED",
+      stateColor: done ? "#00FF94" : "rgba(255,255,255,.56)",
+      mood: done ? "Cleared on the latest official file." : "Locked until the next weekly set.",
+      footer: done ? "FILED" : "LOCKED",
+      readout: done ? "CLEARED" : "LOCKED",
+      sortBucket: done ? 10 : 40,
+    };
+  }
+
+  if (phase === "WEEKLY RESET PENDING") {
+    return {
+      state: "closed",
+      stateLabel: done ? "FILED" : "LOCKED",
+      stateColor: done ? "#00FF94" : "rgba(255,255,255,.56)",
+      mood: done ? "Filed from official weekly data." : "Weekly reset is pending the next set.",
+      footer: done ? "FILED" : "LOCKED",
+      readout: done ? "FILED" : "LOCKED",
+      sortBucket: done ? 10 : 40,
+    };
+  }
+
+  if (phase === "RESULTS FILED") {
+    return {
+      state: done ? "closed" : "active",
+      stateLabel: done ? "CLEARED" : "STILL OPEN",
+      stateColor: done ? "#00FF94" : color,
+      mood: done ? "Cleared on latest file." : "Still open after latest file.",
+      footer: done ? "CLEARED ON LATEST FILE" : "STILL OPEN",
+      readout: done ? "CLEARED" : "OPEN",
+      sortBucket: done ? 10 : 20,
+    };
+  }
+
+  return {
+    state: done ? "closed" : "active",
+    stateLabel: done ? "CLEARED" : "STILL OPEN",
+    stateColor: done ? "#00FF94" : color,
+    mood: done ? "Cleared on latest file." : "Next official file decides this.",
+    footer: done ? "CLEARED" : "STILL OPEN",
+    readout: done ? "CLEARED" : "OPEN",
+    sortBucket: done ? 30 : 10,
+  };
+};
+
+const applyMissionPhase = (missions, phase) =>
+  missions
+    .map((mission) => {
+      const phaseCopy = getMissionPhaseCopy(phase, mission);
+      return {
+        ...mission,
+        ...phaseCopy,
+        phase,
+      };
+    })
+    .sort((left, right) => {
+      const leftRatio = left.target > 0 ? left.progress / left.target : 0;
+      const rightRatio = right.target > 0 ? right.progress / right.target : 0;
+      return (
+        left.sortBucket - right.sortBucket ||
+        rightRatio - leftRatio ||
+        right.progress - left.progress
+      );
+    });
+
+const getMissionBoardPhaseText = (phase, clearedCount, openCount, hottestMission, nextMissionRemaining, nextMissionMeasure) => {
+  if (phase === "ROOM LIVE TODAY") {
+    return {
+      title: "Mission Board is on watch until results are filed",
+      subline: "ON WATCH · FILED DATA ONLY",
+      supportLines: ["Live play can create tension, but only filed data moves the board."],
+    };
+  }
+
+  if (phase === "ROOM OPENS SOON") {
+    return {
+      title: "Mission Board is pending the next official file",
+      subline: hottestMission
+        ? `PENDING · ${nextMissionRemaining} ${nextMissionMeasure.toUpperCase()} LEFT`
+        : "PENDING · BOARD READY",
+      supportLines: ["Next file can move this."],
+    };
+  }
+
+  if (phase === "RESULTS FILED") {
+    return {
+      title: "Mission Board updated from the latest file",
+      subline: `${clearedCount} CLEARED · ${openCount} STILL OPEN`,
+      supportLines: openCount > 0 ? ["Still open after latest file."] : ["Filed and cleared from official results."],
+    };
+  }
+
+  if (phase === "BOARD LOCKED") {
+    return {
+      title: "Mission Board is locked for the week",
+      subline: `${clearedCount} FILED · ${openCount} LOCKED`,
+      supportLines: ["Board truth is locked until the next official file."],
+    };
+  }
+
+  if (phase === "WEEKLY RESET PENDING") {
+    return {
+      title: "Weekly missions are locked until reset",
+      subline: `${clearedCount} FILED · RESET PENDING`,
+      supportLines: ["The next set opens with the next room window."],
+    };
+  }
+
+  return {
+    title: "Waiting for next room",
+    subline: `${clearedCount} CLEARED · ${openCount} STILL OPEN`,
+    supportLines: openCount > 0
+      ? ["Latest file is locked. Next official room decides what moves."]
+      : ["Filed state is locked until the next room."],
+  };
+};
+
 export const getRecords = (sessions, players) => {
   if (!sessions.length) {
     return null;
@@ -5302,7 +5449,7 @@ export const getWeeklyLoopState = ({
     ? `No new report filed since ${latestLabel}.`
     : `No filed rooms in this campaign yet.`;
 
-  if ((day === 0 || (day === 1 && hour < 8)) && !todaySessions.length) {
+  if (((day === 0 && hour < 8) || (day === 1 && hour < 8)) && !todaySessions.length) {
     state = "WEEKLY RESET PENDING";
     line = `Weekly board is between cycles. Next room opens ${nextLabel}.`;
   } else if (isSessionDay && hour >= sessionStartHour && hour < sessionEndHour) {
@@ -5907,8 +6054,9 @@ export const getDailyOrdersForPlayer = (
   return selected.slice(0, maxOrders);
 };
 
-export const getMissionBoardState = (sessions, players) => {
-  const missions = getWeeklyMissions(sessions);
+export const getMissionBoardState = (sessions, players, options = {}) => {
+  const phase = options.weeklyLoopState?.state || options.phase || "WAITING FOR NEXT ROOM";
+  const missions = applyMissionPhase(getWeeklyMissions(sessions), phase).slice(0, 4);
   const clearedCount = missions.filter((mission) => mission.progress >= mission.target).length;
   const openCount = missions.length - clearedCount;
   const hottestMission = [...missions]
@@ -5928,6 +6076,14 @@ export const getMissionBoardState = (sessions, players) => {
     nextMissionRemaining === 1
       ? nextMission?.measureSingular
       : nextMission?.measurePlural || "results";
+  const phaseText = getMissionBoardPhaseText(
+    phase,
+    clearedCount,
+    openCount,
+    hottestMission,
+    nextMissionRemaining,
+    nextMissionMeasure,
+  );
   const uniqueWeeklyWinners = [
     ...new Set(
       weekSessions
@@ -5939,21 +6095,15 @@ export const getMissionBoardState = (sessions, players) => {
   if (openCount > 0 || !players.length || !weekSessions.length) {
     return {
       mode: "core",
+      phase,
       missions,
       clearedCount,
       openCount,
       hottestMission,
       nextMission,
-      title:
-        openCount === 1 && nextMission
-          ? `${nextMission.label} is the last open objective still changing the week`
-          : hottestMission
-            ? `${hottestMission.label} is pulling hardest on the room right now`
-            : `${openCount} live objectives are still shaping the week`,
-      subline: hottestMission
-        ? `${clearedCount} CLEARED · ${openCount} LIVE · ${nextMissionRemaining} ${nextMissionMeasure.toUpperCase()} LEFT`
-        : `${clearedCount} CLEARED · ${openCount} LIVE`,
-      supportLines: [],
+      title: phaseText.title,
+      subline: phaseText.subline,
+      supportLines: phaseText.supportLines,
     };
   }
 
@@ -6169,16 +6319,29 @@ export const getMissionBoardState = (sessions, players) => {
     );
   }
 
+  const phasedAdaptiveMissions = applyMissionPhase(adaptiveMissions, phase).slice(0, 3);
+  const adaptivePhaseText = getMissionBoardPhaseText(
+    phase,
+    clearedCount,
+    phasedAdaptiveMissions.length,
+    phasedAdaptiveMissions[0] || null,
+    phasedAdaptiveMissions[0]
+      ? Math.max((phasedAdaptiveMissions[0].target || 0) - (phasedAdaptiveMissions[0].progress || 0), 0)
+      : 0,
+    phasedAdaptiveMissions[0]?.measurePlural || "results",
+  );
+
   return {
     mode: "adaptive",
-    missions: adaptiveMissions.slice(0, 3),
+    phase,
+    missions: phasedAdaptiveMissions,
     clearedCount,
-    openCount: adaptiveMissions.length,
-    hottestMission: adaptiveMissions[0] || null,
-    nextMission: adaptiveMissions[0] || null,
-    title: "Core weekly board is cleared. Live watches stay open.",
-    subline: `${weekSessions.length} LOBBIES THIS WEEK · ${uniqueWeeklyWinners} WINNERS ON FILE`,
-    supportLines: supportLines.slice(0, 2),
+    openCount: phasedAdaptiveMissions.length,
+    hottestMission: phasedAdaptiveMissions[0] || null,
+    nextMission: phasedAdaptiveMissions[0] || null,
+    title: adaptivePhaseText.title,
+    subline: `${adaptivePhaseText.subline} · ${weekSessions.length} LOBBIES FILED`,
+    supportLines: [...adaptivePhaseText.supportLines, ...supportLines].slice(0, 2),
   };
 };
 
