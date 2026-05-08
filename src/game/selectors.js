@@ -2713,17 +2713,21 @@ export const getFalloutReport = (
   }
 
   if (bestSingleTies.length > 0) {
-    const playerNames = joinHumanNames(bestSingleTies.map((entry) => entry.player.username));
-    const lobbyLabels = bestSingleTies.map((entry) => entry.session.id).join(" and ");
+    const firstFiledTie = [...bestSingleTies].sort(
+      (left, right) =>
+        parseSessionIdNumber(left.session.id) - parseSessionIdNumber(right.session.id) ||
+        (left.player?.username || "").localeCompare(right.player?.username || ""),
+    )[0];
+    const tiedPlayerIds = [...new Set(bestSingleTies.map((entry) => entry.player.id))];
     pushCard({
       id: "file-marker",
       label: "FILE MARKER",
       tone: "marker",
       headline: bestSingleTies.length > 1
-        ? `${playerNames} shared the ${reportDateLabel} ceiling at ${bestSingleCeiling}K in ${lobbyLabels}.`
+        ? `${reportDateLabel} ceiling landed at ${bestSingleCeiling}K, first filed by ${firstFiledTie.player.username} in ${firstFiledTie.session.id}.`
         : `${bestSingleTies[0].player.username} set the night ceiling with ${bestSingleCeiling}K in ${getLobbyLabel(bestSingleTies[0].session.id)}.`,
       detail: "Best single-lobby kill line from the latest filed night.",
-      playerIds: bestSingleTies.map((entry) => entry.player.id),
+      playerIds: tiedPlayerIds,
       source: "best_single_lobby_kills",
     });
   }
@@ -3044,7 +3048,7 @@ export const getLatestWeeklyRecap = ({
   now = new Date(),
 } = {}) => {
   const latestFiledDate = weeklyLoopState?.latestFiledDate || getLatestSessionDate(sessions);
-  if (!latestFiledDate || weeklyLoopState?.state === "ROOM LIVE TODAY") {
+  if (!latestFiledDate) {
     return null;
   }
   return getWeeklyRecap(latestFiledDate, sessions, players, {

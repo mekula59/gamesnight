@@ -1221,7 +1221,7 @@ const CSS = `
     .badge-grid{grid-template-columns:repeat(2,1fr)!important;}
     .mission-board{grid-template-columns:1fr!important;}
     .vault-grid{grid-template-columns:1fr!important;}
-    .vault-view-shell{width:calc(100vw - 48px)!important;max-width:calc(100vw - 48px)!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important;}
+    .vault-view-shell{width:100%!important;max-width:100%!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important;}
     .vault-view-shell>div{max-width:100%!important;}
     .vault-view-shell .vault-card{width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
     .vault-header-row{display:block!important;}
@@ -1229,7 +1229,8 @@ const CSS = `
     .vault-header-row button{margin-top:8px!important;}
     .vault-header-row button{max-width:100%!important;}
     .vault-support-line{max-width:34ch!important;letter-spacing:.07em!important;line-height:1.5!important;white-space:normal!important;overflow-wrap:break-word!important;}
-    .vault-archive-totals{grid-template-columns:1fr!important;}
+    .vault-archive-totals{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;border:none!important;overflow:visible!important;background:none!important;margin-bottom:26px!important;}
+    .vault-archive-totals>div{border:1px solid rgba(255,255,255,.07)!important;border-radius:8px!important;background:rgba(255,255,255,.03)!important;padding:14px 10px 13px!important;min-width:0!important;}
     .vault-season-files-grid,.vault-historic-grid,.vault-lobby-wipe-grid{grid-template-columns:1fr!important;}
     .vault-season-stat-grid{grid-template-columns:1fr!important;}
     .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow-x:hidden!important;}
@@ -1418,7 +1419,8 @@ const CSS = `
     .warroom-fallout-headline{font-size:.9rem!important;line-height:1.22!important;}
     .warroom-fallout-grid{grid-template-columns:1fr!important;gap:7px!important;}
     .warroom-fallout-card{padding:8px 9px!important;}
-    .warroom-fallout-card:nth-child(n+4){display:none!important;}
+    .warroom-fallout-card:nth-child(3){display:none!important;}
+    .warroom-fallout-card:nth-child(n+5){display:none!important;}
     .warroom-weekly-recap{padding:10px 11px!important;margin-bottom:0!important;}
     .warroom-weekly-head{margin-bottom:8px!important;gap:8px!important;}
     .warroom-weekly-headline{display:none!important;}
