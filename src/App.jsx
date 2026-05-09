@@ -1192,7 +1192,12 @@ const CSS = `
     .hide-mob{display:none!important;} .show-mob{display:flex!important;}
     .hof-grid{grid-template-columns:1fr!important;}
     .hof-grid{min-width:0!important;width:100%!important;max-width:100%!important;}
-    .hof-honors-grid{grid-template-columns:1fr!important;}
+    .hof-honors-grid{display:flex!important;grid-template-columns:none!important;overflow-x:auto!important;scroll-snap-type:x mandatory!important;padding:2px 4px 10px!important;margin-left:-4px;margin-right:-4px;}
+    .hof-honors-grid::-webkit-scrollbar,.hof-filter-rail::-webkit-scrollbar{display:none!important;}
+    .hof-honors-grid,.hof-filter-rail{scrollbar-width:none!important;-ms-overflow-style:none!important;}
+    .hof-honor-card{flex:0 0 82%!important;scroll-snap-align:start!important;}
+    .hof-filter-rail{overflow-x:auto!important;flex-wrap:nowrap!important;padding-bottom:6px!important;}
+    .hof-filter-rail button{flex:0 0 auto!important;}
     .legacy-player-card{width:auto!important;max-width:100%!important;box-sizing:border-box!important;margin-left:0!important;margin-right:0!important;}
     .legacy-player-card{padding:22px 16px 18px!important;border-radius:24px!important;}
     .legacy-card-head{gap:12px!important;margin-bottom:18px!important;}
@@ -1236,7 +1241,7 @@ const CSS = `
     .fade-up{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow-x:hidden!important;}
     .card-h,.lb-card,.rival-card,.comm-card{min-width:0!important;width:100%!important;}
     .card-h.legacy-player-card{width:calc(100vw - 68px)!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;}
-    .legacy-badge-strip{width:calc(100vw - 124px)!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;}
+    .legacy-badge-strip{width:auto!important;min-width:0!important;max-width:100%!important;overflow:visible!important;}
     .legacy-badge-strip span{max-width:100%!important;white-space:normal!important;line-height:1.15!important;font-size:.62rem!important;padding:3px 7px!important;}
     main{padding-left:12px!important;padding-right:12px!important;overflow-x:hidden!important;}
     .combat-picker-shell{
@@ -2043,6 +2048,7 @@ export default function GameNight(){
   const [np,setNp]=useState({username:"",color:"#FFD700"});
   const [chartPid,setChartPid]=useState("");
   const [intelScope,setIntelScope]=useState("s3");
+  const [legendFilter,setLegendFilter]=useState("all");
   const [shareCard,setShareCard]=useState(null); // {sid, visible}
   const [confetti,setConfetti]=useState(()=>foolsDay?createFoolsConfetti():[]);
   const [foolsToast,setFoolsToast]=useState(0); // 0=hidden 1=warning 2=reveal
@@ -3543,47 +3549,55 @@ export default function GameNight(){
             </div>
           </div>
 
-          {/* Permanent Honors */}
+          {/* Top Honor Lane */}
           {(()=>{
             const allTimeRows=allStats().filter((player)=>player.appearances>0);
-            const winsLeader=[...allTimeRows].sort((a,b)=>b.wins-a.wins||b.kills-a.kills)[0];
-            const killsLeader=[...allTimeRows].sort((a,b)=>b.kills-a.kills||b.wins-a.wins)[0];
-            const mostPlayed=[...allTimeRows].sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins)[0];
-            const records=getRecords();
-            const topGamePlayer=records?.topGame?.pid?players.find((player)=>player.id===records.topGame.pid):null;
+            const winsLeader=[...allTimeRows].sort((a,b)=>b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances)[0];
+            const killsLeader=[...allTimeRows].sort((a,b)=>b.kills-a.kills||b.wins-a.wins||b.appearances-a.appearances)[0];
+            const sharpshooter=[...allTimeRows]
+              .filter((player)=>player.appearances>=5&&player.id!==winsLeader?.id&&player.id!==killsLeader?.id)
+              .sort((a,b)=>b.kd-a.kd||b.kills-a.kills||b.wins-a.wins)[0];
+            const mostPlayed=[...allTimeRows]
+              .filter((player)=>player.id!==winsLeader?.id&&player.id!==killsLeader?.id&&player.id!==sharpshooter?.id)
+              .sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins||b.kills-a.kills)[0];
             const honors=[
-              {icon:"🏆",label:"All-Time Wins Leader",player:winsLeader,value:winsLeader?`${winsLeader.wins}W`:"Waiting",color:"#FFD700"},
-              {icon:"💀",label:"All-Time Kills Leader",player:killsLeader,value:killsLeader?`${killsLeader.kills}K`:"Waiting",color:"#FF4D8F"},
-              {icon:"📅",label:"Most Played File",player:mostPlayed,value:mostPlayed?`${mostPlayed.appearances}G`:"Waiting",color:"#00FF94"},
-              {icon:"☄️",label:"Highest Single Game",player:topGamePlayer,value:records?.topGame?`${records.topGame.k}K in ${records.topGame.sid}`:"Waiting",color:"#C77DFF"},
+              {icon:"👑",label:"Champion",honor:"The Champion",player:winsLeader,value:winsLeader?`${winsLeader.wins} wins`:"Waiting",color:"#FFD700"},
+              {icon:"💀",label:"Reaper",honor:"The Reaper",player:killsLeader,value:killsLeader?`${killsLeader.kills} kills`:"Waiting",color:"#FF4D8F"},
+              {icon:"🎯",label:"Sharpshooter",honor:"Best K/G file",player:sharpshooter,value:sharpshooter?`${sharpshooter.kd} K/G`:"Waiting",color:"#00E5FF"},
+              {icon:"🎮",label:"Ride or Die",honor:"Most filed rooms",player:mostPlayed,value:mostPlayed?`${mostPlayed.appearances} lobbies`:"Waiting",color:"#FFAB40"},
             ];
             return(
-              <div style={{...card({border:"2px solid rgba(255,215,0,.24)",background:"linear-gradient(135deg,rgba(255,215,0,.08),var(--card))"}),padding:20,marginBottom:16}}>
+              <div style={{...card({border:"1px solid rgba(255,215,0,.22)",background:"linear-gradient(135deg,rgba(255,215,0,.07),rgba(0,0,0,.28),var(--card))"}),padding:16,marginBottom:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
                   <div>
-                    <div className="bc7" style={{fontSize:".62rem",letterSpacing:".28em",color:"#FFD700"}}>PERMANENT HONORS</div>
-                    <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4}}>All-time marks only. No live campaign movement.</div>
+                    <div className="bc7" style={{fontSize:".62rem",letterSpacing:".28em",color:"#FFD700"}}>TOP HONOR LANE</div>
+                    <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4}}>Four all-time plinths from official room history.</div>
                   </div>
                 </div>
-                <div className="hof-honors-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+                <div className="hof-honors-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10}}>
                   {honors.map((honor)=>(
-                    <div key={honor.label} onClick={()=>honor.player&&goProfile(honor.player.id)} style={{
-                      background:"rgba(0,0,0,.34)",
-                      border:`1px solid ${honor.color}33`,
-                      borderLeft:`3px solid ${honor.color}`,
-                      borderRadius:"0 12px 12px 0",
-                      padding:"12px 14px",
+                    <button key={honor.label} type="button" className="hof-honor-card" onClick={()=>honor.player&&goProfile(honor.player.id)} style={{
+                      textAlign:"left",
+                      background:`linear-gradient(150deg,${honor.color}12,rgba(0,0,0,.42))`,
+                      border:`1px solid ${honor.color}38`,
+                      borderTop:`3px solid ${honor.color}`,
+                      borderRadius:"18px",
+                      padding:"13px 14px",
                       cursor:honor.player?"pointer":"default",
+                      color:"var(--text)",
+                      boxShadow:`0 16px 34px ${honor.color}10`,
                     }}>
-                      <div className="bc7" style={{fontSize:".58rem",letterSpacing:".18em",color:`${honor.color}cc`,marginBottom:8}}>{honor.icon} {honor.label}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div className="bc7" style={{fontSize:".54rem",letterSpacing:".2em",color:`${honor.color}dd`,marginBottom:8}}>{honor.icon} {honor.label}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:9}}>
                         {honor.player&&<Avatar p={honor.player} size={30}/>}
                         <div style={{minWidth:0}}>
                           <div style={{fontFamily:"Fredoka One",color:honor.color,fontSize:".95rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{honor.player?dn(honor.player.username):"Waiting"}</div>
-                          <div style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".98rem"}}>{honor.value}</div>
+                          <div className="bc7" style={{color:"var(--text3)",fontSize:".62rem",letterSpacing:".1em",textTransform:"uppercase"}}>{honor.honor}</div>
                         </div>
                       </div>
-                    </div>
+                      <div className="bc9" style={{color:"#fff",fontSize:"1.05rem",lineHeight:1.05}}>{honor.value}</div>
+                      <div className="bc7" style={{color:"var(--text3)",fontSize:".6rem",letterSpacing:".12em",marginTop:8,textTransform:"uppercase"}}>Open Combat File</div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -3592,9 +3606,52 @@ export default function GameNight(){
 
           {/* Legacy Files */}
           {(()=>{
-            const allTimeRows=allStats()
+            const rowsWithMeta=allStats()
               .filter((player)=>player.appearances>0)
-              .sort((a,b)=>b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances);
+              .map((row,index)=>{
+                const player=players.find((entry)=>entry.id===row.id);
+                const badges=player?getBadges(player.id):[];
+                const rank=player?getRank(player.id):{title:"",color:"var(--text3)"};
+                const majorBadgeCount=badges.filter((badge)=>/Champion|Invincible|Reaper|First Blood|Record|LOBBY WIPE/.test(badge.label)).length;
+                const legacyStrength=
+                  (rank.title.includes("Champion")?1000000:0)+
+                  (rank.title.includes("Reaper")?900000:0)+
+                  (rank.title.includes("Sharpshooter")?800000:0)+
+                  (rank.title.includes("Ride or Die")?700000:0)+
+                  majorBadgeCount*65000+
+                  row.wins*1000+
+                  row.kills*8+
+                  row.appearances*4;
+                return{...row,player,badges,rank,legacyStrength,sourceIndex:index};
+              })
+              .filter((row)=>row.player)
+              .filter((row)=>{
+                if(legendFilter==="champions")return row.rank.title.includes("Champion")||row.badges.some((badge)=>/Champion/.test(badge.label));
+                if(legendFilter==="100w")return row.wins>=100;
+                if(legendFilter==="500k")return row.kills>=500;
+                if(legendFilter==="attendance")return row.appearances>=100;
+                return true;
+              })
+              .sort((a,b)=>{
+                if(legendFilter==="all")return b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances||a.sourceIndex-b.sourceIndex;
+                return b.legacyStrength-a.legacyStrength||b.wins-a.wins||b.kills-a.kills||b.appearances-a.appearances||a.sourceIndex-b.sourceIndex;
+              });
+            const allFileCount=allStats().filter((player)=>player.appearances>0).length;
+            const filters=[
+              {id:"all",label:"All"},
+              {id:"champions",label:"Champions"},
+              {id:"100w",label:"100W+"},
+              {id:"500k",label:"500K+"},
+              {id:"attendance",label:"High attendance"},
+            ];
+            const getBadgePriority=(badge)=>{
+              if(/Champion|Invincible|Reaper|First Blood|S1 Record Breaker/.test(badge.label))return 1000;
+              if(/1K|1.5K|2K|3K|5K|750 Kills|500 Kills/.test(badge.label))return 800;
+              if(/300 Kills|200 Kills|150 Kills|100 Kills|50 Kills|25 Kills/.test(badge.label))return 700;
+              if(/Full House|Marathon|No Days Off|S1 Iron Man/.test(badge.label))return 600;
+              if(/LOBBY WIPE|Best Run|Hot Hand|Rampage|Big Game|Assassin|Fool/.test(badge.label))return 500;
+              return badge.hot?450:100;
+            };
             return(
               <div style={{...card({border:"2px solid rgba(0,229,255,.18)",background:"linear-gradient(135deg,rgba(0,229,255,.05),rgba(0,0,0,.22),var(--card))"}),padding:20,marginBottom:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
@@ -3602,14 +3659,34 @@ export default function GameNight(){
                     <div className="bc7" style={{fontSize:".62rem",letterSpacing:".28em",color:"#00E5FF"}}>LEGACY FILES</div>
                     <div className="bc7" style={{fontSize:".72rem",color:"var(--text3)",marginTop:4}}>All-time player cards from official room history.</div>
                   </div>
-                  <div className="bc7" style={{fontSize:".62rem",letterSpacing:".16em",color:"var(--text3)"}}>{allTimeRows.length} FILES</div>
+                  <div className="bc7" style={{fontSize:".62rem",letterSpacing:".16em",color:"var(--text3)"}}>{rowsWithMeta.length} OF {allFileCount} FILES</div>
+                </div>
+                <div className="hof-filter-rail" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+                  {filters.map((filter)=>(
+                    <button key={filter.id} type="button" onClick={()=>setLegendFilter(filter.id)} style={{
+                      border:legendFilter===filter.id?"1px solid rgba(255,215,0,.62)":"1px solid rgba(255,255,255,.12)",
+                      background:legendFilter===filter.id?"rgba(255,215,0,.14)":"rgba(255,255,255,.045)",
+                      color:legendFilter===filter.id?"#FFD700":"var(--text2)",
+                      borderRadius:999,
+                      padding:"8px 12px",
+                      fontSize:".68rem",
+                      fontWeight:900,
+                      letterSpacing:".08em",
+                      textTransform:"uppercase",
+                      cursor:"pointer",
+                    }}>
+                      {filter.label}
+                    </button>
+                  ))}
                 </div>
                 <div className="hof-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:18}}>
-                  {allTimeRows.map((row,index)=>{
-                    const player=players.find((entry)=>entry.id===row.id);
-                    if(!player)return null;
-                    const rank=getRank(player.id);
-                    const badges=getBadges(player.id);
+                  {rowsWithMeta.map((row,index)=>{
+                    const player=row.player;
+                    const rank=row.rank;
+                    const badges=row.badges;
+                    const badgeLimit=badges.length>3?2:3;
+                    const displayBadges=[...badges].sort((a,b)=>getBadgePriority(b)-getBadgePriority(a)).slice(0,badgeLimit);
+                    const hiddenBadgeCount=Math.max(0,badges.length-displayBadges.length);
                     const streak=getStreak(player.id);
                     const hasStreakGlow=streak>=3;
                     return(
@@ -3678,7 +3755,7 @@ export default function GameNight(){
                         </div>
                         {badges.length>0&&(
                           <div className="legacy-badge-strip" style={{display:"flex",flexWrap:"wrap",gap:5,position:"relative",zIndex:1}}>
-                            {badges.map((badge,index)=>(
+                            {displayBadges.map((badge,index)=>(
                               <span key={`${badge.label}-${index}`} style={{
                               background:badge.hot?"rgba(255,107,53,.15)":"rgba(255,255,255,.09)",
                               borderRadius:999,
@@ -3692,6 +3769,19 @@ export default function GameNight(){
                                 {badge.hot?<span className="fire" style={{display:"inline-block"}}>{badge.icon}</span>:badge.icon} {badge.label}
                               </span>
                             ))}
+                            {hiddenBadgeCount>0&&(
+                              <span style={{
+                                background:"rgba(255,255,255,.06)",
+                                borderRadius:999,
+                                padding:"3px 9px",
+                                fontSize:".68rem",
+                                fontWeight:800,
+                                color:"var(--text2)",
+                                border:"1px solid rgba(255,255,255,.14)",
+                              }}>
+                                +{hiddenBadgeCount} more
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
