@@ -56,6 +56,7 @@ import {
   getRank as selectGetRank,
   getRecords as selectGetRecords,
   getRivalryBoard as selectGetRivalryBoard,
+  getRivalryMatchHistory as selectGetRivalryMatchHistory,
   reconcileRivalOpsState as selectReconcileRivalOpsState,
   getRivals as selectGetRivals,
   getCampaignFronts as selectGetCampaignFronts,
@@ -408,7 +409,127 @@ const CSS = `
     opacity:.7;
   }
   .rivalry-evidence-card{
-    cursor:default;
+    cursor:pointer;
+  }
+  .rivalry-evidence-card.is-selected{
+    outline:2px solid rgba(0,229,255,.62);
+    outline-offset:2px;
+    box-shadow:0 0 0 1px rgba(0,229,255,.18),0 22px 46px rgba(0,229,255,.09)!important;
+  }
+  .rival-board-evidence-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(280px,340px);
+    gap:16px;
+    align-items:start;
+  }
+  .rival-history-desktop-wrap{
+    position:sticky;
+    top:104px;
+  }
+  .rival-history-panel{
+    border:1px solid rgba(0,229,255,.18);
+    border-left:3px solid rgba(0,229,255,.64);
+    border-radius:0 16px 16px 0;
+    background:
+      radial-gradient(circle at 12% 0,rgba(0,229,255,.12),transparent 38%),
+      linear-gradient(145deg,rgba(255,255,255,.045),rgba(0,0,0,.32));
+    padding:15px;
+    box-shadow:0 18px 38px rgba(0,0,0,.2);
+  }
+  .rival-history-empty{
+    color:var(--text2);
+    line-height:1.6;
+    font-size:.76rem;
+  }
+  .rival-history-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .rival-history-kicker{
+    color:#00E5FF;
+    font-size:.56rem;
+    letter-spacing:.24em;
+    margin-bottom:6px;
+  }
+  .rival-history-title{
+    color:#fff;
+    font-size:1.02rem;
+    line-height:1.12;
+    margin:0 0 6px;
+  }
+  .rival-history-score{
+    color:var(--text3);
+    font-size:.66rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .rival-history-list{
+    display:grid;
+    gap:8px;
+  }
+  .rival-history-row{
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:12px;
+    background:rgba(0,0,0,.28);
+    padding:10px 11px;
+  }
+  .rival-history-row-top,
+  .rival-history-result{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:center;
+  }
+  .rival-history-row-top{
+    color:#00E5FF;
+    font-size:.68rem;
+    margin-bottom:7px;
+  }
+  .rival-history-row-top span:last-child{
+    color:var(--text3);
+    font-size:.58rem;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .rival-history-result{
+    color:var(--text2);
+    font-size:.72rem;
+    line-height:1.45;
+    margin-bottom:6px;
+  }
+  .rival-history-result span:last-child{
+    flex-shrink:0;
+    color:#FFD700;
+    font-weight:900;
+  }
+  .rival-history-impact{
+    color:rgba(255,255,255,.78);
+    font-size:.66rem;
+    line-height:1.45;
+  }
+  .rival-history-showall,
+  .rival-history-close{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);
+    color:var(--text2);
+    border-radius:999px;
+    padding:8px 11px;
+    margin-top:10px;
+    font-size:.66rem;
+    font-weight:900;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .rival-history-close{
+    margin-top:0;
+    flex-shrink:0;
+  }
+  .rival-history-mobile-sheet{
+    display:none;
   }
   .rival-card-mobile-chip{
     display:none;
@@ -593,6 +714,66 @@ const CSS = `
   }
   .h2h-secondary-tool{
     opacity:.78;
+  }
+  @media(max-width:720px){
+    .rival-board-evidence-layout{
+      display:block!important;
+    }
+    .rival-history-desktop-wrap{
+      display:none!important;
+    }
+    .rival-history-mobile-sheet{
+      display:block;
+      position:fixed;
+      inset:0;
+      z-index:80;
+      pointer-events:none;
+    }
+    .rival-history-scrim{
+      position:absolute;
+      inset:0;
+      border:0;
+      background:rgba(5,2,18,.72);
+      backdrop-filter:blur(5px);
+      pointer-events:auto;
+    }
+    .rival-history-sheet-inner{
+      position:absolute;
+      left:10px;
+      right:10px;
+      bottom:10px;
+      max-height:min(72vh,620px);
+      overflow:auto;
+      pointer-events:auto;
+      border-radius:18px 18px 12px 12px;
+      box-shadow:0 -24px 70px rgba(0,0,0,.68);
+    }
+    .rival-history-mobile{
+      background:
+        linear-gradient(180deg,rgba(28,16,62,.98),rgba(12,6,30,.99));
+      border-left:1px solid rgba(0,229,255,.2);
+      border-top:3px solid rgba(0,229,255,.7);
+      border-radius:18px 18px 12px 12px;
+      padding:14px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .rival-history-title{
+      font-size:.98rem;
+    }
+    .rival-history-row{
+      padding:10px 11px;
+      background:rgba(0,0,0,.56);
+      border-color:rgba(255,255,255,.14);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .rival-history-result{
+      display:grid;
+      gap:3px;
+      font-size:.7rem;
+    }
+    .rival-history-result span:last-child{
+      font-size:.68rem;
+    }
   }
   @media(max-width:640px){
     .season-closed-state{
@@ -2285,6 +2466,7 @@ export default function GameNight(){
     selectGetSeasonScoutBoard(seasonId,players,sessions,options);
   const getDailyMVP=()=>selectGetDailyMVP(sessions,players);
   const getRivals=()=>selectGetRivals(sessions);
+  const getRivalryMatchHistory=(pairId,options={})=>selectGetRivalryMatchHistory(pairId,sessions,players,options);
   const getSeasonSessions=sid=>selectGetSeasonSessions(sessions,sid);
   const getMissionBoardState=()=>selectGetMissionBoardState(sessions,players,{weeklyLoopState});
   const getRecords=()=>selectGetRecords(sessions,players);
@@ -3557,12 +3739,10 @@ export default function GameNight(){
             const sharpshooter=[...allTimeRows]
               .filter((player)=>player.appearances>=5&&player.id!==winsLeader?.id&&player.id!==killsLeader?.id)
               .sort((a,b)=>b.kd-a.kd||b.kills-a.kills||b.wins-a.wins)[0];
-            const mostPlayed=[...allTimeRows]
-              .filter((player)=>player.id!==winsLeader?.id&&player.id!==killsLeader?.id&&player.id!==sharpshooter?.id)
-              .sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins||b.kills-a.kills)[0];
+            const mostPlayed=[...allTimeRows].sort((a,b)=>b.appearances-a.appearances||b.wins-a.wins||b.kills-a.kills)[0];
             const honors=[
               {icon:"👑",label:"Champion",honor:"The Champion",player:winsLeader,value:winsLeader?`${winsLeader.wins} wins`:"Waiting",color:"#FFD700"},
-              {icon:"💀",label:"Reaper",honor:"The Reaper",player:killsLeader,value:killsLeader?`${killsLeader.kills} kills`:"Waiting",color:"#FF4D8F"},
+              {icon:"💀",label:"Most Kills",honor:"All-time damage leader",player:killsLeader,value:killsLeader?`${killsLeader.kills} kills`:"Waiting",color:"#FF4D8F"},
               {icon:"🎯",label:"Sharpshooter",honor:"Best K/G file",player:sharpshooter,value:sharpshooter?`${sharpshooter.kd} K/G`:"Waiting",color:"#00E5FF"},
               {icon:"🎮",label:"Ride or Die",honor:"Most filed rooms",player:mostPlayed,value:mostPlayed?`${mostPlayed.appearances} lobbies`:"Waiting",color:"#FFAB40"},
             ];
@@ -3843,6 +4023,7 @@ export default function GameNight(){
         <RivalsView ctx={{
           sessions,
           rivalryBoard,
+          getRivalryMatchHistory,
           rivalOpsState,
           setRivalOpsState,
           store,

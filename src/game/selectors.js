@@ -702,6 +702,23 @@ export const getBadges = (playerId, sessions) => {
       badges.push({ icon: "👑", label: "S2 Champion", hot: true });
     }
 
+    const seasonTwoKillMap = {};
+    seasonTwoSessions.forEach((session) => {
+      Object.entries(session.kills || {}).forEach(([pid, kills]) => {
+        seasonTwoKillMap[pid] = (seasonTwoKillMap[pid] || 0) + kills;
+      });
+    });
+    const topSeasonTwoKiller = Object.entries(seasonTwoKillMap).sort(
+      (left, right) => right[1] - left[1],
+    )[0];
+    if (
+      topSeasonTwoKiller &&
+      topSeasonTwoKiller[0] === playerId &&
+      topSeasonTwoKiller[1] > 0
+    ) {
+      badges.push({ icon: "💀", label: "S2 Reaper", hot: true });
+    }
+
     const seasonTwoConfig = SEASONS.find((season) => season.id === "s2");
     const finalDayFiled = seasonTwoConfig
       ? seasonTwoSessions.some((session) => session.date === seasonTwoConfig.end)
@@ -1085,6 +1102,91 @@ export const getRivalryBoard = (sessions, players, options = {}) => {
     rows,
     seasonId: activeSeason?.id || "all",
     latestDate,
+  };
+};
+
+export const getRivalryMatchHistory = (pairId, sessions, players, options = {}) => {
+  const [playerAId, playerBId] = String(pairId || "").split(":");
+  const playerA = players.find((player) => player.id === playerAId) || null;
+  const playerB = players.find((player) => player.id === playerBId) || null;
+  const limit = options.limit === Infinity
+    ? Infinity
+    : Number.isFinite(options.limit)
+      ? options.limit
+      : 5;
+
+  if (!playerAId || !playerBId || !playerA || !playerB) {
+    return {
+      pairId,
+      playerA,
+      playerB,
+      meetings: 0,
+      scoreLine: "0-0",
+      rows: [],
+      visibleRows: [],
+      hasMore: false,
+    };
+  }
+
+  let playerAWins = 0;
+  let playerBWins = 0;
+  const rows = [...sessions]
+    .sort(compareSessionsAsc)
+    .reduce((history, session) => {
+      const placements = session.placements || session.attendees || [];
+      const [winnerId, runnerUpId] = placements;
+      if (!winnerId || !runnerUpId) {
+        return history;
+      }
+      const sessionPairId = [winnerId, runnerUpId].sort().join(":");
+      if (sessionPairId !== pairId) {
+        return history;
+      }
+
+      if (winnerId === playerAId) {
+        playerAWins += 1;
+      } else if (winnerId === playerBId) {
+        playerBWins += 1;
+      }
+
+      const winner = players.find((player) => player.id === winnerId) || null;
+      const runnerUp = players.find((player) => player.id === runnerUpId) || null;
+      const winnerKills = session.kills?.[winnerId] ?? null;
+      const runnerUpKills = session.kills?.[runnerUpId] ?? null;
+      const scoreLine = `${playerAWins}-${playerBWins}`;
+      const winnerName = winner?.username || "Winner";
+      const season = getSeasonForDate(session.date);
+      const impact = playerAWins === playerBWins
+        ? `${winnerName} tied the rivalry ${scoreLine}`
+        : `${winnerName} +1. Series moved to ${scoreLine}`;
+
+      history.push({
+        lobbyId: session.id,
+        date: session.date,
+        winner,
+        runnerUp,
+        winnerKills,
+        runnerUpKills,
+        scoreImpact: impact,
+        scoreLine,
+        seasonTag: season?.id ? season.id.toUpperCase() : "ARCHIVE",
+      });
+      return history;
+    }, []);
+
+  const newestRows = [...rows].reverse();
+
+  return {
+    pairId,
+    playerA,
+    playerB,
+    meetings: rows.length,
+    playerAWins,
+    playerBWins,
+    scoreLine: `${playerAWins}-${playerBWins}`,
+    rows: newestRows,
+    visibleRows: limit === Infinity ? newestRows : newestRows.slice(0, limit),
+    hasMore: limit !== Infinity && newestRows.length > limit,
   };
 };
 

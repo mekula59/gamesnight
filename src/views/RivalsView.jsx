@@ -1,6 +1,9 @@
+import { useState } from "react";
+
 export default function RivalsView({ ctx }) {
   const {
     rivalryBoard,
+    getRivalryMatchHistory,
     dn,
     rivalSearch,
     setRivalSearch,
@@ -16,6 +19,8 @@ export default function RivalsView({ ctx }) {
     Avatar,
   } = ctx;
 
+  const [selectedPairId, setSelectedPairId] = useState("");
+  const [showAllMeetings, setShowAllMeetings] = useState(false);
   const board = rivalryBoard || { hot: [], watch: [], cold: [] };
   const searchTerm = rivalSearch.trim().toLowerCase();
   const cardMatchesSearch = (entry) => {
@@ -60,9 +65,83 @@ export default function RivalsView({ ctx }) {
     if (tone === "watch") return "Close enough to track next.";
     return "History file, low heat.";
   };
+  const selectedHistory = selectedPairId && getRivalryMatchHistory
+    ? getRivalryMatchHistory(selectedPairId, { limit: showAllMeetings ? Infinity : 5 })
+    : null;
+  const openMatchHistory = (entry) => {
+    setSelectedPairId(entry.pairId);
+    setShowAllMeetings(false);
+  };
+  const closeMatchHistory = () => {
+    setSelectedPairId("");
+    setShowAllMeetings(false);
+  };
+  const formatKills = (kills) => kills === null || kills === undefined ? "not filed" : `${kills}K`;
+
+  const renderEvidencePanel = (variant = "desktop") => {
+    if (!selectedHistory || !selectedHistory.playerA || !selectedHistory.playerB) {
+      return (
+        <aside className={`rival-history-panel rival-history-${variant}`}>
+          <div className="bc7 rival-history-empty">Select a rivalry card to open the official top-two match history.</div>
+        </aside>
+      );
+    }
+    const title = `${dn(selectedHistory.playerA.username)} vs ${dn(selectedHistory.playerB.username)}`;
+    return (
+      <aside className={`rival-history-panel rival-history-${variant}`}>
+        <div className="rival-history-head">
+          <div>
+            <div className="bc7 rival-history-kicker">MATCH HISTORY</div>
+            <h3 className="bc9 rival-history-title">{title}</h3>
+            <div className="bc7 rival-history-score">{selectedHistory.scoreLine} across {selectedHistory.meetings} top-two meetings</div>
+          </div>
+          {variant === "mobile" && (
+            <button type="button" className="rival-history-close" onClick={closeMatchHistory}>Close</button>
+          )}
+        </div>
+        <div className="rival-history-list">
+          {selectedHistory.visibleRows.map((row) => (
+            <div key={`${row.lobbyId}-${row.scoreLine}`} className="rival-history-row">
+              <div className="rival-history-row-top">
+                <span className="bc9">{row.lobbyId}</span>
+                <span className="bc7">{formatDate(row.date)} · {row.seasonTag}</span>
+              </div>
+              <div className="rival-history-result">
+                <span>{dn(row.winner?.username || "Winner")} beat {dn(row.runnerUp?.username || "Runner-up")}</span>
+                <span>{formatKills(row.winnerKills)} to {formatKills(row.runnerUpKills)}</span>
+              </div>
+              <div className="bc7 rival-history-impact">{row.scoreImpact}</div>
+            </div>
+          ))}
+        </div>
+        {selectedHistory.hasMore && (
+          <button type="button" className="rival-history-showall" onClick={() => setShowAllMeetings(true)}>
+            Show all meetings
+          </button>
+        )}
+        {showAllMeetings && selectedHistory.rows.length > 5 && (
+          <button type="button" className="rival-history-showall" onClick={() => setShowAllMeetings(false)}>
+            Show latest 5
+          </button>
+        )}
+      </aside>
+    );
+  };
 
   const renderHeatCard = (entry, tone) => (
-    <article key={entry.pairId} className={`rival-ops-card rivalry-evidence-card heat-${tone}`}>
+    <article
+      key={entry.pairId}
+      className={`rival-ops-card rivalry-evidence-card heat-${tone}${selectedPairId === entry.pairId ? " is-selected" : ""}`}
+      onClick={() => openMatchHistory(entry)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openMatchHistory(entry);
+        }
+      }}
+    >
       <div className="rival-card-mobile-chip bc7">{tone === "active" ? "ACTIVE" : tone === "watch" ? "WATCH" : "HISTORY"}</div>
       <div className="rival-card-matchup">
         <div className="rival-card-player">
@@ -121,30 +200,44 @@ export default function RivalsView({ ctx }) {
           value={rivalSearch} onChange={(e) => setRivalSearch(e.target.value)} />
       </div>
 
-      <div className="rival-ops-shell heat-board-shell">
-        {totalVisible === 0 ? (
-          <div className="rival-ops-empty">
-            <div className="bc7 rival-ops-empty-title">NO FILES FOUND</div>
-            <div className="bc7 rival-ops-empty-line">No rivalry on the heat board matches that search.</div>
-          </div>
-        ) : heatSections.map((section) => (
-          <section key={section.title} className={`rival-ops-tier heat-tier-${section.tone}`}>
-            <div className="rival-ops-tier-head">
-              <h3 className="rival-ops-tier-title">{section.title}</h3>
-              <span className="bc7 rival-ops-tier-count">{section.cards.length} files</span>
+      <div className="rival-board-evidence-layout">
+        <div className="rival-ops-shell heat-board-shell">
+          {totalVisible === 0 ? (
+            <div className="rival-ops-empty">
+              <div className="bc7 rival-ops-empty-title">NO FILES FOUND</div>
+              <div className="bc7 rival-ops-empty-line">No rivalry on the heat board matches that search.</div>
             </div>
-            {section.cards.length ? (
-              <div className={`rival-ops-track heat-board-track is-${section.tone}`}>
-                {section.cards.map((entry) => renderHeatCard(entry, section.tone))}
+          ) : heatSections.map((section) => (
+            <section key={section.title} className={`rival-ops-tier heat-tier-${section.tone}`}>
+              <div className="rival-ops-tier-head">
+                <h3 className="rival-ops-tier-title">{section.title}</h3>
+                <span className="bc7 rival-ops-tier-count">{section.cards.length} files</span>
               </div>
-            ) : (
-              <div className="rival-ops-empty heat-tier-empty">
-                <div className="bc7 rival-ops-empty-line">{section.empty}</div>
-              </div>
-            )}
-          </section>
-        ))}
+              {section.cards.length ? (
+                <div className={`rival-ops-track heat-board-track is-${section.tone}`}>
+                  {section.cards.map((entry) => renderHeatCard(entry, section.tone))}
+                </div>
+              ) : (
+                <div className="rival-ops-empty heat-tier-empty">
+                  <div className="bc7 rival-ops-empty-line">{section.empty}</div>
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
+        <div className="rival-history-desktop-wrap">
+          {renderEvidencePanel("desktop")}
+        </div>
       </div>
+
+      {selectedHistory && (
+        <div className="rival-history-mobile-sheet">
+          <button type="button" aria-label="Close rivalry history" className="rival-history-scrim" onClick={closeMatchHistory} />
+          <div className="rival-history-sheet-inner">
+            {renderEvidencePanel("mobile")}
+          </div>
+        </div>
+      )}
 
       <details className="h2h-scroll h2h-secondary-tool" style={{ ...card({ border: "1px solid rgba(0,229,255,.12)" }), padding: 0, marginTop: 20, marginBottom: 22 }}>
         <summary className="bc9" style={{ color: "#00E5FF", fontSize: "1rem", cursor: "pointer", padding: "16px 18px", listStyle: "none" }}>

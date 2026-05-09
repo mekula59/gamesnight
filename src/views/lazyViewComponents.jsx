@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BADGE_CATALOGUE } from "../game/config";
 
 export function BadgeFlip({ b, playerColor }) {
+  const displayLabel = b.label === "S2 Invincible" ? "Season 2 Invincible" : b.label;
   const streakRunMatch = b.label.match(/^Best Run (\d+)$/);
   const bc = streakRunMatch
     ? { how: `Longest single-day win run on file: ${streakRunMatch[1]} straight` }
@@ -52,7 +53,7 @@ export function BadgeFlip({ b, playerColor }) {
               WebkitBoxOrient: "vertical",
             }}
           >
-            {b.label}
+            {displayLabel}
           </span>
         </div>
         <div className="badge-flip-back" style={{ border: `1px solid ${playerColor}44` }}>
