@@ -2209,6 +2209,7 @@ export default function GameNight(){
   const [lbSearch,   setLbSearch]  = useState("");
   const [spotlight,  setSpotlight] = useState(null);
   const [faqOpen,    setFaqOpen]   = useState(null);
+  const [recognitionOpenKeys,setRecognitionOpenKeys]=useState(()=>["recognition-special","recognition-ladder"]);
   const [rivalSearch,setRivalSearch]= useState("");
   const [profileId,  setProfileId]  = useState(null);
   const [expandedSid,setExpandedSid]= useState(null);
@@ -3829,7 +3830,7 @@ export default function GameNight(){
               if(/1K|1.5K|2K|3K|5K|750 Kills|500 Kills/.test(badge.label))return 800;
               if(/300 Kills|200 Kills|150 Kills|100 Kills|50 Kills|25 Kills/.test(badge.label))return 700;
               if(/Full House|Marathon|No Days Off|S1 Iron Man/.test(badge.label))return 600;
-              if(/LOBBY WIPE|Best Run|Hot Hand|Rampage|Big Game|Assassin|Fool/.test(badge.label))return 500;
+              if(/LOBBY WIPE|No Kills Bandit|Best Run|Hot Hand|Rampage|Big Game|Assassin|Fool/.test(badge.label))return 500;
               return badge.hot?450:100;
             };
             return(
@@ -3865,7 +3866,14 @@ export default function GameNight(){
                     const rank=row.rank;
                     const badges=row.badges;
                     const badgeLimit=badges.length>3?2:3;
-                    const displayBadges=[...badges].sort((a,b)=>getBadgePriority(b)-getBadgePriority(a)).slice(0,badgeLimit);
+                    const sortedBadges=[...badges].sort((a,b)=>getBadgePriority(b)-getBadgePriority(a));
+                    const banditBadge=sortedBadges.find((badge)=>badge.label==="No Kills Bandit");
+                    const displayBadges=banditBadge
+                      ?[
+                        banditBadge,
+                        ...sortedBadges.filter((badge)=>badge.label!=="No Kills Bandit").slice(0,badgeLimit-1),
+                      ]
+                      :sortedBadges.slice(0,badgeLimit);
                     const hiddenBadgeCount=Math.max(0,badges.length-displayBadges.length);
                     const streak=getStreak(player.id);
                     const hasStreakGlow=streak>=3;
@@ -5049,166 +5057,264 @@ export default function GameNight(){
             </h2>
           </div>
 
-          {/* ── Rank Titles ── */}
-          <div style={{...card({border:"2px solid rgba(199,125,255,.3)"}),padding:26,marginBottom:18}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-              <span style={{fontSize:"1.6rem"}}>🏅</span>
-              <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>Callsigns: What They Mean</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>These titles sit under each player name. The top ones belong to one player at a time, until somebody takes them.</p>
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
-              {RANK_FAQ.map((r,i)=>(
-                <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"14px 16px",border:`1px solid ${r.color}33`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
-                    <span style={{fontSize:"1.3rem"}}>{r.icon}</span>
-                    <span style={{fontFamily:"Fredoka One",color:r.color,fontSize:"1.05rem"}}>{r.name}</span>
-                  </div>
-                  <p style={{color:"var(--text2)",fontSize:".8rem",lineHeight:1.55}}>{r.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Badges ── */}
-          <div style={{...card({border:"2px solid rgba(255,215,0,.3)"}),padding:26,marginBottom:18}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-              <span style={{fontSize:"1.6rem"}}>🎖️</span>
-              <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.3rem"}}>Commendations: How to Earn Them</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Badges stack, and the room remembers all of them. Tap to open a file note.</p>
-              </div>
-            </div>
-            <div>
-              {BADGE_CATALOGUE.map((b,i)=>(
-                <div key={i} className="faq-item">
-                  <div className="faq-q" onClick={()=>setFaqOpen(faqOpen===i?null:i)}>
-                    <span style={{display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{fontSize:"1.1rem"}}>{b.icon}</span>
-                      <strong style={{color:"var(--text)"}}>{b.name}</strong>
-                      <span style={{color:"var(--text3)",fontWeight:600,fontSize:".84rem"}}>{b.desc}</span>
+          {(()=>{
+            const specialRoleNames=["The Champion","The Reaper","Sharpshooter","Ride or Die"];
+            const specialRoles=RANK_FAQ.filter((rank)=>specialRoleNames.includes(rank.name));
+            const ladderNames=["Rookie","Rising Star","Gunslinger","Veteran","Legend","Elite","Mythic","Immortal","Warlord","Apex","Ascendant","Eternal"];
+            const callsignLadder=ladderNames.map((name)=>RANK_FAQ.find((rank)=>rank.name===name)).filter(Boolean);
+            const badgeByName=(name)=>BADGE_CATALOGUE.find((badge)=>badge.name===name);
+            const badgeGroups=[
+              {id:"board",title:"Board Roles",color:"#FFD700",items:["The Champion","The Reaper","Sharpshooter","Ride or Die"].map(badgeByName).filter(Boolean)},
+              {id:"wins",title:"Win Progression",color:"#C77DFF",items:["Winner","Win Streak","Rising Star","Gunslinger","Veteran","Legend","Elite","Mythic","Immortal","Warlord","Apex","Ascendant","Eternal"].map(badgeByName).filter(Boolean)},
+              {id:"kills",title:"Kill Milestones",color:"#FF4D8F",items:BADGE_CATALOGUE.filter((badge)=>/Kills$/.test(badge.name))},
+              {id:"performance",title:"Performance Feats",color:"#00E5FF",items:["2.0+ K/G","Big Game","50% Win Rate","Assassin","LOBBY WIPE","No Kills Bandit","Iron Wall","Hot Hand","Rampage"].map(badgeByName).filter(Boolean)},
+              {id:"attendance",title:"Attendance",color:"#FFAB40",items:["Full House","Marathon","Never 1st","Day One"].map(badgeByName).filter(Boolean)},
+              {id:"season",title:"Season Honors",color:"#00FF94",items:BADGE_CATALOGUE.filter((badge)=>/^S[12] |S2 |Opening Night|First Blood S2/.test(badge.name))},
+              {id:"limited",title:"Limited Events",color:"#FF6B35",items:["Easter Egg","No Days Off","Fool's Crown"].map(badgeByName).filter(Boolean)},
+            ].filter((group)=>group.items.length);
+            const killMilestones=badgeGroups.find((group)=>group.id==="kills")?.items||[];
+            const recognitionOpen=(key)=>recognitionOpenKeys.includes(key);
+            const toggleRecognition=(key)=>setRecognitionOpenKeys((openKeys)=>openKeys.includes(key)?openKeys.filter((item)=>item!==key):[...openKeys,key]);
+            const renderSectionShell=({keyId,title,label,color,children,openByDefault=false,count=""})=>{
+              const open=recognitionOpen(keyId,openByDefault);
+              return(
+                <div style={{...card({border:`2px solid ${color}38`,background:`linear-gradient(135deg,${color}0f,var(--card))`}),padding:0,marginBottom:16,overflow:"hidden"}}>
+                  <button type="button" onClick={()=>toggleRecognition(keyId)} style={{
+                    width:"100%",border:0,background:"transparent",color:"var(--text)",cursor:"pointer",
+                    padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left",
+                  }}>
+                    <span>
+                      <span className="bc7" style={{display:"block",fontSize:".58rem",letterSpacing:".24em",color,marginBottom:5,textTransform:"uppercase"}}>{label}</span>
+                      <span style={{fontFamily:"Fredoka One",fontSize:"1.18rem",color:"#fff"}}>{title}</span>
                     </span>
-                    <span style={{color:"var(--text3)",marginLeft:8,flexShrink:0,fontSize:"1rem"}}>{faqOpen===i?"▲":"▼"}</span>
-                  </div>
-                  {faqOpen===i&&(
-                    <div className="faq-a">
-                      <span style={{color:"#00FF94",fontWeight:800}}>How to earn: </span>{b.how}
+                    <span className="bc7" style={{color:"var(--text3)",fontSize:".72rem",letterSpacing:".12em",textTransform:"uppercase",whiteSpace:"nowrap"}}>
+                      {count||""} {open?"▲":"▼"}
+                    </span>
+                  </button>
+                  {open&&<div style={{padding:"0 20px 20px"}}>{children}</div>}
+                </div>
+              );
+            };
+            const renderBadgeCard=(badge)=>(
+              <div key={badge.name} style={{background:"rgba(0,0,0,.3)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 14px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{fontSize:"1.1rem"}}>{badge.icon}</span>
+                  <span style={{fontFamily:"Fredoka One",color:"#fff",fontSize:".95rem"}}>{badge.name}</span>
+                </div>
+                <p style={{color:"var(--text3)",fontSize:".74rem",lineHeight:1.5,marginBottom:7}}>{badge.desc}</p>
+                <p style={{color:"var(--text2)",fontSize:".74rem",lineHeight:1.5}}><span style={{color:"#00FF94",fontWeight:900}}>How to earn: </span>{badge.how}</p>
+              </div>
+            );
+            return(
+              <>
+                <div style={{...card({border:"2px solid rgba(0,229,255,.25)",background:"linear-gradient(135deg,rgba(0,229,255,.08),var(--card))"}),padding:18,marginBottom:16}}>
+                  <div className="bc7" style={{fontSize:".6rem",letterSpacing:".26em",color:"#00E5FF",marginBottom:7}}>OFFICIAL GUIDE NOTE</div>
+                  <div style={{fontFamily:"Fredoka One",fontSize:"1.1rem",color:"#fff",marginBottom:5}}>Only official filed sessions count.</div>
+                  <p style={{color:"var(--text2)",fontSize:".82rem",lineHeight:1.65}}>
+                    Recognition comes from filed lobbies only. Callsigns, badges, levels, and records do not move until the room result is official.
+                  </p>
+                </div>
+
+                {renderSectionShell({
+                  keyId:"recognition-special",
+                  title:"Special Roles",
+                  label:"Board-held identities",
+                  color:"#FFD700",
+                  openByDefault:true,
+                  count:"4 roles",
+                  children:(
+                    <>
+                      <p style={{color:"var(--text3)",fontSize:".78rem",lineHeight:1.65,marginBottom:12}}>
+                        These roles belong to the current board holders. They can change when the official board changes.
+                      </p>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>
+                        {specialRoles.map((role)=>(
+                          <div key={role.name} style={{background:"rgba(0,0,0,.32)",border:`1px solid ${role.color}33`,borderLeft:`3px solid ${role.color}`,borderRadius:"0 12px 12px 0",padding:"13px 15px"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                              <span style={{fontSize:"1.2rem"}}>{role.icon}</span>
+                              <span style={{fontFamily:"Fredoka One",color:role.color,fontSize:"1rem"}}>{role.name==="The Reaper"?"The Reaper / Most Kills":role.name}</span>
+                            </div>
+                            <p style={{color:"var(--text2)",fontSize:".78rem",lineHeight:1.55}}>{role.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ),
+                })}
+
+                {renderSectionShell({
+                  keyId:"recognition-ladder",
+                  title:"Callsign Ladder",
+                  label:"Win-based progression",
+                  color:"#C77DFF",
+                  openByDefault:true,
+                  count:`${callsignLadder.length} callsigns`,
+                  children:(
+                    <div style={{display:"grid",gap:8}}>
+                      {callsignLadder.map((rank,index)=>(
+                        <div key={rank.name} style={{display:"grid",gridTemplateColumns:"34px minmax(0,1fr)",gap:10,alignItems:"start",background:"rgba(0,0,0,.26)",border:`1px solid ${rank.color}28`,borderRadius:12,padding:"11px 13px"}}>
+                          <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:`${rank.color}1f`,border:`1px solid ${rank.color}44`,fontSize:".92rem"}}>{index+1}</div>
+                          <div>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                              <span>{rank.icon}</span>
+                              <span style={{fontFamily:"Fredoka One",color:rank.color,fontSize:".98rem"}}>{rank.name}</span>
+                            </div>
+                            <p style={{color:"var(--text2)",fontSize:".76rem",lineHeight:1.5}}>{rank.desc}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+                  ),
+                })}
 
-          {/* ── Stats Glossary ── */}
-          <div style={{...card({border:"2px solid rgba(0,229,255,.25)"}),padding:26,marginBottom:18}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-              <span style={{fontSize:"1.6rem"}}>📊</span>
-              <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#00E5FF",fontSize:"1.3rem"}}>Stats Glossary</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>What the board is actually telling you</p>
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
-              {[
-                {icon:"🏆",term:"Wins",            color:"#FFD700",def:"How many lobbies you finished first in. Simple. You wore the crown that round."},
-                {icon:"💀",term:"Kills",            color:"#FF4D8F",def:"Total eliminations across every lobby you have entered. Pressure leaves receipts."},
-                {icon:"⚡",term:"K/G (Kills/Game)", color:"#00E5FF",def:"Total kills divided by lobbies played. A quick read on how much damage you bring each time you show."},
-                {icon:"🎯",term:"Win Rate %",       color:"#00FF94",def:"Wins divided by appearances. How often you actually close the room once you are in it."},
-                {icon:"📅",term:"Appearances",      color:"#FFAB40",def:"Every lobby you showed up for. The file respects attendance before it respects legacy."},
-                {icon:"🌟",term:"Best Game",        color:"#C77DFF",def:"Your highest single-lobby kill count. The one night people bring up again later."},
-                {icon:"🔥",term:"Win Streak",       color:"#FF6B35",def:"Consecutive wins on the same session day. It resets with a new date, so hot nights stand on their own."},
-                {icon:"⚔️",term:"Duels (Rivals)",   color:"#FF4D8F",def:"Times you and another player finished first and second in the same lobby. The Rivals board tracks who blinked first."},
-                {icon:"⚡",term:"Latest Day",       color:"#00E5FF",def:"Filters the Arena to the most recent session only. Good for seeing who owned the room last time out."},
-                {icon:"🎖️",term:"Carry Score",     color:"#FF6B35",def:"Wins where you also led the lobby in kills. You closed it and did the lifting."},
-                {icon:"🧱",term:"Consistency",      color:"#00FF94",def:"Percent of lobbies where you finished in the top half. Not flashy, but the room notices reliable players."},
-                {icon:"🌵",term:"Drought",          color:"#FFAB40",def:"How many lobbies since your last win. Zero means your latest outing ended with the crown."},
-              ].map((s,i)=>(
-                <div key={i} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"13px 16px",border:`1px solid ${s.color}22`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <span style={{fontSize:"1.1rem"}}>{s.icon}</span>
-                    <span style={{fontFamily:"Fredoka One",color:s.color,fontSize:"1rem"}}>{s.term}</span>
+                <div style={{...card({border:"2px solid rgba(255,77,143,.28)",background:"linear-gradient(135deg,rgba(255,77,143,.08),var(--card))"}),padding:20,marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:12}}>
+                    <div>
+                      <div className="bc7" style={{fontSize:".58rem",letterSpacing:".24em",color:"#FF4D8F",marginBottom:5}}>DAMAGE LADDER</div>
+                      <h3 style={{fontFamily:"Fredoka One",fontSize:"1.18rem",color:"#fff"}}>Kill Milestones</h3>
+                    </div>
+                    <div className="bc7" style={{fontSize:".7rem",letterSpacing:".12em",color:"var(--text3)",textTransform:"uppercase"}}>{killMilestones.length} damage milestones</div>
                   </div>
-                  <p style={{color:"var(--text2)",fontSize:".8rem",lineHeight:1.5}}>{s.def}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Level System ── */}
-          <div style={{...card({border:"2px solid rgba(199,125,255,.25)"}),padding:26,marginBottom:18}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-              <span style={{fontSize:"1.6rem"}}>⚡</span>
-              <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#C77DFF",fontSize:"1.3rem"}}>Levels: How They Climb</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>
-                  XP builds every time you show up. Your level appears in the Arena and inside every Combat File.
-                </p>
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",
-              gap:8,marginBottom:16}}>
-              {[
-                {icon:"📅",label:"1 XP",        desc:"Per lobby played"},
-                {icon:"🏆",label:"3 XP",        desc:"Per lobby won"},
-                {icon:"💀",label:"0.5 XP",      desc:"Per kill"},
-                {icon:"🎖️",label:"10 XP",       desc:"Per badge earned"},
-                {icon:"🚀",label:"25 XP",       desc:"Per season played in"},
-              ].map((s,i)=>(
-                <div key={i} style={{
-                  background:"rgba(199,125,255,.06)",
-                  border:"1px solid rgba(199,125,255,.18)",
-                  borderRadius:8,padding:"12px 14px",
-                  display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:"1.3rem",flexShrink:0}}>{s.icon}</span>
-                  <div>
-                    <div style={{fontFamily:"Barlow Condensed",fontWeight:900,
-                      fontSize:"1rem",color:"#C77DFF",letterSpacing:".05em"}}>{s.label}</div>
-                    <div style={{fontFamily:"Barlow Condensed",fontWeight:700,
-                      fontSize:".72rem",color:"var(--text3)"}}>{s.desc}</div>
+                  <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
+                    {killMilestones.map((badge)=>(
+                      <div key={badge.name} style={{flex:"0 0 150px",background:"rgba(0,0,0,.34)",border:"1px solid rgba(255,77,143,.22)",borderRadius:12,padding:"12px 13px"}}>
+                        <div style={{fontSize:"1.2rem",marginBottom:8}}>{badge.icon}</div>
+                        <div style={{fontFamily:"Fredoka One",fontSize:".92rem",color:"#FF4D8F",marginBottom:5}}>{badge.name}</div>
+                        <div style={{fontSize:".68rem",color:"var(--text3)",lineHeight:1.45}}>{badge.how}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-            <div style={{background:"rgba(0,0,0,.3)",borderRadius:8,padding:"12px 16px",
-              borderLeft:"3px solid rgba(199,125,255,.4)"}}>
-              <div className="bc7" style={{fontSize:".76rem",color:"var(--text2)",lineHeight:1.7}}>
-                Level comes from total XP on a square-root curve, so the early jumps happen quickly and the higher ranks ask for real staying power.
-                The mini bar in the Arena and your Combat File shows how close you are to the next level.
-                Badges help a lot because each one adds 10 XP on top of whatever you already earned through wins, kills, and appearances.
-                Big milestones do double duty. The 500 Kills badge, for example, lands after the long grind and still gives an extra push.
-              </div>
-            </div>
-          </div>
 
-          {/* ── General Questions ── */}
-          <div style={{...card({border:"2px solid rgba(255,107,53,.25)"}),padding:26}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-              <span style={{fontSize:"1.6rem"}}>💬</span>
-              <div>
-                <h3 style={{fontFamily:"Fredoka One",color:"#FF6B35",fontSize:"1.3rem"}}>Room Questions</h3>
-                <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Schedule, rules, and how to get your name on the board. Tap to expand.</p>
-              </div>
-            </div>
-            {[
-              {q:"When do sessions run?",         a:"Mon-Sat, 5:00 PM to 7:00 PM UTC. Mekula hosts. Discord is where the warning siren goes out before the room opens."},
-              {q:"How do I get added to the roster?",a:"Join the Discord and ask Mekula. Once your name is on the roster, your file starts tracking from the next session you play."},
-              {q:"What is Bullet League?",        a:"Bullet League is the featured battleground for Games Night. Fast rounds, fast swings, and not much room to hide."},
-              {q:"How are winners determined?",   a:"Whoever finishes first on the in-game leaderboard at the end of a round takes that lobby. The kill number beside each name is the confirmed damage for that round."},
-              {q:"Why does my Win Rate show 0% even if I played?",a:"Win Rate only really comes alive once you close a lobby. Until then the file is still tracking your appearances, kills, and pressure. The first win unlocks the rest."},
-              {q:"What is the Rivals page?",      a:"Rivals tracks the matchups that keep repeating. Every time two players finish first and second in the same lobby, the duel is logged and the rivalry grows."},
-              {q:"How do I watch the stream?",   a:"Most sessions go live on Twitch at twitch.tv/mekulavick. The Twitch button in the nav takes you straight to the broadcast."},
-            ].map((item,i)=>(
-              <div key={i} className="faq-item">
-                <div className="faq-q" onClick={()=>setFaqOpen(100+i===faqOpen?null:100+i)}>
-                  <span>{item.q}</span>
-                  <span style={{color:"var(--text3)",marginLeft:8,flexShrink:0,fontSize:"1rem"}}>{100+i===faqOpen?"▲":"▼"}</span>
+                <div style={{...card({border:"2px solid rgba(255,215,0,.3)"}),padding:20,marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                    <span style={{fontSize:"1.5rem"}}>🎖️</span>
+                    <div>
+                      <h3 style={{fontFamily:"Fredoka One",color:"#FFD700",fontSize:"1.2rem"}}>Commendation Groups</h3>
+                      <p style={{color:"var(--text3)",fontSize:".78rem",marginTop:2}}>Display groups only. Earning rules stay exactly the same.</p>
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gap:8}}>
+                    {badgeGroups.map((group)=>(
+                      <div key={group.id} className="faq-item" style={{border:`1px solid ${group.color}22`,borderRadius:12,overflow:"hidden",background:"rgba(0,0,0,.18)"}}>
+                        <div className="faq-q" onClick={()=>toggleRecognition(`badge-${group.id}`)} style={{padding:"13px 14px"}}>
+                          <span style={{display:"flex",alignItems:"center",gap:9,minWidth:0}}>
+                            <span style={{width:8,height:8,borderRadius:"50%",background:group.color,boxShadow:`0 0 12px ${group.color}66`,flexShrink:0}}/>
+                            <strong style={{color:"#fff"}}>{group.title}</strong>
+                            <span style={{color:"var(--text3)",fontWeight:800,fontSize:".78rem"}}>{group.items.length} {group.id==="kills"?"damage milestones":"commendations"}</span>
+                          </span>
+                          <span style={{color:"var(--text3)",marginLeft:8,flexShrink:0,fontSize:"1rem"}}>{recognitionOpen(`badge-${group.id}`)?"▲":"▼"}</span>
+                        </div>
+                        {recognitionOpen(`badge-${group.id}`)&&(
+                          <div style={{padding:"0 14px 14px",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
+                            {group.items.map(renderBadgeCard)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {100+i===faqOpen&&<div className="faq-a">{item.a}</div>}
-              </div>
-            ))}
-          </div>
+
+                {renderSectionShell({
+                  keyId:"recognition-levels",
+                  title:"Levels and XP",
+                  label:"Progression layer",
+                  color:"#C77DFF",
+                  count:"5 XP sources",
+                  children:(
+                    <>
+                      <p style={{color:"var(--text3)",fontSize:".78rem",lineHeight:1.65,marginBottom:12}}>
+                        Levels are separate from callsigns and badges. They show long-term file growth from official activity.
+                      </p>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8,marginBottom:12}}>
+                        {[
+                          {icon:"📅",label:"1 XP",desc:"Per lobby played"},
+                          {icon:"🏆",label:"3 XP",desc:"Per lobby won"},
+                          {icon:"💀",label:"0.5 XP",desc:"Per kill"},
+                          {icon:"🎖️",label:"10 XP",desc:"Per badge earned"},
+                          {icon:"🚀",label:"25 XP",desc:"Per season played in"},
+                        ].map((s)=>(
+                          <div key={s.label} style={{background:"rgba(199,125,255,.06)",border:"1px solid rgba(199,125,255,.18)",borderRadius:10,padding:"11px 13px",display:"flex",alignItems:"center",gap:10}}>
+                            <span style={{fontSize:"1.2rem",flexShrink:0}}>{s.icon}</span>
+                            <div>
+                              <div className="bc9" style={{fontSize:".98rem",color:"#C77DFF"}}>{s.label}</div>
+                              <div className="bc7" style={{fontSize:".7rem",color:"var(--text3)"}}>{s.desc}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p style={{color:"var(--text2)",fontSize:".78rem",lineHeight:1.65}}>
+                        Level uses total XP on a square-root curve. Early levels move quickly, higher levels need real staying power.
+                      </p>
+                    </>
+                  ),
+                })}
+
+                {renderSectionShell({
+                  keyId:"recognition-rules",
+                  title:"Filed Session Rules",
+                  label:"Board language",
+                  color:"#00E5FF",
+                  count:"12 terms",
+                  children:(
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:10}}>
+                      {[
+                        {icon:"🏆",term:"Wins",color:"#FFD700",def:"Lobbies finished in first place."},
+                        {icon:"💀",term:"Kills",color:"#FF4D8F",def:"Confirmed eliminations across filed lobbies."},
+                        {icon:"⚡",term:"K/G",color:"#00E5FF",def:"Total kills divided by lobbies played."},
+                        {icon:"🎯",term:"Win Rate %",color:"#00FF94",def:"Wins divided by appearances."},
+                        {icon:"📅",term:"Appearances",color:"#FFAB40",def:"Every official lobby where the player was listed."},
+                        {icon:"🌟",term:"Best Game",color:"#C77DFF",def:"Highest single-lobby kill count on file."},
+                        {icon:"🔥",term:"Win Streak",color:"#FF6B35",def:"Consecutive wins on the same session day."},
+                        {icon:"⚔️",term:"Duels",color:"#FF4D8F",def:"Two players finishing first and second in the same lobby."},
+                        {icon:"⚡",term:"Latest Day",color:"#00E5FF",def:"The most recent filed session date."},
+                        {icon:"🎖️",term:"Carry Score",color:"#FF6B35",def:"Wins where the winner also led the lobby in kills."},
+                        {icon:"🧱",term:"Consistency",color:"#00FF94",def:"Percent of lobbies finished in the top half."},
+                        {icon:"🌵",term:"Drought",color:"#FFAB40",def:"Lobbies since the player last won."},
+                      ].map((s)=>(
+                        <div key={s.term} style={{background:"rgba(0,0,0,.3)",borderRadius:12,padding:"12px 14px",border:`1px solid ${s.color}22`}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                            <span>{s.icon}</span>
+                            <span style={{fontFamily:"Fredoka One",color:s.color,fontSize:".95rem"}}>{s.term}</span>
+                          </div>
+                          <p style={{color:"var(--text2)",fontSize:".76rem",lineHeight:1.5}}>{s.def}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                })}
+
+                {renderSectionShell({
+                  keyId:"recognition-questions",
+                  title:"Room Questions",
+                  label:"Joining and schedule",
+                  color:"#FF6B35",
+                  count:"7 answers",
+                  children:(
+                    <div>
+                      {[
+                        {q:"When do sessions run?",a:"Mon-Sat, 5:00 PM to 7:00 PM UTC. Mekula hosts. Discord is where the room call goes out."},
+                        {q:"How do I get added to the roster?",a:"Join the Discord and ask Mekula. Once your name is on the roster, your file starts tracking from the next official session you play."},
+                        {q:"What is Bullet League?",a:"Bullet League is the featured battleground for Games Night."},
+                        {q:"How are winners determined?",a:"Whoever finishes first on the in-game leaderboard at the end of a round takes that lobby."},
+                        {q:"Why does my Win Rate show 0% even if I played?",a:"Win Rate only moves once you close a lobby. Until then the file still tracks appearances, kills, and pressure."},
+                        {q:"What is the Rivals page?",a:"Rivals tracks official 1st vs 2nd finishes and the running score between those pairs."},
+                        {q:"How do I watch the stream?",a:"Most sessions go live on Twitch at twitch.tv/mekulavick."},
+                      ].map((item,i)=>(
+                        <div key={item.q} className="faq-item">
+                          <div className="faq-q" onClick={()=>setFaqOpen(`room-${i}`===faqOpen?null:`room-${i}`)}>
+                            <span>{item.q}</span>
+                            <span style={{color:"var(--text3)",marginLeft:8,flexShrink:0,fontSize:"1rem"}}>{`room-${i}`===faqOpen?"▲":"▼"}</span>
+                          </div>
+                          {`room-${i}`===faqOpen&&<div className="faq-a">{item.a}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                })}
+              </>
+            );
+          })()}
         </div>
       )}
 
