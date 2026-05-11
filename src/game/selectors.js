@@ -1913,7 +1913,18 @@ export const getSeasonScoutBoard = (
     const bestKillsText = bestKillsDay
       ? `${bestKillsDay.kills}K · ${bestKillsDay.wins}W on ${bestKillsDateLabel}`
       : "No kill day filed";
+    const topScopeWins = seasonRows[0]?.wins || 0;
+    const selectedSharesTopWins =
+      selectedRank === 1 &&
+      topScopeWins > 0 &&
+      seasonRows.filter((row) => row.wins === topScopeWins).length > 1;
     const headline = (() => {
+      if (selectedRank === 1 && selectedKillRank === 1 && selectedSharesTopWins) {
+        return `${displayName(selectedPlayerId)} leads ${scopeName} wins by tiebreak and owns the damage read.`;
+      }
+      if (selectedRank === 1 && selectedKillRank === 1) {
+        return `${displayName(selectedPlayerId)} owns the ${scopeName} wins and damage read.`;
+      }
       if (selectedRank === 1) return `${displayName(selectedPlayerId)} is the ${scopeName} wins read.`;
       if (selectedKillRank === 1) return `${displayName(selectedPlayerId)} is the ${scopeName} damage read.`;
       if (selectedLatestRow.wins >= 2) return `${displayName(selectedPlayerId)} moved on the ${filedNightLabel}.`;
@@ -1921,6 +1932,12 @@ export const getSeasonScoutBoard = (
       return `${displayName(selectedPlayerId)} is a ${scopeName} scouting file worth checking.`;
     })();
     const supportLine = (() => {
+      if (selectedRank === 1 && selectedKillRank === 1 && selectedSharesTopWins) {
+        return `${selectedSeasonRow.wins}W is tied at the crown line, but ${selectedSeasonRow.kills}K puts this file first on the current board.`;
+      }
+      if (selectedRank === 1 && selectedKillRank === 1) {
+        return `${selectedSeasonRow.wins}W, ${selectedSeasonRow.kills}K, and ${selectedSeasonRow.appearances} lobbies put both scope reads on one file.`;
+      }
       if (selectedRank === 1) return `${selectedSeasonRow.wins}W, ${selectedSeasonRow.kills}K, and ${selectedSeasonRow.appearances} lobbies lead this scope.`;
       if (nextTarget) {
         const gap = nextTarget.wins - selectedSeasonRow.wins;
@@ -3238,17 +3255,21 @@ export const getWeeklyRecap = (
   }
 
   if (bestSingleGames.length) {
+    const bestSinglePlayerEntries = [
+      ...new Map(bestSingleGames.map((entry) => [entry.playerId, entry])).values(),
+    ];
+    const bestSingleSessionIds = [...new Set(bestSingleGames.map((entry) => entry.session.id))];
     pushCard({
       id: "best-lobby",
       label: "BEST LOBBY",
       tone: "marker",
-      headline: bestSingleGames.length > 1
-        ? `${joinHumanNames(bestSingleGames.map((entry) => entry.player?.username || displayName(entry.playerId)))} shared the week ceiling at ${bestSingleGame.kills}K.`
+      headline: bestSinglePlayerEntries.length > 1
+        ? `${joinHumanNames(bestSinglePlayerEntries.map((entry) => entry.player?.username || displayName(entry.playerId)))} shared the week ceiling at ${bestSingleGame.kills}K.`
         : `${bestSingleGames[0].player?.username || displayName(bestSingleGames[0].playerId)} set the week ceiling at ${bestSingleGame.kills}K in ${bestSingleGames[0].session.id}.`,
-      detail: bestSingleGames.length > 1
-        ? bestSingleGames.map((entry) => entry.session.id).join(" and ")
+      detail: bestSinglePlayerEntries.length > 1
+        ? bestSingleSessionIds.join(" and ")
         : `${formatWeeklyLoopDate(bestSingleGames[0].session.date)} official room file.`,
-      playerIds: bestSingleGames.map((entry) => entry.playerId),
+      playerIds: bestSinglePlayerEntries.map((entry) => entry.playerId),
       source: "week_best_single_game",
     });
   }
@@ -4000,6 +4021,22 @@ export const getPlayerSeasonRead = (
         stateLabel: "Unfiled this season",
         headline: `No ${seasonShort} file yet.`,
         supportLine: "The all-time record stays archived until this name enters the room.",
+      };
+    }
+    if (rank === 1 && killRank === 1 && tiedWinLeaders.length > 1) {
+      return {
+        stateLabel: "Crown and Reaper",
+        headline: `The crown line is tied at ${stats.wins}W, and this file leads damage at ${stats.kills}K.`,
+        supportLine: `${stats.appearances} lobbies put this file first by the current tiebreak.`,
+      };
+    }
+    if (rank === 1 && killRank === 1) {
+      const second = seasonRows[1] ? getPlayerById(playerIndex, seasonRows[1].id) : null;
+      const gap = seasonRows[1] ? stats.wins - seasonRows[1].wins : 0;
+      return {
+        stateLabel: "Crown and Reaper",
+        headline: `Holding the ${seasonName} crown line and damage line.`,
+        supportLine: second ? `${stats.wins}W and ${stats.kills}K keep ${second.username} ${plural(gap, "win")} back.` : `${stats.appearances} lobbies back up both live reads.`,
       };
     }
     if (rank === 1 && tiedWinLeaders.length > 1) {

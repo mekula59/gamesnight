@@ -234,6 +234,9 @@ export default function RivalsView({ ctx }) {
         <div className="rival-history-mobile-sheet">
           <button type="button" aria-label="Close rivalry history" className="rival-history-scrim" onClick={closeMatchHistory} />
           <div className="rival-history-sheet-inner">
+            <button type="button" className="rival-history-mobile-close" onClick={closeMatchHistory} aria-label="Close rivalry match history">
+              Close history
+            </button>
             {renderEvidencePanel("mobile")}
           </div>
         </div>

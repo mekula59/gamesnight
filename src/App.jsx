@@ -748,6 +748,24 @@ const CSS = `
       border-radius:18px 18px 12px 12px;
       box-shadow:0 -24px 70px rgba(0,0,0,.68);
     }
+    .rival-history-mobile-close{
+      position:sticky;
+      top:0;
+      z-index:2;
+      width:100%;
+      border:1px solid rgba(0,229,255,.36);
+      border-bottom:0;
+      background:linear-gradient(180deg,rgba(12,6,30,.99),rgba(20,11,48,.98));
+      color:#00E5FF;
+      border-radius:18px 18px 0 0;
+      padding:12px 14px;
+      font-size:.72rem;
+      font-weight:900;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      cursor:pointer;
+      text-align:center;
+    }
     .rival-history-mobile{
       background:
         linear-gradient(180deg,rgba(28,16,62,.98),rgba(12,6,30,.99));
