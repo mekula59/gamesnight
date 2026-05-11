@@ -595,6 +595,29 @@ export const getBadges = (playerId, sessions) => {
           : "Won a 5+ player lobby while taking every possible kill.",
     });
   }
+  const noKillsBanditCount = sessions.filter((session) => {
+    const participants = getLobbyParticipantIds(session);
+    const winnerIsUnambiguous =
+      session.winner === playerId &&
+      participants.includes(playerId) &&
+      (!(session.placements || []).length || session.placements?.[0] === playerId);
+    return (
+      winnerIsUnambiguous &&
+      participants.length >= 4 &&
+      (session.kills?.[playerId] ?? 0) === 0
+    );
+  }).length;
+  if (noKillsBanditCount > 0) {
+    badges.push({
+      icon: "🕶️",
+      label: "No Kills Bandit",
+      hot: noKillsBanditCount > 1,
+      how:
+        noKillsBanditCount > 1
+          ? `${noKillsBanditCount} No Kills Bandit wins on file. Win an official 4+ player lobby with 0 kills.`
+          : "Win an official 4+ player lobby with 0 kills.",
+    });
+  }
   if (stats.winRate >= 50 && stats.appearances >= 3) {
     badges.push({ icon: "🎯", label: "50% WR" });
   }
