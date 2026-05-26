@@ -2384,7 +2384,7 @@ export const getCampaignFronts = (seasonId, sessions, players) => {
       detail: presenceChaser
         ? attendanceGap === 0
           ? `${displayName(presenceChaser.id)} is level on attendance.`
-          : `${displayName(presenceChaser.id)} is ${attendanceGap} lobby${attendanceGap === 1 ? "" : "ies"} behind.`
+          : `${displayName(presenceChaser.id)} is ${attendanceGap} ${attendanceGap === 1 ? "lobby" : "lobbies"} behind.`
         : "The attendance front has one clear marker.",
       playerIds: [presenceLeader.id, presenceChaser?.id].filter(Boolean),
       statLine: `${presenceLeader.appearances}G to ${presenceChaser?.appearances || 0}G`,
@@ -2916,6 +2916,11 @@ export const getFalloutReport = (
   });
   const dayStats = allStats(players, daySessions).filter((player) => player.appearances > 0);
   const topWinner = fallout?.topWinners?.[0] || recap?.topWinner || null;
+  const topWinners = fallout?.topWinners?.length
+    ? fallout.topWinners
+    : topWinner
+      ? [topWinner]
+      : [];
   const topKiller = fallout?.topKiller || [...dayStats].sort((left, right) => right.kills - left.kills || right.wins - left.wins)[0] || null;
   const uniquePlayers = recap?.uniquePlayers || new Set(daySessions.flatMap((session) => session.attendees || [])).size;
   const totalKills = recap?.totalKills || daySessions.reduce((sum, session) => sum + getLobbyTotalKills(session), 0);
@@ -2973,16 +2978,23 @@ export const getFalloutReport = (
     source: "day_recap",
   });
 
-  if (topWinner?.player || topWinner?.pid) {
-    const player = topWinner.player || getPlayerById(playerIndex, topWinner.pid);
-    const wins = topWinner.wins || fallout?.topWinCount || 0;
+  if (topWinners.length > 0) {
+    const wins = fallout?.topWinCount || topWinners[0]?.wins || 0;
+    const winnerIds = topWinners
+      .map((entry) => entry.player?.id || entry.pid || entry.id)
+      .filter(Boolean);
+    const winnerNames = joinNames(winnerIds.map((playerId) => displayName(playerId)));
     pushCard({
       id: "ground-gained",
       label: "GROUND GAINED",
       tone: "crown",
-      headline: `${displayName(player?.id)} closed ${wins} room${wins === 1 ? "" : "s"} on the night.`,
-      detail: "Top win line from the latest filed night.",
-      playerIds: [player?.id].filter(Boolean),
+      headline: topWinners.length > 1
+        ? `${winnerNames} split the night at ${wins} wins each.`
+        : `${winnerNames} closed ${wins} room${wins === 1 ? "" : "s"} on the night.`,
+      detail: topWinners.length > 1
+        ? "Shared top win line from the latest filed night."
+        : "Top win line from the latest filed night.",
+      playerIds: winnerIds,
       source: "latest_day_wins",
     });
   }
@@ -3008,12 +3020,14 @@ export const getFalloutReport = (
         (left.player?.username || "").localeCompare(right.player?.username || ""),
     )[0];
     const tiedPlayerIds = [...new Set(bestSingleTies.map((entry) => entry.player.id))];
+    const tiedPlayerNames = tiedPlayerIds.map(displayName);
+    const tiedPlayerLine = joinNames(tiedPlayerNames);
     pushCard({
       id: "file-marker",
       label: "FILE MARKER",
       tone: "marker",
       headline: bestSingleTies.length > 1
-        ? `${reportDateLabel} ceiling landed at ${bestSingleCeiling}K, first filed by ${firstFiledTie.player.username} in ${firstFiledTie.session.id}.`
+        ? `${tiedPlayerLine} shared the ${reportDateLabel} ceiling at ${bestSingleCeiling}K. First filed by ${firstFiledTie.player.username} in ${firstFiledTie.session.id}.`
         : `${bestSingleTies[0].player.username} set the night ceiling with ${bestSingleCeiling}K in ${getLobbyLabel(bestSingleTies[0].session.id)}.`,
       detail: "Best single-lobby kill line from the latest filed night.",
       playerIds: tiedPlayerIds,
@@ -3646,8 +3660,19 @@ export const getDayStorylines = (date, sessions, players) => {
     })();
 
   if (sharedHeatRun?.player) {
+    const startLobby = getLobbyLabel(sharedHeatRun.start.id);
+    const endLobby = getLobbyLabel(sharedHeatRun.end.id);
+    const startNumber = parseSessionIdNumber(sharedHeatRun.start.id);
+    const endNumber = parseSessionIdNumber(sharedHeatRun.end.id);
+    const skippedRoomLobbies =
+      startNumber &&
+      endNumber &&
+      endNumber - startNumber + 1 > sharedHeatRun.streak;
+    const runPath = skippedRoomLobbies
+      ? `across their own appearances from ${startLobby} to ${endLobby}`
+      : `from ${startLobby} through ${endLobby}`;
     pushStoryline(
-      `${sharedHeatRun.player.username} had the cleanest run of the day with ${sharedHeatRun.streak} straight wins from ${getLobbyLabel(sharedHeatRun.start.id)} through ${getLobbyLabel(sharedHeatRun.end.id)}.`,
+      `${sharedHeatRun.player.username} had the strongest player-file run of the day with ${sharedHeatRun.streak} straight wins ${runPath}.`,
     );
   }
 

@@ -313,6 +313,11 @@ export default function HomeView({ ctx }) {
               :"Waiting";
             const dailyMVP=getDailyMVP?.();
             const getMvpPlayer=(entry)=>entry?.id?players.find((player)=>player.id===entry.id)||entry:null;
+            const killKingPlayers=dailyMVP?.killKings?.map((entry)=>getMvpPlayer(entry)).filter(Boolean)||[];
+            const killKingNames=killKingPlayers.map((player)=>dn(player.username));
+            const killKingNameLine=killKingNames.length>2
+              ?`${killKingNames.slice(0,2).join(" + ")} +${killKingNames.length-2}`
+              :killKingNames.join(" + ");
             const dailyMvpCards=dailyMVP?[
               {
                 label:"MOST WINS",
@@ -331,11 +336,14 @@ export default function HomeView({ ctx }) {
               {
                 label:"BEST KILL LOBBY",
                 value:dailyMVP.killKing?`${dailyMVP.killKing.killKingK}K`:"0K",
-                note:dailyMVP.killKing?.killKingSid
-                  ?`Lobby ${parseSessionIdNumber(dailyMVP.killKing.killKingSid)||dailyMVP.killKing.killKingSid}`
-                  :"single lobby",
+                note:dailyMVP.killKings?.length>1
+                  ?`Shared ceiling · ${dailyMVP.killKings.length} files`
+                  :dailyMVP.killKing?.killKingSid
+                    ?`Lobby ${parseSessionIdNumber(dailyMVP.killKing.killKingSid)||dailyMVP.killKing.killKingSid}`
+                    :"single lobby",
                 color:"#C77DFF",
                 player:getMvpPlayer(dailyMVP.killKing),
+                nameOverride:dailyMVP.killKings?.length>1?killKingNameLine:"",
               },
               {
                 label:"MOST APPEARANCES",
@@ -716,7 +724,7 @@ export default function HomeView({ ctx }) {
                             overflow:"hidden",
                             textOverflow:"ellipsis",
                           }}>
-                            {item.player?dn(item.player.username):"Waiting"}
+                            {item.nameOverride || (item.player?dn(item.player.username):"Waiting")}
                           </div>
                           <div className="bc7" style={{
                             fontSize:".6rem",

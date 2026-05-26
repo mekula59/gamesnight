@@ -85,6 +85,19 @@ export default function WarRoomView({ ctx }) {
     }
     return acc;
   }, {});
+  const formatNightWinLine = (nightSummary) => {
+    const entries = Object.entries(nightSummary?.wins || {}).sort((left, right) => right[1] - left[1]);
+    const topWins = entries[0]?.[1] || 0;
+    if (!topWins) return "";
+    const leaders = entries.filter((entry) => entry[1] === topWins);
+    const names = leaders.map(([pid]) => dn(getPlayer(pid)?.username || "Unknown"));
+    const nameLine = names.length > 2
+      ? `${names.slice(0, 2).join(" + ")} +${names.length - 2}`
+      : names.join(" + ");
+    return leaders.length > 1
+      ? ` · ${nameLine} split ${topWins} each`
+      : ` · ${nameLine} closed ${topWins}`;
+  };
   const activeTrail = [
     lobbyFilter ? `Operative: ${dn(getPlayer(lobbyFilter)?.username || "Unknown")}` : "",
     lobbyDate ? `Date: ${formatLobbyDate(lobbyDate, { day: "numeric", month: "short", year: "numeric" })}` : "",
@@ -463,8 +476,7 @@ export default function WarRoomView({ ctx }) {
             const firstNightCardIndex = isFirstVisibleNight ? firstNightOrder++ : -1;
             const marker = getLobbyDateMarker(s.date);
             const nightSummary = daySummary[s.date];
-            const nightLeaderEntry = nightSummary ? Object.entries(nightSummary.wins).sort((left, right) => right[1] - left[1])[0] : null;
-            const nightLeader = nightLeaderEntry ? getPlayer(nightLeaderEntry[0]) : null;
+            const nightWinLine = formatNightWinLine(nightSummary);
             return (
               <MotionReveal key={s.id} className="archive-rhythm-card" delay={idx < 8 ? Math.min(idx, 7) * 45 : 0} disabled={idx >= 8} threshold={0.08} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {showNightBreak && (
@@ -472,7 +484,7 @@ export default function WarRoomView({ ctx }) {
                     <div style={{ height: 1, flex: 1, background: "linear-gradient(90deg,rgba(255,77,143,.3),transparent)" }} />
                     <div className="bc7 warroom-night-pill" style={{ padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", fontSize: ".62rem", letterSpacing: ".14em", color: "var(--text3)", textTransform: "uppercase", textAlign: "center" }}>
                       {idx === 0 ? "Latest night on file" : "Night file"} · {formatLobbyDate(s.date, { weekday: "long", day: "numeric", month: "short" })} · {nightSummary.count} report{nightSummary.count !== 1 ? "s" : ""} · {nightSummary.kills} kills
-                      {nightLeader && nightLeaderEntry ? ` · ${dn(nightLeader.username)} closed ${nightLeaderEntry[1]}` : ""}
+                      {nightWinLine}
                     </div>
                     <div style={{ height: 1, flex: 1, background: "linear-gradient(90deg,transparent,rgba(199,125,255,.3))" }} />
                   </div>

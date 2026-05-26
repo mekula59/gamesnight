@@ -1,4 +1,5 @@
 import { STORAGE_VERSION } from "./config";
+import { normalizeGameData } from "./aliases";
 import { INITIAL_PLAYERS, INITIAL_SESSIONS } from "./seedData";
 import { todayStr } from "./time";
 
@@ -29,12 +30,15 @@ export const createStorageAdapter = () => {
   };
 };
 
-const getDefaultState = () => ({
-  players: INITIAL_PLAYERS,
-  sessions: INITIAL_SESSIONS,
-  pollVote: null,
-  showCeremony: false,
-});
+const getDefaultState = () => {
+  const normalized = normalizeGameData(INITIAL_PLAYERS, INITIAL_SESSIONS);
+  return {
+    players: normalized.players,
+    sessions: normalized.sessions,
+    pollVote: null,
+    showCeremony: false,
+  };
+};
 
 const OFFICIAL_REPLACEMENT_DATES = new Set(["2026-05-01"]);
 
@@ -52,7 +56,7 @@ const replaceOfficialSessions = (sessions) => {
   const officialDates = new Set(officialSessions.map((session) => session.date));
   const keptSessions = sessions.filter((session) => !officialDates.has(session.date));
 
-  return [...keptSessions, ...officialSessions].sort((left, right) => {
+  return normalizeGameData([], [...keptSessions, ...officialSessions]).sessions.sort((left, right) => {
     if (left.date !== right.date) {
       return left.date.localeCompare(right.date);
     }
@@ -73,8 +77,9 @@ export const loadGameData = async (store) => {
 
     if (currentVersion !== STORAGE_VERSION) {
       await store.set("gn-version", STORAGE_VERSION);
-      await store.set("gn-players", JSON.stringify(INITIAL_PLAYERS));
-      await store.set("gn-sessions", JSON.stringify(INITIAL_SESSIONS));
+      const normalized = normalizeGameData(INITIAL_PLAYERS, INITIAL_SESSIONS);
+      await store.set("gn-players", JSON.stringify(normalized.players));
+      await store.set("gn-sessions", JSON.stringify(normalized.sessions));
       return getDefaultState();
     }
 
@@ -82,15 +87,18 @@ export const loadGameData = async (store) => {
     const sessionsResult = await store.get("gn-sessions");
     const storedPlayers = playersResult ? JSON.parse(playersResult.value) : INITIAL_PLAYERS;
     const storedSessions = sessionsResult ? JSON.parse(sessionsResult.value) : null;
-    const sessions = replaceOfficialSessions(
+    const rawSessions = replaceOfficialSessions(
       storedSessions && storedSessions.length > 0 ? storedSessions : INITIAL_SESSIONS,
     );
+    const normalized = normalizeGameData(storedPlayers, rawSessions);
+    const { players, sessions } = normalized;
+    await store.set("gn-players", JSON.stringify(players));
     await store.set("gn-sessions", JSON.stringify(sessions));
 
     const pollKey = `gn-poll-${todayStr()}`;
     const pollResult = await store.get(pollKey);
     return {
-      players: storedPlayers,
+      players,
       sessions,
       pollVote: pollResult?.value ?? null,
       showCeremony: false,
@@ -102,13 +110,14 @@ export const loadGameData = async (store) => {
 
 export const persistGameData = async (store, players, sessions) => {
   try {
-    await store.set("gn-players", JSON.stringify(players));
-    await store.set("gn-sessions", JSON.stringify(sessions));
+    const normalized = normalizeGameData(players, sessions);
+    await store.set("gn-players", JSON.stringify(normalized.players));
+    await store.set("gn-sessions", JSON.stringify(normalized.sessions));
   } catch {
     return null;
   }
 
-  return { players, sessions };
+  return normalizeGameData(players, sessions);
 };
 
 export const readRivalOpsState = async (store) => {

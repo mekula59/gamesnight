@@ -9,13 +9,14 @@ export const SEASONAL_EVENT = {
   endHour: 16,
 };
 
-export const STORAGE_VERSION = "gn-v122";
+export const STORAGE_VERSION = "gn-v134";
 export const SITE_TITLE = "Games Night";
 export const HOSTED_BY = "Mekula";
 export const FEATURED_GAME = "Bullet League";
 export const DISCORD_URL = "https://discord.gg/gJSjaBFBDD";
 export const DISCORD_WEBHOOK = "";
 export const TWITCH_URL = "https://www.twitch.tv/mekulavick";
+export const TIKTOK_URL = "https://www.tiktok.com/@mekulaplays";
 export const SESSION_START_HOUR = 17;
 export const SESSION_END_HOUR = 19;
 export const SESSION_DAYS = [1, 2, 3, 4, 5, 6];

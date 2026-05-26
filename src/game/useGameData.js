@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { normalizeGameData } from "./aliases";
 import { loadGameData, persistGameData } from "./storage";
 
 export const useGameData = ({ store, view }) => {
@@ -39,6 +40,22 @@ export const useGameData = ({ store, view }) => {
     return undefined;
   }, [loaded, ceremonyPending, showCeremony, ceremonySnoozed, view]);
 
+  const setNormalizedPlayers = (nextPlayers) => {
+    setPlayers((currentPlayers) => {
+      const resolvedPlayers =
+        typeof nextPlayers === "function" ? nextPlayers(currentPlayers) : nextPlayers;
+      return normalizeGameData(resolvedPlayers, sessions).players;
+    });
+  };
+
+  const setNormalizedSessions = (nextSessions) => {
+    setSessions((currentSessions) => {
+      const resolvedSessions =
+        typeof nextSessions === "function" ? nextSessions(currentSessions) : nextSessions;
+      return normalizeGameData(players, resolvedSessions).sessions;
+    });
+  };
+
   const persist = (nextPlayers, nextSessions) =>
     persistGameData(store, nextPlayers, nextSessions);
 
@@ -68,9 +85,9 @@ export const useGameData = ({ store, view }) => {
 
   return {
     players,
-    setPlayers,
+    setPlayers: setNormalizedPlayers,
     sessions,
-    setSessions,
+    setSessions: setNormalizedSessions,
     loaded,
     persist,
     showCeremony,
